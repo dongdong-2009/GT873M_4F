@@ -1,0 +1,37 @@
+#ifndef __IROS_CONFIG_H
+#define __IROS_CONFIG_H
+#define HAVE_MPORTS 1
+#define HAVE_SYS_MEMPOOL 1
+#define HAVE_MEM_TRACE 1
+#define HAVE_MINI_CLI 1
+#define HAVE_LOG_THREAD 1
+#define HAVE_EXCEPTION_HANDLER 1
+#define HAVE_CPULOAD_PER_THREAD 1
+#define HAVE_IP_STACK 1
+#define HAVE_WEB_SERVER 1
+#define HAVE_FLASH_FS 1
+#define HAVE_CTC_OAM 1
+#define HAVE_POSIX 1
+#define HAVE_SERIAL_FLASH 1
+#define HAVE_SDL_CMD 1
+#define HAVE_SDL_CMD_CTC 1
+#define HAVE_SDL_CMD_HELP 1
+#define HAVE_RTK_CMD 1
+#define HAVE_SDL_CTC 1
+#define HAVE_DB_MANAGMENT 1
+#define HAVE_MC_CTRL 1
+#define HAVE_LOG_FILE 1
+//#define HAVE_LOOP_DETECT 1
+#define HAVE_TERMINAL_SERVER 1
+#define HAVE_PPPOE 1
+#define HAVE_PPP 1
+#define HAVE_PTP 1
+#define HAVE_TELNET_CLI 1
+#define HAVE_MIF 1
+#define HAVE_LOOP_LED 1
+
+//#define HAVE_SWITCH_SPEED_1000	1
+//#define HAVE_SWITCH_SPEED_100	1
+
+
+#endif

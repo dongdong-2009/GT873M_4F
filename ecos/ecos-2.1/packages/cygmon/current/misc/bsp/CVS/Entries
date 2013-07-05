@@ -1,0 +1,10 @@
+/bsp.h/1.1.1.1.8.2/Mon Dec 17 10:50:12 2007//Tlynxd_generic
+/cpu.h/1.1.1.1.8.2/Mon Dec 17 10:50:12 2007//Tlynxd_generic
+/dbg-threads-api.h/1.1.1.1.8.2/Mon Dec 17 10:50:12 2007//Tlynxd_generic
+/defs.h/1.1.1.1.8.2/Mon Dec 17 10:50:12 2007//Tlynxd_generic
+/gdb-data.h/1.1.1.1.8.2/Mon Dec 17 10:50:12 2007//Tlynxd_generic
+/hex-utils.h/1.1.1.1.8.2/Mon Dec 17 10:50:12 2007//Tlynxd_generic
+D/arm////
+D/common////
+D/mips////
+D/mn10300////

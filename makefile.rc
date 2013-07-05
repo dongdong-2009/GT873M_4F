@@ -1,0 +1,21 @@
+
+ifndef SWHOME
+$(error SWHOME not defined)
+endif
+
+ifndef TOOLSHOME
+$(error TOOLSHOME not defined)
+endif
+
+ifndef BUILDID
+BUILDID=$(shell date +"%s")
+endif
+
+export GNUTOOLSHOME=$(TOOLSHOME)/gnutools
+PATH:=$(GNUTOOLSHOME)/bin:/usr/local/bin:/bin:/usr/bin
+PATH:=$(SWHOME)/ecos/ecos-2.1/tools/bin:$(PATH)
+PATH:=$(SWHOME)/tools/support/scripts/general:$(PATH)
+PATH:=$(SWHOME)/tools/support/tools/bin:$(PATH)
+export PATH
+export BUILDID
+
