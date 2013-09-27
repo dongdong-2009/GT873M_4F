@@ -157,4 +157,20 @@ cs_status mc_flood_msg(mc_node_t *mc_node, mc_object_t *pObj)
 
     return ret;
 }
+#if 1
+extern void pkt_print(char *buf, cs_uint16 len)
+{
+    int i;
+    cs_printf("---------------------------------------------------------");
+    for(i = 0; i<len; ++i)
+    {
+        if(0 == (i&0xf)) cs_printf("\n%04x: ", i);
+        if(0 == (i&0x7)) cs_printf(" ");
+        cs_printf("%02x ", buf[i]);
+    }
+    cs_printf(".\n---------------------------------------------------------\n");
+
+}
+#endif
+
 

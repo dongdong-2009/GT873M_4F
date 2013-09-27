@@ -298,11 +298,12 @@ static void app_uni_stats_count()
     cs_uint8 i = 0; 
     cs_port_id_t port = 0;
     cs_uint32 offset = 0;
-    for(i = 0; i < (g_app_max_uni_port + 1); i++){
-
+    for(i = 0; i < (g_app_max_uni_port + 1); i++)
+	{
         memset(&uni_stats,0x00,sizeof(uni_stats));
 
-        if(i == 0){
+        if(i == 0)
+		{
             if(g_app_max_uni_port == 1)
             {
                 /* for one port onu, the no internal ge port, skip it*/
@@ -313,10 +314,11 @@ static void app_uni_stats_count()
                 /* internal PON chip GE port */
                 port = CS_DOWNLINK_PORT;
             }
-        }else{
+        }
+		else
+        {
             port = i;
         }
-
         ret = epon_request_onu_port_stats_get(context, ONU_DEVICEID_FOR_API, ONU_LLIDPORT_FOR_API, 
                 port,FALSE, &uni_stats);
         if(ret != CS_E_OK){

@@ -165,44 +165,48 @@ typedef struct
 }ring_buf_t;
 
 typedef struct{
-    uart_config_t uart_cfg;         
-    cs_uint32 proto_type;     /* protocol type TCP 6/UDP 1*/
-    cs_uint32 proto_port;        /* L4 protocol port 1~65535 */
-    cs_uint32 client_timeout;  /* remote client timeout 0:never thoer:1~65535s*/
-    cs_uint32 max_payload;   /* 512 ~1400 bytes */
-    cs_uint32 min_payload;    /* 40 ~ max_payload */
-    cs_uint32 max_res_time; /* max response time 25~1000ms */
-    cs_int32 server_fd;   /* server socket FD */
-    cs_int32 client_fd;    /* client socket FD */
-    cs_uint32 client_ip;
-    cs_uint32 client_port;
-    cs_uint32 client_closed_flag; /* check client connection */
-    cs_uint32 term_serv_rx_ip_packets;
-    cs_uint32 term_serv_tx_ip_packets;
-    cs_uint32 term_serv_tx_lost_packets;
-    cs_uint32 term_serv_rx_ip_cnt;
-    cs_uint32 term_serv_tx_ip_cnt;
-    cs_uint32 term_serv_tx_lost_cnt;
-    cs_uint32 uart_rx_char_cnt;
-    cs_uint32 uart_tx_char_cnt;
-    cs_uint32 enable_flag;  /* terminal server enable/disable*/
-    cs_uint64 last_act_ticks;
-    cs_uint8  init_flag;  /* used to check flash area has valid config data */ 
-    ring_buf_t ip_rx_buf;
-    #if 0
-    ping_pong_buf_t    uart_msg; /* store received UART data */
-    #endif
-	#if 1
-	cs_uint8 client_enable;
-	cs_uint8 server_enable;
-	cs_uint8 socket_enable;		/*socket 的状态。1:已创建socket;0:未创建socket*/
-	#endif
+		uart_config_t uart_cfg; 		
+		cs_uint32 proto_type;	  /* protocol type TCP 6/UDP 1*/
+		cs_uint32 proto_port;		 /* L4 protocol port 1~65535 */
+		cs_uint32 client_timeout;  /* remote client timeout 0:never thoer:1~65535s*/
+		cs_uint32 max_payload;	 /* 512 ~1400 bytes */
+		cs_uint32 min_payload;	  /* 40 ~ max_payload */
+		cs_uint32 max_res_time; /* max response time 25~1000ms */
+		cs_int32 server_fd;   /* server socket FD */
+		cs_int32 client_fd;    /* client socket FD */
+		cs_uint32 client_ip;
+		cs_uint32 client_port;
+		cs_uint32 client_closed_flag; /* check client connection */
+		cs_uint32 term_serv_rx_ip_packets;
+		cs_uint32 term_serv_tx_ip_packets;
+		cs_uint32 term_serv_tx_lost_packets;
+		cs_uint32 term_serv_rx_ip_cnt;
+		cs_uint32 term_serv_tx_ip_cnt;
+		cs_uint32 term_serv_tx_lost_cnt;
+		cs_uint32 uart_rx_char_cnt;
+		cs_uint32 uart_tx_char_cnt;
+		cs_uint32 enable_flag;	/* terminal server enable/disable*/
+		cs_uint64 last_act_ticks;
+		cs_uint8  init_flag;  /* used to check flash area has valid config data */ 
+		ring_buf_t ip_rx_buf;
+#if 0
+		ping_pong_buf_t    uart_msg; /* store received UART data */
+#endif
+		
+#if 1
+		cs_uint8 server_client_mode;	//0-server mode, 1-client mode
+		cs_uint8 client_enable;
+		cs_uint8 server_enable;
+		cs_uint8 socket_enable; 	/*socket 的状态。1:已创建socket;0:未创建socket*/
+		cs_uint8 socket_control;	//1:要创建socket;0:不创建socket
+#endif
+	
+#if 1
+		cs_uint32 remote_server_ip;
+		cs_uint16 remote_server_port;
+#endif
+		cs_uint32 reserved[1];
 
-	#if 1
-	cs_uint32 remote_server_ip;
-	cs_uint16 remote_server_port;
-	#endif
-    cs_uint32 reserved[1];
 } term_server_config_t;
 #if 0
 #define TERM_SRV_UART_MAX_SIZE  8192

@@ -18,6 +18,25 @@ extern void iros_system_reset(RESET_TYPE_E reset_type);
 extern int fs_mount(void);
 extern int fs_umount(void);
 #endif
+
+#if 1
+static char upload_html[] =
+    "<HTML><HEAD></HEAD>"
+
+    "<FORM action=/cgi-bin/get_wlb_image.cgi method=post \
+    encType=multipart/form-data >\
+    <BODY>Upgrade app firmware(.wlb format): <INPUT type=file name=userfile><INPUT type=submit value=Upload></BODY></FORM>"
+
+    "<FORM action=/get_jffs2_image.cgi method=post \
+    encType=multipart/form-data >\
+    <BODY>Upgrade JFFS2 image(.wfs format): <INPUT type=file name=userfile><INPUT type=submit value=Upload></BODY></FORM>"
+    "</HTML>"
+
+    ;
+
+CYG_HTTPD_IRES_TABLE_ENTRY(cyg_ires_entry_upload, "/upload.html", upload_html, sizeof(upload_html));
+#endif
+
 int oper_flash_erase_block(void* block);
 
 cs_boolean cgi_get_web_upgrade_status()

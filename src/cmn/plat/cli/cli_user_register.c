@@ -24,6 +24,7 @@
 #include "sdl_api.h"
 #include "packet.h"
 #include "app_ip_mgnt.h"
+#include "terminal_server.h"
 #define cli_ntohs(x)        ((((x) >> 8) & 0xff) | (((x) << 8) & 0xff00))
 cs_uint8  uni_max_port_num=0;
 //#ifdef HAVE_IP_STACK
@@ -282,7 +283,7 @@ int cmd_statistics_uni(struct cli_def *cli, char *command, char *argv[], int arg
 {
      cs_port_id_t portid=0;
      oam_port_uni_stats_t uni_stats;
-	 cs_uint64 zero_cnt = 0;
+	 
      cs_uint64 rxrate = 0,txrate = 0;
     // deal with help
     if(CLI_HELP_REQUESTED)
@@ -310,6 +311,8 @@ int cmd_statistics_uni(struct cli_def *cli, char *command, char *argv[], int arg
 
     if(1 == argc)
     {
+    	#if 0
+		cs_uint64 zero_cnt = 0;
         portid=atoi(argv[0]);
 
         if ((portid > uni_max_port_num)
@@ -381,6 +384,41 @@ int cmd_statistics_uni(struct cli_def *cli, char *command, char *argv[], int arg
 			{
 					return(-1);
 			}
+		#endif
+		
+		#else
+		portid=atoi(argv[0]);
+
+		if ((portid > uni_max_port_num)|| (portid < 1) ) 
+		{
+			cli_print(cli, "%% Invalid input.");
+			return CLI_ERROR;
+		}
+        
+        if(CS_E_OK != app_onu_port_stats_get(portid, &uni_stats))
+        {
+            return CS_E_ERROR;
+        }
+		if(gwd_portstats_get_rate(portid-1, &txrate, &rxrate) == EPON_TRUE)
+		{
+			//cli_print(cli, "  tx port rate %lld bps\t\t rx port rate %lld bps", txrate, rxrate);
+		}
+		else
+		{
+			cli_print(cli, "gwd_portstats_get_rate failed\n");
+			return CLI_ERROR;
+		}
+		
+		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In bit rate", rxrate, "Out bit rate", txrate);
+		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In bytes", uni_stats.rxbyte_cnt, "Out bytes", uni_stats.rxbyte_cnt);
+		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In total pkts", uni_stats.rxfrm_cnt, "Out total pkts", uni_stats.txfrm_cnt);
+		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In unicast pkts", uni_stats.rxucfrm_cnt, "Out unicast pkts", uni_stats.txucfrm_cnt);
+		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In multicast pkts", uni_stats.rxmcfrm_cnt, "Out multicast pkts", uni_stats.txmcfrm_cnt);
+		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In broadcast pkts", uni_stats.rxbcfrm_cnt, "Out broadcast pkts", uni_stats.txbcfrm_cnt);
+		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In pause pkts", uni_stats.rxpausefrm_cnt, "Out pause pkts", uni_stats.txpausefrm_cnt);
+		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In crc error pkts", uni_stats.rxcrcerrfrm_cnt, "Out crc error pkts", uni_stats.txcrcerrfrm_cnt);
+		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In jumbo pkts", uni_stats.rxoversizefrm_cnt, "Out jumbo pkts", (cs_uint64)0);
+		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In undersize pkts", uni_stats.rxundersizefrm_cnt, "Out undersize pkts", (cs_uint64)0);
 		#endif
     } 
     else
@@ -1324,8 +1362,21 @@ int cmd_port_stats_disable(struct cli_def *cli, char *command, char *argv[], int
 
     	if(port >= 1 && port <= 4)
     	{
+    		#if 0
 			ctc_onu_stats_monitor_stop(port);
-			cli_print(cli,"port %d stats disable success\n",port);
+			#else
+			cs_status status = CS_E_OK;
+			status = ctc_onu_stats_monitor_stop(port);
+			if(CS_E_OK == status)
+			{
+				cli_print(cli,"port %d stats disable success\n",port);
+			}
+			else
+			{
+				cli_print(cli,"port %d stats disable fail\n",port);
+			}
+			#endif
+			
     	}
     	else
     	{
@@ -1376,8 +1427,10 @@ void user_register_command_entry(struct cli_command **cmd_root)
     statistics = cli_register_command(cmd_root, NULL, "statistics",  NULL,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "Show system statistics information");
     /*statistics_pon = cli_register_command(cmd_root, statistics, "pon",  cmd_statistics_pon,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "Show pon statistics");*/
     portstats = cli_register_command(cmd_root, statistics, "port", NULL, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "port statistics");
+		#if 0
 		cli_register_command(cmd_root, portstats, "enable", cmd_port_stats_enable, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "enable command");
 		cli_register_command(cmd_root, portstats, "disable",cmd_port_stats_disable, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "disable command");
+		#endif
 		cli_register_command(cmd_root, portstats, "show", cmd_statistics_uni, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "show port statistics");
 
     statistics_cpu = cli_register_command(cmd_root, statistics, "cpu",  cmd_statistics_cpu,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "Show cpu statistics");
@@ -1428,14 +1481,29 @@ extern cs_status ip_mode_get(int *mode)
 extern cs_status ip_check(cs_uint32 ip)
 {
 	cs_status ret = CS_E_OK;
-	if(0xffffffff == ip || 0x0 == ip)
+	cs_uint32 ip_invalid[2] = {0};
+	cs_uint16 i = 0;
+	cs_uint16 num = 0;
+	ip_invalid[0] = 0;
+	ip_invalid[1] = (cs_uint32)(-1);
+	
+
+	num = sizeof(ip_invalid) / sizeof(ip_invalid[0]);
+	for(i=0; i<num; i++)
 	{
-		ret = CS_E_ERROR;
+		if(ip == ip_invalid[i])
+		{
+			ret = CS_E_ERROR;
+			break;
+		}
+		else
+		{
+			ret = CS_E_OK;
+			continue;
+		}
+		
 	}
-	else
-	{
-		ret = CS_E_OK;
-	}
+	
 	return ret;
 }
 
@@ -1478,11 +1546,45 @@ extern cs_status ip_info_save_to_global(cs_uint32 ip, cs_uint32 mask, cs_uint32	
 extern cs_status ip_info_get_from_global(cs_uint32 *ip, cs_uint32 *mask, cs_uint32 *gateway, cs_uint16 *vlan)
 {
 	cs_status ret = CS_E_OK;
+	if(NULL != ip)
+	{
+		*ip = device_ip_info.device_ip;
+	}
+	else
+	{
+		//do nothing
+	}
 
-	*ip = device_ip_info.device_ip;
-	*mask = device_ip_info.device_mask;
-	*gateway = device_ip_info.device_gateway;
-	*vlan = device_ip_info.device_vlan;
+	if(NULL != mask)
+	{	
+		*mask = device_ip_info.device_mask;
+	}
+	else
+	{
+		//do nothing
+	}
+
+	if(NULL != gateway)
+	{
+		*gateway = device_ip_info.device_gateway;
+	}
+	else
+	{
+		//do nothing
+	}
+
+	if(NULL != vlan)
+	{
+		*vlan = device_ip_info.device_vlan;
+	}
+	else
+	{
+		//do nothing
+	}
+	
+
+	
+	
 	
 	return ret;	
 }
@@ -1854,484 +1956,121 @@ extern int cmd_if_config(struct cli_def *cli, char *command, char *argv[], int a
 
 
 
-#ifdef HAVE_TERMINAL_SERVER
 
+#ifdef HAVE_TERMINAL_SERVER
+cs_status serial_port_check(cs_uint16 serial_port);
+
+int cmd_serial_to_enet_mode_int(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+    if (CLI_HELP_REQUESTED)
+        return CLI_HELP_NO_ARGS;
+
+    if(argc > 0)
+    {
+        cli_print(cli, "%% Invalid input.");
+        return CLI_OK;
+    }
+
+    cli_set_configmode(cli, MODE_SERIAL_TO_ENET, "Serial_to_enet");
+    return CLI_OK;
+}
+
+int cmd_serial_to_enet_mode_exit(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+    if (CLI_HELP_REQUESTED)
+        return CLI_HELP_NO_ARGS;
+
+    if(argc > 0)
+    {
+        cli_print(cli, "%% Invalid input.");
+        return CLI_OK;
+    }
+
+    cli_set_configmode(cli, MODE_CONFIG, NULL);
+    return CLI_OK;
+}
+int cmd_show_hardware_information(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	#if 1
+	cs_printf("in cmd_show_hardware_information\n");
+	#endif
+	return CLI_OK;
+}
+
+extern cs_status serial_port_information_show(cs_uint16 serial_port_id);
+
+int cmd_show_serial_port(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	#if 0
+	cs_printf("in cmd_show_serial\n");	
+	#endif
+
+	cs_uint16 serial_port_id = 0;
+	if(argc >= 1)
+	{
+		if(CLI_HELP_REQUESTED)
+		{
+			if(1 == argc)
+			{
+				cli_arg_help(cli, 0, "<serial_port>","Serial port number. ep:1,2", NULL);
+				return CLI_OK;
+			}
+			else
+			{
+				//do nothing
+			}
+		}
+		else
+		{
+			//do nothing
+		}
+		
+		serial_port_id = iros_strtol(argv[0]);
+		if(CS_E_OK == serial_port_check(serial_port_id))
+		{
+			if(1 == argc)
+			{
+				serial_port_information_show(serial_port_id);
+			}
+			else
+			{
+				//do nothing
+			}
+		}
+		else
+		{
+			cs_printf("%% There is no matched command.\n");
+			return CLI_ERROR;
+		}
+	}	
+	if(argc >= 2)
+	{
+		if(CLI_HELP_REQUESTED)
+		{
+			if(2 == argc)
+			{
+				cli_arg_help(cli, 0, "<cr>","Just press enter to execute command!", NULL);
+				return CLI_OK;
+			}
+			else
+			{
+				cs_printf("%% There is no matched command.\n");
+				return CLI_ERROR;
+			}
+		}
+		else
+		{
+			cs_printf("%% There is no matched command.\n");
+			return CLI_ERROR;
+		}
+	}
+	return CLI_OK;
+}
 
 #if 1
-//定义在其他模块中
-
-extern cs_status ip_check(cs_uint32 ip);
-extern cs_status mask_check(cs_uint32 mask);
-extern cs_status gateway_check(cs_uint32	gateway);
-extern cs_status vlan_check(cs_uint16 vlan);
-
-extern cs_status uart_server_enable(cs_uint8 uart);
-extern void ts_disable(cs_uint8 uart);
-extern cs_status uart_server_disable(cs_uint8 uart);
 extern cs_status uart_ip_info_get_from_global(cs_uint32 *uart_ip, cs_uint32 *uart_mask, cs_uint32 *uart_gateway, cs_uint16 *uart_vlan);
 extern cs_status uart_ip_info_save_to_global(cs_uint32 uart_ip, cs_uint32 uart_mask, cs_uint32 uart_gateway, cs_uint16 uart_vlan);
 extern cs_status uart_ip_info_save_to_flash(cs_uint32 ip, cs_uint32 mask, cs_uint32	gateway, cs_uint16 vlan);
-extern cs_status uart_ip_info_get_from_flash(cs_uint32 *ip, cs_uint32 *mask, cs_uint32 *gateway, cs_uint16 *vlan);
-extern cs_status ip_mode_set(int mode);
-extern cs_status ip_mode_get(int *mode);
-
-#endif
-
-
-#if 1
-//定义在本模块中
-extern void cli_uart_gwd_cmd(struct cli_command **cmd_root);
-static int cmd_uart_server_enable(struct cli_def *cli, char *command, char *argv[], int argc);
-static int cmd_uart_server_disable(struct cli_def *cli, char *command, char *argv[], int argc);
-static int cmd_uart_client_enable(struct cli_def *cli, char *command, char *argv[], int argc);
-static int cmd_uart_client_disable(struct cli_def *cli, char *command, char *argv[], int argc);
-extern int cmd_uart_client_set_server_ip(struct cli_def *cli, char *command, char *argv[], int argc);
-extern int cmd_uart_client_set_server_port(struct cli_def *cli, char *command, char *argv[], int argc);
-extern int cmd_uart_client_get_server_ip(struct cli_def *cli, char *command, char *argv[], int argc);
-extern int cmd_uart_client_get_server_port(struct cli_def *cli, char *command, char *argv[], int argc);
-extern int cmd_uart_mode_set(struct cli_def *cli, char *command, char *argv[], int argc);
-extern int cmd_uart_mode_get(struct cli_def *cli, char *command, char *argv[], int argc);
-extern int cmd_onu_uart_ip_save(struct cli_def *cli, char *command, char *argv[], int argc);
-extern int cmd_uart_configure(struct cli_def *cli, char *command, char *argv[], int argc);
-extern int cmd_onu_uart_ip_show(struct cli_def *cli, char *command, char *argv[], int argc);
-extern int cmd_onu_uart_ip_set(struct cli_def *cli, char *command, char *argv[], int argc);
-
-
-#endif
-
-
-void cli_uart_gwd_cmd(struct cli_command **cmd_root)
-{
-	struct cli_command *uart = NULL;
-	struct cli_command *uart_server = NULL;
-	struct cli_command *uart_client = NULL;
-	struct cli_command *mode_ip = NULL;
-	struct cli_command *uart_mode = NULL;
-	struct cli_command *set_server = NULL;
-	struct cli_command *get_server = NULL;
-	
-	uart = cli_register_command(cmd_root, NULL, "uart",  NULL,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "uart configuration set");
-	
-	uart_server = cli_register_command(cmd_root, uart, "server",NULL, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "uart server configuration set");
-	cli_register_command(cmd_root, uart_server, "enable", cmd_uart_server_enable, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "uart server enable");
- 	cli_register_command(cmd_root, uart_server, "disable", cmd_uart_server_disable, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "uart server disable");
-
-	cli_register_command(cmd_root, uart, "configure",cmd_uart_configure, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "uart configuration");
-	
-	uart_client = cli_register_command(cmd_root, uart, "client",NULL, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "uart client configuration set");
-	cli_register_command(cmd_root, uart_client, "enable", cmd_uart_client_enable, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "uart client enable");
- 	cli_register_command(cmd_root, uart_client, "disable", cmd_uart_client_disable, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "uart client disable");
-	set_server = cli_register_command(cmd_root, uart_client, "set_server", NULL, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "uart client set server");
-	cli_register_command(cmd_root, set_server, "ip", cmd_uart_client_set_server_ip, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "uart client set server ip");
-	cli_register_command(cmd_root, set_server, "port", cmd_uart_client_set_server_port, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "uart client set server port");
-	get_server = cli_register_command(cmd_root, uart_client, "get_server", NULL, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "uart client get server");
-	cli_register_command(cmd_root, get_server, "ip", cmd_uart_client_get_server_ip, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "uart client get server ip");
-	cli_register_command(cmd_root, get_server, "port", cmd_uart_client_get_server_port, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "uart client get server port");
-	
-	mode_ip = cli_register_command(cmd_root, uart, "ip",NULL, PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "show uart server ip");
-	cli_register_command(cmd_root, mode_ip, "get",cmd_onu_uart_ip_show, PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "show uart server ip");
-	cli_register_command(cmd_root, mode_ip, "set",cmd_onu_uart_ip_set, PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "show uart server ip");
-	cli_register_command(cmd_root, mode_ip, "save",cmd_onu_uart_ip_save, PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "show uart server ip");
-	
-	uart_mode = cli_register_command(cmd_root, uart, "mode",  NULL,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "uart mode configuration");
-	cli_register_command(cmd_root, uart_mode, "set",  cmd_uart_mode_set,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "Set GPIO pin");
-	cli_register_command(cmd_root, uart_mode, "get",  cmd_uart_mode_get,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "Get GPIO pin");
-	
-	
-}
-
-int cmd_uart_server_enable(struct cli_def *cli, char *command, char *argv[], int argc)
-{
-	if(CLI_HELP_REQUESTED)
-	{
-		switch(argc)
-		{
-			case 1:
-				return cli_arg_help(cli, 0, "<uart>",NULL);
-			default:
-				return cli_arg_help(cli, argc > 1 ,NULL);
-		}
-	}
-	else
-	{
-		//do nothing
-	}
-	if(1 == argc)
-	{
-		cs_uint8 uart = 0;
-		uart = atoi(argv[0]);
-		cs_status ret = CS_E_OK;
-		ret = uart_server_enable(uart);
-		if(CS_E_OK == ret)
-		{
-			#if 0
-			cli_print(cli, "uart server enable success");
-			#endif
-		}
-		else
-		{
-			#if 0
-			cli_print(cli, "uart server enable failed");
-			#endif
-		}
-	}
-	else
-	{
-		cs_printf("invalid input\n");
-	}
-	
-	return CLI_OK;
-}
-
-
-
-int cmd_uart_server_disable(struct cli_def *cli, char *command, char *argv[], int argc)
-{
-	if(CLI_HELP_REQUESTED)
-	{
-		switch(argc)
-		{
-			case 1:
-				return cli_arg_help(cli, 0, "<uart>",NULL);
-			default:
-				return cli_arg_help(cli, argc > 1 ,NULL);
-		}
-	}
-	else
-	{
-		//do nothing
-	}
-	
-	if(1 == argc)
-	{
-		cs_uint8 uart = 0;
-		uart = atoi(argv[0]);
-		cs_status ret = CS_E_OK;
-		ret = uart_server_disable(uart);
-		if(CS_E_OK == ret)
-		{
-			cli_print(cli, "uart server disable success");
-		}
-		else
-		{
-			cli_print(cli, "uart server disable failed");
-		}
-	}
-	else
-	{
-		cs_printf("invalid input\n");
-	}
-
-	
-	return CLI_OK;
-}
-
-extern cs_status uart_client_enable(cs_uint8 uart);
-
-int cmd_uart_client_enable(struct cli_def *cli, char *command, char *argv[], int argc)
-{
-	if(CLI_HELP_REQUESTED)
-	{
-		switch(argc)
-		{
-			case 1:
-				return cli_arg_help(cli, 0, "<uart>",NULL);
-			default:
-				return cli_arg_help(cli, argc > 1 ,NULL);
-		}
-	}
-	else
-	{
-		//do nothing
-	}
-
-	if(1 == argc)
-	{	
-		cs_uint8 uart = 0;
-		uart = atoi(argv[0]);
-		cs_status ret = CS_E_OK;
-		ret = uart_client_enable(uart);
-		if(CS_E_OK == ret)
-		{
-			#if 0
-			cli_print(cli, "uart client enable success");
-			#endif
-		}
-		else
-		{
-			#if 0
-			cli_print(cli, "uart client enable failed");
-			#endif
-		}
-	}
-	else
-	{
-		cs_printf("invalid input\n");
-	}
-	
-	return CLI_OK;
-}
-
-extern cs_status uart_client_disable(cs_uint8 uart);
-
-int cmd_uart_client_disable(struct cli_def *cli, char *command, char *argv[], int argc)
-{
-	if(CLI_HELP_REQUESTED)
-	{
-		switch(argc)
-		{
-			case 1:
-				return cli_arg_help(cli, 0, "<uart>",NULL);
-			default:
-				return cli_arg_help(cli, argc > 1 ,NULL);
-		}
-	}
-	else
-	{
-		//do nothing
-	}
-	
-	if(1 == argc)
-	{
-		cs_uint8 uart = 0;
-		uart = atoi(argv[0]);
-		cs_status ret = CS_E_OK;
-		ret = uart_client_disable(uart);
-		if(CS_E_OK == ret)
-		{
-			cli_print(cli, "uart client disable success");
-		}
-		else
-		{
-			cli_print(cli, "uart client disable failed");
-		}
-	}
-	else
-	{
-		cli_print(cli, "invalid input");
-	}
-
-	
-	return CLI_OK;
-}
-
-
-
-
-
-
-/**********************************************************************************************************************************************
-*函数名：cmd_uart_mode_set
-*函数功能描述：设置 gpio 的状态
-*函数参数：
-*函数返回值：int ,成功返回0
-*作者：朱晓辉
-*函数创建日期：2013.1.25
-*函数修改日期：尚未修改
-*修改人：尚未修改
-*修改原因：尚未修改
-*版本：1.0
-*历史版本：无
-**********************************************************************************************************************************************/
-extern int cmd_uart_mode_set(struct cli_def *cli, char *command, char *argv[], int argc)
-{
-    int pin_number=0;
-    int status=0;
-
-    // deal with help
-    if(CLI_HELP_REQUESTED)
-    {
-        switch(argc)
-        {
-        case 1:
-            return cli_arg_help(cli, 0,
-                "<pin id>", "value in  (1, 15)",
-                 NULL);
-
-         case 2:
-            return cli_arg_help(cli, 0,
-            "<status>", " set pin status, value in (0, 1)",
-             NULL);
-
-        default:
-            return cli_arg_help(cli, argc > 1, NULL);
-        }
-    }
-
-    if(2 == argc)
-    {
-        pin_number=atoi(argv[0]);
-        status=atoi(argv[1]);
-
-        if (pin_number >= CS_GPIO_MAX_NUM || pin_number < 0) 
-		{
-            cli_print(cli, "%% Invalid input.");
-            return CLI_ERROR;
-        }
-        if ((status != 0 ) && (status !=1) ) 
-		{
-            cli_print(cli, "%% Invalid input.");
-            return CLI_ERROR;
-        }
-
-		cs_callback_context_t context_gpio;
-		cs_plat_gpio_mode_set(context_gpio, 0, 0, pin_number, GPIO_MODE_OUTPUT);
-		cs_status ret = CS_E_OK;
-		ret = cs_plat_gpio_write(context_gpio, 0, 0, pin_number, status);
-		if(CS_E_OK == ret)
-		{
-			cli_print(cli, "gpio %d set %d seccess\n", pin_number, status);
-		}
-		else 
-		{
-			cli_print(cli, "gpio %d set %d failed\n", pin_number, status);
-		}
-    } 
-	else
-    {
-        cli_print(cli, "%% Invalid input.");
-    }
-
-    return CLI_OK;	
-}
-
-
-
-/**********************************************************************************************************************************************
-*函数名：cmd_uart_mode_get
-*函数功能描述：获取gpio 的状态
-*函数参数：
-*函数返回值：int ,成功返回0
-*作者：朱晓辉
-*函数创建日期：2013.1.25
-*函数修改日期：尚未修改
-*修改人：尚未修改
-*修改原因：尚未修改
-*版本：1.0
-*历史版本：无
-**********************************************************************************************************************************************/
-int cmd_uart_mode_get(struct cli_def *cli, char *command, char *argv[], int argc)
-{
-	int pin_number=0;
-    cs_uint8 status=0;
-
-    // deal with help
-    if(CLI_HELP_REQUESTED)
-    {
-        switch(argc)
-        {
-        case 1:
-            return cli_arg_help(cli, 0,
-                "<pin id>", "value in  (1, 15)",
-                 NULL);
-        default:
-            return cli_arg_help(cli, argc > 1, NULL);
-        }
-		return CLI_OK;
-    }
-
-    if(1 == argc)
-    {
-        pin_number=atoi(argv[0]);
-
-        if (pin_number >= CS_GPIO_MAX_NUM || pin_number < 0) 
-		{
-            cli_print(cli, "%% Invalid input.");
-            return CLI_ERROR;
-        }
-
-		cs_callback_context_t context_gpio;
-		cs_plat_gpio_mode_set(context_gpio, 0, 0, pin_number, GPIO_MODE_OUTPUT);
-		cs_status ret = CS_E_OK;
-		ret = cs_plat_gpio_read(context_gpio, 0, 0, pin_number, &status);
-		if(CS_E_OK == ret)
-		{
-			cli_print(cli, "gpio %d: %d\n", pin_number, status);
-		}
-		else 
-		{
-			cli_print(cli, "gpio %d get failed\n", pin_number);
-		}
-		
-		cli_print(cli, "gpio %d: %d\n", pin_number, status);
-    } 
-	else
-    {
-        cli_print(cli, "%% Invalid input.");
-    }
-
-    return CLI_OK;	
-}
-
-
-/**********************************************************************************************************************************************
-*函数名：cmd_onu_uart_ip_save
-*函数功能描述：将串口ip 信息保存
-*函数参数：
-*函数返回值：int ,成功返回0
-*作者：朱晓辉
-*函数创建日期：2013.5.27
-*函数修改日期：尚未修改
-*修改人：尚未修改
-*修改原因：尚未修改
-*版本：1.0
-*历史版本：无
-**********************************************************************************************************************************************/
-extern int cmd_onu_uart_ip_save(struct cli_def *cli, char *command, char *argv[], int argc)
-{
-	if(CLI_HELP_REQUESTED)
-	{
-		switch(argc)
-		{
-			case 1:
-				return cli_arg_help(cli, 0,
-				"<cr>", "save uart ip configuration",
-				NULL);
-				break;
-
-			default:
-			return cli_arg_help(cli, argc > 1, NULL);
-		}
-	}
-
-
-	cs_status ret = CS_E_OK;
-	cs_uint32	uart_ip;
-	cs_uint32	uart_mask;
-	cs_uint32	uart_gateway;
-	cs_uint16	uart_vlan;
-	
-	ret = uart_ip_info_get_from_global(&uart_ip, &uart_mask, &uart_gateway, &uart_vlan);
-	if(CS_E_OK != ret)
-	{
-		cs_printf("ip_info_get_from_global fail\n");
-	}
-	else
-	{
-#if 1
-		cs_printf("ip_info_get_from_global success\n");
-#endif
-	}
-	
-#if 1
-	ret = uart_ip_info_save_to_flash(uart_ip, uart_mask, uart_gateway, uart_vlan);
-	if(CS_E_OK == ret)
-	{
-		// do nothing
-	}
-	else
-	{
-		cs_printf("uart_ip_info_save_to_flash failed\n");
-	}
-#endif
-
-	
-	return CLI_OK;
-}
-
-
-
-
 
 extern int cmd_onu_uart_ip_show(struct cli_def *cli, char *command, char *argv[], int argc)
 {
@@ -2495,7 +2234,7 @@ extern int cmd_onu_uart_ip_set(struct cli_def *cli, char *command, char *argv[],
 
 		ip_mode_set(0);
 		cs_status ret = CS_E_OK;
-		ret = app_ipintf_add_ip_address((uart_ip), uart_vlan, (uart_mask));
+		ret = app_ipintf_add_ip_address((uart_ip), uart_gateway, (uart_mask));
 		if(CS_E_OK != ret)
 		{
 			cs_printf("***app_ipintf_add_ip_address fail\n");
@@ -2507,17 +2246,16 @@ extern int cmd_onu_uart_ip_set(struct cli_def *cli, char *command, char *argv[],
 			#endif
 		}
 		ip_mode_set(1);
-
 		#if 0
 		ret = uart_ip_info_save_to_global(uart_ip, uart_mask, uart_gateway, uart_vlan);
 		if(CS_E_OK != ret)
 		{
-			cs_printf("ip_info_save_to_global fail\n");
+			cs_printf("uart_ip_info_save_to_global fail\n");
 		}
 		else
 		{
 			#if 0
-			cs_printf("ip_info_save_to_global success\n");
+			cs_printf("uart_ip_info_save_to_global success\n");
 			#endif
 		}
 		#endif
@@ -2532,5 +2270,1085 @@ extern int cmd_onu_uart_ip_set(struct cli_def *cli, char *command, char *argv[],
 }
 
 
+/**********************************************************************************************************************************************
+*函数名：cmd_onu_uart_ip_save
+*函数功能描述：将串口ip 信息保存
+*函数参数：
+*函数返回值：int ,成功返回0
+*作者：朱晓辉
+*函数创建日期：2013.5.27
+*函数修改日期：尚未修改
+*修改人：尚未修改
+*修改原因：尚未修改
+*版本：1.0
+*历史版本：无
+**********************************************************************************************************************************************/
+extern int cmd_onu_uart_ip_save(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	if(CLI_HELP_REQUESTED)
+	{
+		switch(argc)
+		{
+			case 1:
+				return cli_arg_help(cli, 0,
+				"<cr>", "save uart ip configuration",
+				NULL);
+				break;
+
+			default:
+			return cli_arg_help(cli, argc > 1, NULL);
+		}
+	}
+
+
+	cs_status ret = CS_E_OK;
+	cs_uint32	uart_ip;
+	cs_uint32	uart_mask;
+	cs_uint32	uart_gateway;
+	cs_uint16	uart_vlan;
+	
+	ret = uart_ip_info_get_from_global(&uart_ip, &uart_mask, &uart_gateway, &uart_vlan);
+	if(CS_E_OK != ret)
+	{
+		cs_printf("ip_info_get_from_global fail\n");
+	}
+	else
+	{
+#if 1
+		cs_printf("ip_info_get_from_global success\n");
 #endif
+	}
+	
+#if 1
+	ret = uart_ip_info_save_to_flash(uart_ip, uart_mask, uart_gateway, uart_vlan);
+	if(CS_E_OK == ret)
+	{
+		// do nothing
+	}
+	else
+	{
+		cs_printf("uart_ip_info_save_to_flash failed\n");
+	}
+#endif
+
+	
+	return CLI_OK;
+}
+
+
+#endif
+
+
+#if 1
+cs_status serial_port_check(cs_uint16 serial_port);
+
+cs_status serial_port_baud_check(cs_uint32 baud)
+{
+	cs_status ret = CS_E_OK;
+	cs_uint32 baud_value[] = {300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, };
+	cs_uint16 i = 0;
+	cs_uint16 num = 0;
+	num = sizeof(baud_value) / sizeof(baud_value[0]);
+	for(i=0;i<num;i++)
+	{
+		if(baud == baud_value[i])
+		{
+			ret = CS_E_OK;
+			break;
+		}
+		else
+		{
+			ret = CS_E_ERROR;
+			continue;
+		}
+	}
+	return ret;
+}
+
+extern cs_status gw_serial_port_baud_set(cs_uint16 serial_port_id, int baud);
+
+cs_status serial_port_baud_set(struct cli_def *cli, cs_uint16 serial_port_id, char *argv[], int argc)
+{
+	cs_status ret = CS_E_OK;
+	if(argc >= 1)
+	{
+		if(CLI_HELP_REQUESTED)
+		{
+			if(1 == argc)
+			{
+				cli_arg_help(cli, 0, "115200","115200 bits/s", NULL);
+				cli_arg_help(cli, 0, "1200","1200 bits/s", NULL);
+				cli_arg_help(cli, 0, "19200","19200 bits/s", NULL);
+				cli_arg_help(cli, 0, "230400","230400 bits/s", NULL);
+				cli_arg_help(cli, 0, "2400","2400 bits/s", NULL);
+				cli_arg_help(cli, 0, "300","300 bits/s", NULL);
+				cli_arg_help(cli, 0, "38400","38400 bits/s", NULL);
+				cli_arg_help(cli, 0, "4800","4800 bits/s", NULL);
+				cli_arg_help(cli, 0, "57600","57600 bits/s", NULL);
+				cli_arg_help(cli, 0, "600","600 bits/s", NULL);
+				cli_arg_help(cli, 0, "9600","9600 bits/s", NULL);
+				return CS_E_OK;
+			}
+			else
+			{
+				//do nothing
+			}
+					
+		}
+		else
+		{
+			//do nothing
+		}
+		cs_uint32 baud = 0;
+		baud = iros_strtol(argv[0]);
+		if(CS_E_OK == serial_port_baud_check(baud))
+		{
+			#if 0
+			cs_printf("serial_port_id :0x%x\n", serial_port_id);
+			cs_printf("baud :0x%x\n", baud);
+			#endif
+			gw_serial_port_baud_set(serial_port_id, baud);
+			return CS_E_OK;
+		}
+		else
+		{
+			cs_printf("%% There is no matched command.\n");
+			return CS_E_ERROR;
+		}
+	}
+
+	if(argc >= 2)
+	{
+		if(CLI_HELP_REQUESTED)
+		{
+			if(2 == argc)
+			{
+				return cli_arg_help(cli, 0, "<cr>","Enter to execuse command", NULL);
+			}
+			else
+			{
+				//do nothing
+			}
+		}
+		else
+		{
+			//do nothing
+		}
+	}
+	else
+	{
+		//cs_printf("%% There is no matched command.\n");
+		return CS_E_ERROR;
+	}
+
+	return ret;
+}
+
+cs_status serial_port_connect_check(char *cmd_connect)
+{
+	cs_status ret = CS_E_OK;
+	char connect_value[][15] = {"disable", "enable", "mode",};
+	cs_uint16 i = 0;
+	cs_uint16 num = 0;
+	num = sizeof(connect_value) / sizeof(connect_value[0]);
+	for(i=0;i<num;i++)
+	{
+		if(0 == strcmp(cmd_connect, connect_value[i]))
+		{
+			ret = CS_E_OK;
+			break;
+		}
+		else
+		{
+			ret = CS_E_ERROR;
+			continue;
+		}
+	}
+	return ret;
+}
+
+extern cs_status serial_port_connect_disable(cs_uint16 serial_port_id);
+extern cs_status serial_port_connect_enable(cs_uint16 serial_port_id);
+extern cs_status serial_port_connect_mode_tcp_server_set(cs_uint16 serial_port_id);
+extern cs_status serial_port_connect_mode_tcp_client_set(cs_uint16 serial_port_id);
+extern cs_status serial_port_connect_mode_udp_set(cs_uint16 serial_port_id);
+
+
+cs_status serial_port_connect_set(struct cli_def *cli, cs_uint16 serial_port_id, char *argv[], int argc)
+{
+	cs_status ret = CS_E_OK;
+	#if 0
+	cs_printf("serial_port_id :0x%x\n", serial_port_id);
+	#endif
+	if(argc >= 1)
+	{
+		if(CLI_HELP_REQUESTED)
+		{
+			if(1 == argc)
+			{
+				cli_arg_help(cli, 0, "disable","Disable connect", NULL);
+				cli_arg_help(cli, 0, "enable","Enable connect", NULL);
+				cli_arg_help(cli, 0, "mode","Connect mode", NULL);
+				return CS_E_OK;
+			}
+			else
+			{
+				//do nothing
+			}				
+		}
+		else
+		{
+			//do nothing
+		}
+
+
+
+		#if 0
+		cs_printf("argv[0] :%s\n", argv[0]);
+		#endif
+		if(CS_E_OK == serial_port_connect_check(argv[0]))
+		{
+			if(0 == strcmp(argv[0], "disable"))
+			{
+				serial_port_connect_disable(serial_port_id);
+			}
+			else if(0 == strcmp(argv[0], "enable"))
+			{
+				serial_port_connect_enable(serial_port_id);
+			}
+			else if(0 == strcmp(argv[0], "mode"))
+			{
+				if(CLI_HELP_REQUESTED)
+				{
+					if(2 == argc)
+					{
+						cli_arg_help(cli, 0, "tcp_client","TCP client mode", NULL);
+						cli_arg_help(cli, 0, "tcp_server","TCP server mode", NULL);
+						cli_arg_help(cli, 0, "udp","UDP mode", NULL);
+						return CS_E_OK;
+					}
+					else
+					{
+						//do nothing
+					}
+				}
+				else
+				{
+					if(0 == strcmp(argv[1], "tcp_client"))
+					{
+						ret = serial_port_connect_mode_tcp_client_set(serial_port_id);
+						if(CS_E_OK == ret)
+						{
+							cs_printf("serial_port_connect_mode_tcp_client_set success\n");
+						}
+						else
+						{
+							cs_printf("serial_port_connect_mode_tcp_client_set failed\n");
+						}
+					}
+					else if(0 == strcmp(argv[1], "tcp_server"))
+					{
+						ret = serial_port_connect_mode_tcp_server_set(serial_port_id);
+						if(CS_E_OK == ret)
+						{
+							cs_printf("serial_port_connect_mode_tcp_client_set success\n");
+						}
+						else
+						{
+							cs_printf("serial_port_connect_mode_tcp_client_set failed\n");
+						}
+					}
+					else if(0 == strcmp(argv[1], "udp"))
+					{
+						ret = serial_port_connect_mode_udp_set(serial_port_id);
+						if(CS_E_OK == ret)
+						{
+							cs_printf("serial_port_connect_mode_tcp_client_set success\n");
+						}
+						else
+						{
+							cs_printf("serial_port_connect_mode_tcp_client_set failed\n");
+						}
+					}
+					else
+					{
+						cs_printf("%% There is no matched command.\n");
+					}
+					
+				}
+			}
+			else
+			{
+				cs_printf("%% There is no matched command.\n");
+			}
+		}
+		else
+		{
+			
+		}
+
+
+
+
+		
+	}
+	return ret;	
+}
+
+cs_status serial_port_data_size_check(cs_uint8 data_size)
+{
+	cs_status ret = CS_E_OK;
+	cs_uint8 data_size_min = 0;
+	cs_uint8 data_size_max = 0;
+	data_size_min = 5;
+	data_size_max = 8;
+	if((data_size >= data_size_min)&&(data_size <= data_size_max))
+	{
+		ret = CS_E_OK;
+	}
+	else
+	{
+		ret = CS_E_ERROR;
+	}
+	return ret;
+}
+extern cs_status gw_serial_port_data_size_set(cs_uint16 serial_port_id, cs_uint8 data_size);
+
+
+cs_status serial_port_data_size_set(struct cli_def *cli, cs_uint16 serial_port_id, char *argv[], int argc)
+{
+	cs_status ret = CS_E_OK;
+	if(argc >= 1)
+	{
+		if(CLI_HELP_REQUESTED)
+		{
+			if(1 == argc)
+			{
+				cli_arg_help(cli, 0, "<5-8>","Please input data size", NULL);
+				return CS_E_OK;
+			}
+			else
+			{
+				//do nothing
+			}
+					
+		}
+		else
+		{
+			//do nothing
+			cs_uint8 data_size = 0;
+			data_size = iros_strtol(argv[0]);
+			if(CS_E_OK == serial_port_data_size_check(data_size))
+			{
+				gw_serial_port_data_size_set(serial_port_id, data_size);
+				return CS_E_OK;
+			}
+			else
+			{
+				cs_printf("%% There is no matched command.\n");
+				return CS_E_ERROR;
+			}
+		}
+
+	}
+
+	if(argc >= 2)
+	{
+		if(CLI_HELP_REQUESTED)
+		{
+			if(2 == argc)
+			{
+				return cli_arg_help(cli, 0, "<cr>","Enter to execuse command", NULL);
+			}
+			else
+			{
+				//do nothing
+			}
+		}
+		else
+		{
+			//do nothing
+		}
+	}
+	else
+	{
+		//cs_printf("%% There is no matched command.\n");
+		return CS_E_ERROR;
+	}
+
+	return ret;
+
+}
+
+extern cs_status gw_serial_port_local_port_set(cs_uint16 serial_port_id, cs_uint32 local_port);
+cs_status serial_port_local_port_set(struct cli_def *cli, cs_uint16 serial_port_id, char *argv[], int argc)
+{
+	#if 1
+	cs_printf("in serial_port_local_port_set, argc :%d\n", argc);
+	#endif
+	cs_status ret = CS_E_OK;
+	if(argc >= 1)
+	{
+		if(CLI_HELP_REQUESTED)
+		{
+			if(1 == argc)
+			{
+				cli_arg_help(cli, 0, "<port>","Port number", NULL);
+				return CS_E_OK;
+			}
+			else
+			{
+				//do nothing
+			}
+					
+		}
+		else
+		{
+			//do nothing
+			cs_uint32 local_port = 0;
+			local_port = iros_strtol(argv[0]);
+			cs_printf("argv[0] :%s\n", argv[0]);
+			cs_printf("local_port :%d\n", local_port);
+			ret = gw_serial_port_local_port_set(serial_port_id, local_port);
+			if(CS_E_OK == ret)
+			{
+				cs_printf("gw_serial_port_local_port_set success\n");
+			}
+			else
+			{
+				cs_printf("gw_serial_port_local_port_set failed\n");
+			}
+		}
+
+	}
+
+	if(argc >= 2)
+	{
+		if(CLI_HELP_REQUESTED)
+		{
+			if(2 == argc)
+			{
+				return cli_arg_help(cli, 0, "<cr>","Enter to execuse command", NULL);
+			}
+			else
+			{
+				//do nothing
+			}
+		}
+		else
+		{
+			//do nothing
+		}
+	}
+	else
+	{
+		//cs_printf("%% There is no matched command.\n");
+		return CS_E_ERROR;
+	}
+
+	return ret;
+
+}
+
+cs_status serial_port_parity_check(char *parity)
+{
+	cs_status ret = CS_E_OK;
+	char parity_value[][10] = {"even", "mask", "none", "odd", "space",};
+	cs_uint16 i = 0;
+	cs_uint16 num = 0;
+	num = sizeof(parity_value) / sizeof(parity_value[0]);
+	for(i=0;i<num;i++)
+	{
+		if(0 == strcmp(parity, parity_value[i]))
+		{
+			ret = CS_E_OK;
+			break;
+		}
+		else
+		{
+			ret = CS_E_ERROR;
+		}
+	}
+	
+	return ret;
+}
+
+extern cs_status gw_serial_port_parity_set(cs_uint16 serial_port_id, char *parity);
+
+cs_status serial_port_parity_set(struct cli_def *cli, cs_uint16 serial_port_id, char *argv[], int argc)
+{
+	cs_status ret = CS_E_OK;
+	if(argc >= 1)
+	{
+		if(CLI_HELP_REQUESTED)
+		{
+			if(1 == argc)
+			{
+				cli_arg_help(cli, 0, "even","even parity", NULL);
+				cli_arg_help(cli, 0, "mask","Mask parity", NULL);
+				cli_arg_help(cli, 0, "none","No parity", NULL);
+				cli_arg_help(cli, 0, "odd","odd parity", NULL);
+				cli_arg_help(cli, 0, "space","Space parity", NULL);
+				return CS_E_OK;
+			}
+			else
+			{
+				//do nothing
+			}
+					
+		}
+		else
+		{
+			if(CS_E_OK == serial_port_parity_check(argv[0]))
+			{
+				ret = gw_serial_port_parity_set(serial_port_id, argv[0]);
+				if(CS_E_OK == ret)
+				{
+					//do nothing
+				}
+				else
+				{
+					cs_printf("not support\n");
+				}
+			}
+			else
+			{
+				cs_printf("%% There is no matched command.\n");
+				return CS_E_ERROR;
+			}
+		}
+
+	}
+
+	if(argc >= 2)
+	{
+		if(CLI_HELP_REQUESTED)
+		{
+			if(2 == argc)
+			{
+				return cli_arg_help(cli, 0, "<cr>","Enter to execuse command", NULL);
+			}
+			else
+			{
+				//do nothing
+			}
+		}
+		else
+		{
+			//do nothing
+		}
+	}
+	else
+	{
+		//cs_printf("%% There is no matched command.\n");
+		return CS_E_ERROR;
+	}
+
+	return ret;
+
+}
+
+extern cs_status gw_serial_port_purge_buf_set(cs_uint16 serial_port_id);
+
+cs_status serial_port_purge_buf_set(struct cli_def *cli, cs_uint16 serial_port_id, char *argv[], int argc)
+{
+	cs_status ret = CS_E_OK;
+	if(1 == argc)
+	{
+		if(CLI_HELP_REQUESTED)
+		{
+			if(1 == argc)
+			{
+				cli_arg_help(cli, 0, "<cr>","Just press enter to execute command!", NULL);
+				return CS_E_OK;
+			}
+			else
+			{
+				//do nothing
+			}
+					
+		}
+		else
+		{
+			//do nothing
+			cs_printf("%% There is no matched command.\n");
+			ret = CS_E_ERROR;
+			
+		}
+
+	}
+	if(0 == argc)
+	{
+		ret = gw_serial_port_purge_buf_set(serial_port_id);
+	}
+	else
+	{
+		ret = CS_E_ERROR;
+	}
+
+
+	return ret;
+
+}
+
+extern cs_status ip_value_check(char *ip)
+{
+#if 0
+	cs_printf("in ip_value_check\n");
+#endif
+	cs_status ret = CS_E_OK;
+	if(inet_addr(ip) != -1)
+	{
+		ret = CS_E_OK;
+	}
+	else
+	{
+		ret = CS_E_ERROR;
+	}
+	return ret;
+}
+
+extern cs_status gw_serial_port_remote_ip_set(cs_uint16 serial_port_id, cs_uint32 remote_ip);
+cs_status serial_port_remote_ip_set(struct cli_def *cli, cs_uint16 serial_port_id, char *argv[], int argc)
+{
+	cs_status ret = CS_E_OK;
+	if(1 == argc)
+	{
+		if(CLI_HELP_REQUESTED)
+		{
+			cli_arg_help(cli, 0, "<A.B.C.D>","Ip address", NULL);
+			return CS_E_OK;	
+		}
+		else
+		{
+			#if 1
+			cs_printf("argv[0] :%s\n", argv[0]);
+			#endif
+			if(CS_E_OK == ip_value_check(argv[0]))
+			{
+				cs_uint32 remote_ip = 0;
+				remote_ip = ntohl(inet_addr(argv[0]));
+				gw_serial_port_remote_ip_set(serial_port_id, remote_ip);
+			}
+			else
+			{
+				cs_printf("%% There is no matched command.\n");
+				return CS_E_ERROR;
+			}
+		}
+
+	}
+	else if(2 == argc)
+	{	
+		if(CS_E_OK == ip_value_check(argv[0]))
+		{
+			//do nothing
+		}
+		else
+		{
+			cs_printf("%% There is no matched command.\n");
+			return CS_E_ERROR;
+		}
+		
+		if(CLI_HELP_REQUESTED)
+		{
+			return cli_arg_help(cli, 0, "<cr>","Enter to execuse command", NULL);
+
+		}
+		else
+		{
+			//do nothing
+		}
+	}
+	else
+	{
+		cs_printf("%% There is no matched command.\n");
+		return CS_E_ERROR;
+	}
+	return ret;
+}
+
+extern cs_status gw_serial_port_remote_port_set(cs_uint16 serial_port_id, cs_uint32 remote_port);
+cs_status serial_port_remote_port_set(struct cli_def *cli, cs_uint16 serial_port_id, char *argv[], int argc)
+{
+	cs_status ret = CS_E_OK;
+	if(1 == argc)
+	{
+		if(CLI_HELP_REQUESTED)
+		{
+			cli_arg_help(cli, 0, "<port>","Port number", NULL);
+			return CS_E_OK;	
+		}
+		else
+		{
+			#if 1
+			cs_printf("argv[0] :%s\n", argv[0]);
+			#endif
+			cs_uint32 remote_port = 0;
+			remote_port = iros_strtol(argv[0]);
+			gw_serial_port_remote_port_set(serial_port_id, remote_port);
+		}
+
+	}
+	else if(2 == argc)
+	{	
+		if(CLI_HELP_REQUESTED)
+		{
+			return cli_arg_help(cli, 0, "<cr>","Enter to execuse command", NULL);
+
+		}
+		else
+		{
+			//do nothing
+		}
+	}
+	else
+	{
+		cs_printf("%% There is no matched command.\n");
+		return CS_E_ERROR;
+	}
+	return ret;	
+}
+
+cs_status stop_bit_value_check(cs_uint16 stop_bit)
+{
+	cs_status ret = CS_E_OK;
+	cs_uint16 stop_bit_value[] = {1, 2,};
+	cs_uint16 i = 0;
+	cs_uint16 num = 0;
+	num = sizeof(stop_bit_value) / sizeof(stop_bit_value[0]);
+	for(i=0;i<num;i++)
+	{
+		if(stop_bit == stop_bit_value[i])
+		{
+			ret = CS_E_OK;
+			break;
+		}
+		else
+		{
+			ret = CS_E_ERROR;
+			continue;
+		}
+	}
+	return ret;
+}
+
+extern cs_status gw_serial_port_stop_bit_set(cs_uint16 serial_port_id, cs_uint16 stop_bit);
+
+cs_status serial_port_stop_bit_set(struct cli_def *cli, cs_uint16 serial_port_id, char *argv[], int argc)
+{
+	cs_status ret = CS_E_OK;
+	cs_uint16 stop_bit = 0;
+	stop_bit = iros_strtol(argv[0]);
+	if(1 == argc)
+	{
+		if(CLI_HELP_REQUESTED)
+		{
+			cli_arg_help(cli, 0, "1","Set stop bit to 1", NULL);
+			cli_arg_help(cli, 0, "2","Set stop bit to 2", NULL);
+			return CS_E_OK;	
+		}
+		else
+		{
+			#if 1
+			cs_printf("argv[0] :%s\n", argv[0]);
+			#endif
+			if(CS_E_OK == stop_bit_value_check(stop_bit))
+			{
+				gw_serial_port_stop_bit_set(serial_port_id, stop_bit);
+			}
+			else
+			{
+				cs_printf("%% There is no matched command.\n");
+				return CS_E_ERROR;
+			}
+		}
+
+	}
+	else if(2 == argc)
+	{	
+		if(CS_E_OK == stop_bit_value_check(stop_bit))
+		{
+			//do nothing
+		}
+		else
+		{
+			cs_printf("%% There is no matched command.\n");
+			return CS_E_ERROR;
+		}
+		
+		if(CLI_HELP_REQUESTED)
+		{
+			return cli_arg_help(cli, 0, "<cr>","Enter to execuse command", NULL);
+		}
+		else
+		{
+			//do nothing
+		}
+	}
+	else
+	{
+		cs_printf("%% There is no matched command.\n");
+		return CS_E_ERROR;
+	}
+	return ret;
+
+}
+
+
+
+cs_status serial_port_check(cs_uint16 serial_port)
+{
+	cs_status ret = CS_E_OK;
+	cs_uint16 serial_port_value[TS_MAX_UART_NUM];
+	cs_uint16 i = 0;
+	for(i=0;i<TS_MAX_UART_NUM;i++)
+	{
+		serial_port_value[i] = i;
+	}
+	//cs_uint16 i = 0;
+	cs_uint16 num = 0;
+	num = sizeof(serial_port_value) / sizeof(serial_port_value[0]);
+	for(i=0;i<num;i++)
+	{
+		if(serial_port == serial_port_value[i])
+		{
+			ret = CS_E_OK;;
+			break;
+		}
+		else
+		{
+			ret = CS_E_ERROR;
+			continue;
+		}
+	}
+	return ret;
+	
+}
+
+cs_status cmd_serial_port_check(char *cmd)
+{
+	cs_status ret = CS_E_OK;
+	cs_uint16 i = 0;
+	cs_uint16 num = 0;
+	#if 0
+	cs_printf("cmd :%s\n", cmd);
+	#endif
+	char cmd_value[][15] = {"baud", "connect", "data_size", "local_port", "parity", "purge-buf", "remote_ip",
+							"remote_port", "stop_bit",};
+	num = sizeof(cmd_value) / sizeof(cmd_value[0]);
+	for(i=0;i<num;i++)
+	{
+		if(0 == strcmp(cmd, cmd_value[i]))
+		{
+			#if 0
+			cs_printf("cmd check pass :%s\n", cmd);
+			#endif
+			ret = CS_E_OK;
+			break;
+		}
+		else
+		{
+			ret = CS_E_ERROR;
+		}
+	}
+	return ret;
+}
+int cmd_serial_port_set(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	#if 0
+	cs_printf("in cmd_serial_port\n");
+	cs_printf("argc :0x%x\n", argc);
+	#endif
+
+	cs_uint16 serial_port = 0;
+
+	char port_list[2*TS_MAX_UART_NUM];
+	memset(port_list, 0, sizeof(port_list));
+	cs_uint16 i = 0;
+	for(i=0;i<TS_MAX_UART_NUM;i++)
+	{
+		port_list[2*i] = i + '0';
+		port_list[2*i+1] = ',';
+	}
+	port_list[2*i-1] = 0;
+	char infor[] = "Serial port number. ep:";
+	cs_uint16 len = 0;
+	len = strlen(infor) + strlen(port_list) + 1;
+	char port_infor[len];
+	memset(port_infor, 0, sizeof(port_infor));
+	strncpy(port_infor, infor, strlen(infor));
+	strncat(port_infor, port_list, strlen(port_list));
+	
+	if(argc >= 1)
+	{
+		if(CLI_HELP_REQUESTED)
+		{
+			if(1 == argc)
+			{
+				cli_arg_help(cli, 0, "<serial_port>",port_infor, NULL);
+				return CLI_OK;
+			}
+			else
+			{
+				//do nothing
+			}
+		}
+		else
+		{
+			//do nothing
+		}
+		
+		serial_port = iros_strtol(argv[0]);
+		if(CS_E_OK == serial_port_check(serial_port))
+		{
+			#if 0
+			cs_printf("serial_port_check success\n");
+			#endif
+		}
+		else
+		{
+			cs_printf("%% There is no matched command.\n");
+			return CLI_ERROR;
+		}
+	}
+
+	if(argc >= 2)
+	{
+		if(CLI_HELP_REQUESTED)
+		{
+
+			if(2 == argc)
+			{
+				cli_arg_help(cli, 0, "baud","Config baud", NULL);
+				cli_arg_help(cli, 0, "connect","Connect to network", NULL);
+				cli_arg_help(cli, 0, "data_size","Data bit", NULL);
+				cli_arg_help(cli, 0, "local_port","Local tcp or udp port", NULL);
+				cli_arg_help(cli, 0, "parity","Serial parity", NULL);
+				cli_arg_help(cli, 0, "purge-buf","Purge the buffer of specified serial port", NULL);
+				cli_arg_help(cli, 0, "remote_ip","Remote ip information", NULL);
+				cli_arg_help(cli, 0, "remote_port","Remote tcp or udp port", NULL);
+				cli_arg_help(cli, 0, "stop_bit","Stop bit", NULL);
+				return CLI_OK;
+			}
+			else
+			{
+				//do nothing
+			}
+			
+		}
+		else
+		{
+			//do nothing
+		}
+		#if 0
+		cs_printf("argv[1] :%s\n", argv[1]);
+		#endif
+		if(CS_E_OK == cmd_serial_port_check(argv[1]))
+		{
+			#if 0
+			cs_printf("cmd_serial_port_check success\n");
+			#endif
+			if(0 == strcmp("baud", argv[1]))
+			{
+				serial_port_baud_set(cli, serial_port, &argv[2], argc-2);
+			}
+			else if(0 == strcmp("connect", argv[1]))
+			{
+				serial_port_connect_set(cli, serial_port, &argv[2], argc-2);
+			}
+			else if(0 == strcmp("data_size", argv[1]))
+			{
+				serial_port_data_size_set(cli, serial_port, &argv[2], argc-2);
+			}
+			else if(0 == strcmp("local_port", argv[1]))
+			{
+				serial_port_local_port_set(cli, serial_port, &argv[2], argc-2);
+			}
+			else if(0 == strcmp("parity", argv[1]))
+			{
+				serial_port_parity_set(cli, serial_port, &argv[2], argc-2);
+			}
+			else if(0 == strcmp("purge-buf", argv[1]))
+			{
+				serial_port_purge_buf_set(cli, serial_port, &argv[2], argc-2);
+			}
+			else if(0 == strcmp("remote_ip", argv[1]))
+			{
+				serial_port_remote_ip_set(cli, serial_port, &argv[2], argc-2);
+			}
+			else if(0 == strcmp("remote_port", argv[1]))
+			{
+				serial_port_remote_port_set(cli, serial_port, &argv[2], argc-2);
+			}
+			else if(0 == strcmp("stop_bit", argv[1]))
+			{
+				serial_port_stop_bit_set(cli, serial_port, &argv[2], argc-2);
+			}
+			else
+			{
+				cs_printf("%% There is no matched command.**\n");
+				return CLI_ERROR;
+			}
+		}
+		else
+		{
+			cs_printf("%% There is no matched command.\n");
+			return CLI_ERROR;
+		}
+		
+		
+	}
+
+	
+	return CLI_OK;
+}
+#endif
+
+
+int cmd_serial_wire_mode_set(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	#if 1
+	cs_printf("in cmd_serial_wire_mode_set\n");
+	#endif
+	
+	return CLI_OK;
+}
+
+
+
+
+
+
+
+void cli_reg_serial_to_enet_cmd(struct cli_command **cmd_root)
+{
+	struct cli_command *serial = NULL;
+	struct cli_command *show = NULL;
+	struct cli_command *show_serial = NULL;
+	struct cli_command *uart = NULL;
+	struct cli_command *mode_ip = NULL;
+
+	uart = cli_register_command(cmd_root, NULL, "uart",NULL, PRIVILEGE_UNPRIVILEGED, MODE_SERIAL_TO_ENET, "show uart server ip");
+	mode_ip = cli_register_command(cmd_root, uart, "ip",NULL, PRIVILEGE_UNPRIVILEGED, MODE_SERIAL_TO_ENET, "show uart server ip");
+	cli_register_command(cmd_root, mode_ip, "get",cmd_onu_uart_ip_show, PRIVILEGE_UNPRIVILEGED, MODE_SERIAL_TO_ENET, "show uart server ip");
+	cli_register_command(cmd_root, mode_ip, "set",cmd_onu_uart_ip_set, PRIVILEGE_UNPRIVILEGED, MODE_SERIAL_TO_ENET, "show uart server ip");
+	cli_register_command(cmd_root, mode_ip, "save",cmd_onu_uart_ip_save, PRIVILEGE_UNPRIVILEGED, MODE_SERIAL_TO_ENET, "show uart server ip");
+
+	cli_register_command(cmd_root, NULL, "s2e-module", cmd_serial_to_enet_mode_int, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "enter Serial_to_enet mode");
+	cli_register_command(cmd_root, NULL, "exit", cmd_serial_to_enet_mode_exit, PRIVILEGE_PRIVILEGED, MODE_SERIAL_TO_ENET, "exit Serial_to_enet mode");
+	
+	serial = cli_register_command(cmd_root, NULL, "serial", NULL, PRIVILEGE_PRIVILEGED, MODE_SERIAL_TO_ENET, "set serial information");
+	cli_register_command(cmd_root, serial, "wire-mode", cmd_serial_wire_mode_set, PRIVILEGE_PRIVILEGED, MODE_SERIAL_TO_ENET, "The number of wire linked to one serial port, if the port is 485");
+	cli_register_command(cmd_root, serial, "port", cmd_serial_port_set, PRIVILEGE_PRIVILEGED, MODE_SERIAL_TO_ENET, "Config serial port information");
+
+	show = cli_register_command(cmd_root, NULL, "show_s2e", NULL, PRIVILEGE_PRIVILEGED, MODE_SERIAL_TO_ENET, "show information");
+	cli_register_command(cmd_root, show, "hardware-information", cmd_show_hardware_information, PRIVILEGE_PRIVILEGED, MODE_SERIAL_TO_ENET, "show hardware information");
+	show_serial = cli_register_command(cmd_root, show, "serial", NULL, PRIVILEGE_PRIVILEGED, MODE_SERIAL_TO_ENET, "show serial information");
+	cli_register_command(cmd_root, show_serial, "port", cmd_show_serial_port, PRIVILEGE_PRIVILEGED, MODE_SERIAL_TO_ENET, "show serial information");
+	
+}
+
+#endif
+
 

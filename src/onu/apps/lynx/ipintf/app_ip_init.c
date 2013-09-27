@@ -326,16 +326,6 @@ extern cs_status device_ip_init(void)
 	{
 		cs_printf("get ipdate fail..\n");
 
-		#if 0
-		memset(&g_slow_path_ip_cfg, 0, sizeof(g_slow_path_ip_cfg));
-		char ip[] = "192.168.0.1";
-		char mask[] = "255.255.255.0";
-		char gateway[] = "192.168.0.1";
-		g_slow_path_ip_cfg.device_ip = ntohl(inet_addr(ip));
-		g_slow_path_ip_cfg.device_mask = ntohl(inet_addr(mask));
-		g_slow_path_ip_cfg.device_gateway = ntohl(inet_addr(gateway));
-		#endif
-
 		device_ip_set_default(&device_ip, &device_mask, &device_gateway, &device_vlan);
 		
 		g_slow_path_ip_cfg.device_ip = device_ip;
@@ -399,7 +389,7 @@ extern cs_status device_ip_init(void)
 	device_mask = g_slow_path_ip_cfg.device_mask;
 	device_gateway = g_slow_path_ip_cfg.device_gateway;
 	
-	ip_info_save_to_global(device_ip, device_mask, device_gateway, device_vlan);
+	//ip_info_save_to_global(device_ip, device_mask, device_gateway, device_vlan);
 	
 	ip_mode_set(1);
 	app_ipintf_add_ip_address(device_ip, device_gateway, device_mask);
@@ -527,6 +517,8 @@ end:
 
 extern cs_status device_ip_init(void);
 extern cs_status uart_ip_init(void);
+extern cs_status config_get_from_flash(void);
+extern cs_status mc_mode_init(void);
 
 /*
 *   PROTOTYPE    cs_status app_ipintf_init()
@@ -586,7 +578,11 @@ cs_status app_ipintf_init(void)
     ipintf_protocol_config();
     ipintf_cmd_reg();
     cs_printf("%s port num %d\n", __func__, ipintf_info.maxport);
-    
+
+	#if 1
+	config_get_from_flash();
+	mc_mode_init();
+	#endif
     return CS_E_OK;
     
 }

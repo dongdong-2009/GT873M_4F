@@ -389,6 +389,9 @@ cs_status oam_pkt_parser(cs_pkt_t *pPkt)
     return CS_E_NOT_SUPPORT;
 }
 
+#if 1
+extern void pkt_print(char *buf, cs_uint16 len);
+#endif
 /*****************************************************************************/
 /* $rtn_hdr_start  oam_pkt_proc                                              */
 /* CATEGORY   : Device                                                       */
@@ -416,6 +419,11 @@ cs_uint8 oam_pkt_proc(cs_pkt_t *pPkt)
     frame_ptr = pPkt->data + pPkt->offset;
     len = pPkt->len;
     port = pPkt->port;
+	
+	#if 0
+	cs_printf("in %s\n", __func__);
+	pkt_print(frame_ptr, len);
+	#endif
 
     oam_dump_pkt("Rcv OAM",port,frame_ptr,len);
 

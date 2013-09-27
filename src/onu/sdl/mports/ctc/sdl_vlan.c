@@ -107,6 +107,7 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 
 
 #define __MC_VLAN_PER_PORT_MAX          8
+
 #define __MC_VLAN_SWAP_PER_PORT_MAX     8
 
 
@@ -545,11 +546,7 @@ static void __trunk_hw_set(rtk_port_t rtk_port,rtk_vlan_acceptFrameType_t accept
 		#else
 		if(1 == port_vlan->def_vlan.vid)
 		{
-		}
-		else
-		{
-		}
-		if(FALG_DORB == 0)
+			if(FALG_DORB == 0)
 			{
 				svlan_memconf.vs_member |= (1<<rtk_port);
 		       	svlan_memconf.vs_member |= (1<<SWITCH_UPLINK_PORT);
@@ -558,7 +555,7 @@ static void __trunk_hw_set(rtk_port_t rtk_port,rtk_vlan_acceptFrameType_t accept
 				rtk_svlan_untag_action_set(UNTAG_ASSIGN,__SVID_RSVD_TRANSPARENT);
 				rtk_svlan_unmatch_action_set(UNMATCH_DROP,__SVID_RSVD_TRANSPARENT);
 			}
-		if(FALG_DORB != 0)
+			if(FALG_DORB != 0)
 			{
 				svlan_memconf.vs_member |= (1<<rtk_port);
 		       	svlan_memconf.vs_member |= (1<<SWITCH_UPLINK_PORT);
@@ -567,6 +564,11 @@ static void __trunk_hw_set(rtk_port_t rtk_port,rtk_vlan_acceptFrameType_t accept
 				rtk_svlan_untag_action_set(UNTAG_ASSIGN,__SVID_RSVD_TRANSPARENT);
 				rtk_svlan_unmatch_action_set(UNMATCH_DROP,__SVID_RSVD_TRANSPARENT);
 			}
+		}
+		else
+		{
+		}
+
 		#endif
         rtl8367b_setAsicSvlanMemberConfiguration(0, &svlan_memconf);
 }
@@ -1012,10 +1014,13 @@ static void __update_hw_uc(cs_port_id_t port_id)
             if( __c_vlan_table[i].valid )
             {
                 rtk_mbr.bits[0] = __c_vlan_table[i].vlan.mbr;
-				vlan4K.mbr = __c_vlan_table[i].vlan.mbr;
+				//vlan4K.mbr = __c_vlan_table[i].vlan.mbr;
                 rtk_utg.bits[0] = __c_vlan_table[i].vlan.utg;
-				vlan4K.untag = __c_vlan_table[i].vlan.utg;
-                rtk_vlan_set(__c_vlan_table[i].vlan.vid, rtk_mbr, rtk_utg, 0);
+				//vlan4K.untag = __c_vlan_table[i].vlan.utg;
+				rtk_vlan_set(__c_vlan_table[i].vlan.vid, rtk_mbr, rtk_utg, 0);				
+				#if 0
+				cs_printf("rtk_vlan_set, __c_vlan_table[%d].vlan.vid :0x%x, rtk_mbr :0x%x,rtk_utg :0x%x\n", i, __c_vlan_table[i].vlan.vid, rtk_mbr.bits[0], rtk_utg.bits[0]);
+				#endif            
             }
         }
     }
@@ -1077,6 +1082,22 @@ static void __update_hw_uc(cs_port_id_t port_id)
 					#endif
                 }
             }
+			memset(&vlan4K, 0, sizeof(rtl8367b_user_vlan4kentry));
+			vlan4K.vid = port_vlan->def_vlan.vid;
+		    vlan4K.fid_msti = 0;
+			cs_uint16 index = 0;
+			if(__vlan_table_lookup(__c_vlan_table, vlan4K.vid, &index))
+			{
+				vlan4K.mbr = __c_vlan_table[index].vlan.mbr;
+				vlan4K.untag = __c_vlan_table[index].vlan.utg;
+			}
+			else
+			{
+				vlan4K.mbr = 0x4f;
+				vlan4K.untag = 0x4f;
+			}
+			//cs_printf("vlan4K.mbr :0x%x, vlan4K.untag :0x%x\n", vlan4K.mbr, vlan4K.untag);
+		    rtl8367b_setAsicVlan4kEntry(&vlan4K);
 		#if 0
 			if(port_vlan->def_vlan.vid == 1)
 				{
@@ -1095,9 +1116,13 @@ static void __update_hw_uc(cs_port_id_t port_id)
 			if(1 == port_vlan->def_vlan.vid)
 		#endif
 				{
+					#if 0
 				    vlan4K.vid = port_vlan->def_vlan.vid;
 				    vlan4K.fid_msti = 0;
+					vlan4K.mbr = __c_vlan_table[0].vlan.mbr;
+					vlan4K.untag = __c_vlan_table[0].vlan.utg;
 				    rtl8367b_setAsicVlan4kEntry(&vlan4K);
+					#endif
 					#if 0
 					diag_printf("into FALG\n");
 					#endif
@@ -1113,10 +1138,18 @@ static void __update_hw_uc(cs_port_id_t port_id)
 			#endif
 			if(port_vlan->def_vlan.vid != 1)
 				{
+					#if 0
 				    vlan4K.vid = port_vlan->def_vlan.vid;
 				    vlan4K.fid_msti = 0;
+					vlan4K.mbr = __c_vlan_table[0].vlan.mbr;
+					vlan4K.untag = __c_vlan_table[0].vlan.utg;
 				    rtl8367b_setAsicVlan4kEntry(&vlan4K);
+					#endif
+					#if 1
 				    rtk_svlan_c2s_add(port_vlan->def_vlan.vid, rtk_port, port_vlan->def_vlan.vid);
+					#else
+					rtk_svlan_c2s_add(port_vlan->def_vlan.vid, rtk_port, 0);
+					#endif
 				}
             break;
 
@@ -1203,8 +1236,7 @@ static void __update_sw
         }
     }
     else if( SDL_VLAN_MODE_TRUNK == vlan_mode )
-    {
-
+    {  	
         for(i=0; i<cfg_nums; ++i)
         {
             __rule_table_add(__port_vlan_table[port_id].vlan_rule, __RULE_LOOKUP_CVLAN, &vlan_cfg[i]);
@@ -1212,8 +1244,10 @@ static void __update_sw
 			__port_vlan_table[port_id].mc_vlan[i].vid = vlan_cfg[i].s_vlan.vid;
             __vlan_table_add_port(__s_vlan_table, vlan_cfg[i].c_vlan.vid, port_id, EPON_FALSE);
             __vlan_table_add_port(__s_vlan_table, vlan_cfg[i].c_vlan.vid, CS_UPLINK_PORT, EPON_FALSE);
+			#if 1
             __vlan_table_add_port(__c_vlan_table, vlan_cfg[i].c_vlan.vid, port_id, EPON_FALSE);
             __vlan_table_add_port(__c_vlan_table, vlan_cfg[i].c_vlan.vid, CS_UPLINK_PORT, EPON_TRUE);
+			#endif
         }
     }
     else{/* no need update sw table in transparent/stacking/tag mode */}
@@ -1344,6 +1378,20 @@ cs_status epon_request_onu_vlan_set
     CS_IN cs_uint16                     cfg_nums    /* can be zero for modes */
 )
 {
+#if 0
+	cs_printf("***********************************************************\n");
+	cs_printf("in %s\n", __func__);
+	cs_printf("port_id :0x%x\n", port_id);
+	cs_printf("def_vlan.vid :0x%x\n", def_vlan.vid);
+	cs_printf("vlan_mode :0x%x\n", vlan_mode);
+	cs_printf("cfg_nums :0x%x\n", cfg_nums);
+	int count = 0;
+	for(count=0;count<cfg_nums;count++)
+	{
+		cs_printf("vlan_cfg[%d].c_vlan.vid :0x%x, vlan_cfg[%d].s_vlan.vid :0x%x\n", count, vlan_cfg[count].c_vlan.vid, count, vlan_cfg[count].s_vlan.vid);
+	}
+	cs_printf("***********************************************************\n");
+#endif
     int i;
     UNI_PORT_CHECK(port_id);
     __VLAN_MODE_CHECK(vlan_mode);
@@ -1352,13 +1400,22 @@ cs_status epon_request_onu_vlan_set
     || (SDL_VLAN_MODE_AGGREGATION == vlan_mode) 
     || (SDL_VLAN_MODE_TRUNK == vlan_mode) )
     {
-    	__port_vlan_table[port_id].vlan_mode = vlan_mode;
+    	#if 0
+    	__port_vlan_table[port_id].vlan_mode = vlan_mode;		//原来的代码
         __NULL_CHECK(vlan_cfg);
 
         if(cfg_nums > __VLAN_RULE_PER_PORT_MAX)
         {
             return CS_E_PARAM;
         }
+		#else
+		if(cfg_nums > __VLAN_RULE_PER_PORT_MAX)
+        {
+            return CS_E_PARAM;
+        }
+		__NULL_CHECK(vlan_cfg);
+		__port_vlan_table[port_id].vlan_mode = vlan_mode;
+		#endif
 
         for(i = 0; i < cfg_nums; ++i)
         {
@@ -1368,8 +1425,8 @@ cs_status epon_request_onu_vlan_set
     }
 
     __clear_uc(port_id);
-    __update_sw(port_id, def_vlan, vlan_mode, vlan_cfg, cfg_nums);
-    __update_hw(port_id);
+	__update_sw(port_id, def_vlan, vlan_mode, vlan_cfg, cfg_nums);
+	__update_hw(port_id);
 
     return CS_E_OK;
 }
@@ -1386,7 +1443,7 @@ cs_status epon_request_onu_vlan_get
     CS_OUT cs_sdl_vlan_cfg_t            *vlan_cfg,   /* ignored for TRANSPARENT mode */
     CS_OUT cs_uint16                    *cfg_nums    /* zero for TRANSPARENT/TAGGED mode */
 )
-{    
+{
     int i;
     cs_uint16 vlan_cnt = 0;
 
@@ -1441,12 +1498,12 @@ cs_status epon_onu_sw_get_port_pvid(
 {
      cs_sdl_vlan_tag_t            def_vlan;  /* ignored for TRANSPARENT mode */
      cs_sdl_vlan_mode_t         vlan_mode;
-     cs_sdl_vlan_cfg_t            vlan_cfg;   /* ignored for TRANSPARENT mode */
+     cs_sdl_vlan_cfg_t            vlan_cfg[__VLAN_RULE_PER_PORT_MAX];   /* ignored for TRANSPARENT mode */
      cs_uint16                       cfg_nums;    /* zero for TRANSPARENT/TAGGED mode */
 
      cs_status ret = CS_E_ERROR;
 
-     if(epon_request_onu_vlan_get(context, device_id, llidport, port_id, &def_vlan, &vlan_mode, &vlan_cfg, &cfg_nums) == CS_OK)
+     if(epon_request_onu_vlan_get(context, device_id, llidport, port_id, &def_vlan, &vlan_mode, vlan_cfg, &cfg_nums) == CS_OK)
      {
     	 *vid = def_vlan.vid;
     	 ret = CS_E_OK;

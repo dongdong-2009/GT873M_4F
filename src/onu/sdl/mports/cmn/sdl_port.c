@@ -986,6 +986,7 @@ cs_status epon_request_onu_port_stats_get(
     CS_OUT cs_sdl_port_uni_stats_t  *uni_stats
 )
 {
+
     rtk_port_t           port;
     rtk_stat_port_cntr_t port_cnt;
     cs_uint32            val[2] = {0, 0};
@@ -1045,7 +1046,16 @@ cs_status epon_request_onu_port_stats_get(
         uni_stats->txsinglecolfrm_cnt = port_cnt.dot3StatsSingleCollisionFrames;
         uni_stats->txmulticolfrm_cnt = port_cnt.dot3StatsMultipleCollisionFrames;
         uni_stats->txlatecolfrm_cnt = port_cnt.dot3StatsLateCollisions;
-        uni_stats->txexesscolfrm_cnt = port_cnt.etherStatsCollisions;        
+        uni_stats->txexesscolfrm_cnt = port_cnt.etherStatsCollisions;
+		#if 1
+		uni_stats->rxstatsfrm64_cnt = port_cnt.etherStatsPkts64Octets;
+		uni_stats->rxstatsfrm65_127_cnt = port_cnt.etherStatsPkts65to127Octets;
+		uni_stats->rxstatsfrm128_255_cnt = port_cnt.etherStatsPkts128to255Octets;
+		uni_stats->rxstatsfrm256_511_cnt = port_cnt.etherStatsPkts256to511Octets;
+		uni_stats->rxstatsfrm512_1023_cnt = port_cnt.etherStatsPkts512to1023Octets;
+		uni_stats->rxfrm_cnt = uni_stats->rxucfrm_cnt + uni_stats->rxmcfrm_cnt + uni_stats->rxbcfrm_cnt;
+		#endif
+		
     } 
     else {
         aal_uni_mib_get(AAL_MIB_RxUCPktCnt, read_clear, &val[1], &val[0]);

@@ -4,6 +4,7 @@
 #include "sys_cfg.h"
 #include "sdl_api.h"
 #include "cs_utils.h"
+#include "mc_type.h"
 
 #ifdef HAVE_TELNET_CLI
 #define DFT_ENABLE_PASSWD           "enable"
@@ -824,6 +825,330 @@ int cmd_snoop_enable(struct cli_def *cli, char *command, char *argv[], int argc)
     return CLI_OK;
 }
 
+
+#if 1
+extern cs_status mc_mode_get(cs_dev_id_t device, mc_mode_t *mode);
+extern cs_status mc_mode_set(cs_dev_id_t device, mc_mode_t mode);
+
+
+extern int cmd_igmp_mode(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	if(CLI_HELP_REQUESTED)
+	{
+		switch(argc)
+		{
+			case 1:
+				cli_arg_help(cli, 0,
+				"<cr>", "just enter to execuse command. (show igmp mode)",
+				NULL);
+				cli_arg_help(cli, 0,
+				"0", "set igmp snooping mode",
+				NULL);
+				cli_arg_help(cli, 0,
+				"1", "set igmp auth mode",
+				NULL);
+				cli_arg_help(cli, 0,
+				"2", "set igmp proxy mode",
+				NULL);
+				cli_arg_help(cli, 0,
+				"3", "set igmp transparent mode",
+				NULL);
+				return CLI_OK;
+			case 2:
+				return cli_arg_help(cli, 0,
+				"<cr>", "just enter to execuse command. (show igmp mode)",
+				NULL);
+			default:
+				return cli_arg_help(cli, argc > 1, NULL);
+		}
+	}
+	if(argc > 1)
+	{
+		cli_print(cli, "%% Invalid input.");
+		return CLI_OK;
+	}
+	else
+	{
+		//do nothing
+	}
+
+	if(0 == argc)
+	{
+		cs_status ret = CS_E_OK;
+		char mode[15] = {0};
+		mc_mode_t mc_mode;
+    	ret = mc_mode_get(0, &mc_mode);
+		if(CS_E_OK == ret)
+		{
+			switch(mc_mode) 
+			{
+		        case MC_SNOOPING:
+		            strncpy(mode, "snooping", sizeof(mode));
+		            break;
+
+		        case MC_MANUAL:
+		            strncpy(mode, "manual", sizeof(mode));
+		            break;
+
+				case MC_PROXY:
+		            strncpy(mode, "proxy", sizeof(mode));
+		            break;
+
+				case MC_DISABLE:
+		            strncpy(mode, "transparent", sizeof(mode));
+		            break;
+
+		        default:
+		            strncpy(mode, "unknown", sizeof(mode));
+		            break;
+	    	}
+			cs_printf("igmp %s mode\n", mode);
+		}
+		else
+		{
+			cs_printf("mc_mode_get failed\n");
+		}
+	}
+	else if(1 == argc)
+	{
+		cs_status ret = CS_E_OK;
+		int mode = 0;
+		mc_mode_t mc_mode;
+		mode = iros_strtol(argv[0]);
+		switch(mode)
+		{
+			case 0:
+				mc_mode = MC_SNOOPING;
+				break;
+			case 1:
+				mc_mode = MC_MANUAL;
+				break;
+			case 2:
+				mc_mode = MC_PROXY;
+				break;
+			case 3:
+				mc_mode = MC_DISABLE;
+				break;
+			default:
+				mc_mode = MC_SNOOPING;
+				break;
+		}
+		
+		ret = mc_mode_set(0, mc_mode);
+		if(CS_E_OK == ret)
+		{
+			cs_printf("mode :0x%x\n", mode);
+			cs_printf("mc_mode_set success\n");	
+		}
+		else
+		{
+			cs_printf("mc_mode_set failed\n");
+		}
+	}
+	else
+	{
+		//do nothing
+	}
+
+	return CLI_OK;
+}
+
+
+
+#endif
+
+#if 0
+extern onu_slow_path_cfg_cfg_t g_slow_path_ip_cfg;
+cs_status mc_mode_save_to_flash(int mc_mode)
+{
+	#if 0
+	cs_printf("in %s, mc_mode :0x%x\n", __func__, mc_mode);
+	#endif
+	cs_status ret = CS_E_OK;
+	g_slow_path_ip_cfg.mc_mode = mc_mode;
+	int status = 0;
+	status = save_userdata_to_flash((unsigned char *)&g_slow_path_ip_cfg, GWD_PRODUCT_CFG_OFFSET_W, sizeof(g_slow_path_ip_cfg));
+	if(0 == status)
+	{
+		
+		#if 1
+		if(3 == g_slow_path_ip_cfg.mc_mode)
+		{
+			cs_printf("igmp mode :%d,save_userdata_to_flash success\n", mc_mode);
+		}
+		else
+		{
+			//do nothing
+		}
+		#endif
+		
+	}
+	else
+	{
+		cs_printf("igmp mode :%d, save_userdata_to_flash failed\n", mc_mode);
+	}	
+	return ret;
+}
+extern cs_status mc_mode_get_from_flash(int *mc_mode)
+{
+	cs_status ret = CS_E_OK;
+	onu_slow_path_cfg_cfg_t ip_config;
+	int status = 0;
+	status = get_userdata_from_flash((char *)&ip_config, GWD_PRODUCT_CFG_OFFSET_W, sizeof(ip_config));
+	if(0 != status)
+	{
+		cs_printf("igmp mode :%d, get_userdata_from_flash failed\n");
+		ret = CS_E_ERROR;
+	}
+	else
+	{
+		*mc_mode = ip_config.mc_mode;
+		ret = CS_E_OK;
+	}	
+	return ret;
+}
+extern cs_status mc_mode_init(void)
+{
+	cs_status ret = CS_E_OK;
+	mc_mode_t mc_mode;
+	int mode = 0;
+	ret = mc_mode_get_from_flash(&mode);
+	if(CS_E_OK == ret)
+	{
+		if(3 != mode)
+		{
+			goto end;
+		}
+		else
+		{
+			//do nothing
+		}
+		mc_mode = MC_DISABLE;
+		if(CS_E_OK == mc_mode_set(0, mc_mode))
+		{
+			cs_printf("%s success, igmp mode :%d\n", __func__, mc_mode);
+		}
+		else
+		{
+			cs_printf("%s failed\n", __func__);
+		}
+	}
+	else
+	{
+		cs_printf("%s failed\n", __func__);
+	}
+end:
+	return ret;
+}
+#endif
+
+#if 1
+extern onu_slow_path_cfg_cfg_t   g_slow_path_ip_cfg;
+extern cs_status mc_mode_get(cs_dev_id_t device, mc_mode_t *mode);
+cs_status mc_mode_save_to_config(void)
+{
+	cs_status ret = CS_E_OK;
+	cs_dev_id_t device = 0;
+	mc_mode_t mode;
+	int mc_mode;
+	mc_mode_get(device, &mode);
+	mc_mode = mode;
+	g_slow_path_ip_cfg.mc_mode = mc_mode;
+	return ret;
+}
+cs_status config_save_to_flash(void)
+{
+	cs_status ret = CS_E_OK;
+	int status = 0;
+	status = save_userdata_to_flash((unsigned char *)&g_slow_path_ip_cfg, GWD_PRODUCT_CFG_OFFSET_W, sizeof(g_slow_path_ip_cfg));
+	if(0 == status)
+	{
+		//do nothing		
+	}
+	else
+	{
+		cs_printf("save_userdata_to_flash failed!\n");
+	}
+	return ret;
+}
+
+cs_status config_get_from_flash(void)
+{
+	cs_status ret = CS_E_OK;
+	int status = 0;
+	status = get_userdata_from_flash((char *)&g_slow_path_ip_cfg, GWD_PRODUCT_CFG_OFFSET_W, sizeof(g_slow_path_ip_cfg));
+	if(0 != status)
+	{
+		cs_printf("get_userdata_from_flash failed\n");
+		ret = CS_E_ERROR;
+	}
+	else
+	{
+		ret = CS_E_OK;
+	}
+	return ret;
+}
+
+
+cs_status mc_mode_show(int mc_mode)
+{
+	cs_status ret = CS_E_OK;
+	char mode[20] = {0};
+	switch(mc_mode) 
+	{
+		case MC_SNOOPING:
+			strncpy(mode, "snooping", sizeof(mode));
+			break;
+	
+		case MC_MANUAL:
+			strncpy(mode, "manual", sizeof(mode));
+			break;
+	
+		case MC_PROXY:
+			strncpy(mode, "proxy", sizeof(mode));
+			break;
+	
+		case MC_DISABLE:
+			strncpy(mode, "transparent", sizeof(mode));
+			break;
+	
+		default:
+			strncpy(mode, "unknown", sizeof(mode));
+			break;
+	}
+	cs_printf("igmp %s mode\n", mode);
+	
+	return ret;
+}
+extern cs_status mc_mode_init(void)
+{
+	cs_status ret = CS_E_OK;
+	mc_mode_t mc_mode;
+	int mode = 0;
+	mode = g_slow_path_ip_cfg.mc_mode;
+	if(3 == mode)
+	{
+		mc_mode = MC_DISABLE;
+		if(CS_E_OK == mc_mode_set(0, mc_mode))
+		{
+			cs_printf("%s success, igmp mode :%d\n", __func__, mc_mode);
+		}
+		else
+		{
+			cs_printf("%s failed\n", __func__);
+		}
+	}
+	else
+	{
+		//do nothing
+	}
+
+	return ret;
+}
+
+#endif
+
+
 int cmd_show_regular(struct cli_def *cli, char *command, char *argv[], int argc)
 {
     if (CLI_HELP_REQUESTED)
@@ -904,12 +1229,91 @@ void pc(struct cli_def *cli, char *string)
     printf("%s\n", string);
 }
 
+#if 1
+//extern cs_status mc_mode_save_to_flash(int mc_mode);
+//cs_status mc_mode_get(cs_dev_id_t device, mc_mode_t *mode);
+
+extern cs_status mc_mode_save_to_config(void);
+extern cs_status config_save_to_flash(void);
+int cmd_save(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	if(CLI_HELP_REQUESTED)
+	{
+		switch(argc)
+		{
+			case 1:
+            	return cli_arg_help(cli, 0,
+                "<cr>", "save config",
+                 NULL);
+        	default:
+           		return cli_arg_help(cli, argc > 1, NULL);
+		}
+	}
+	else
+	{
+		//do nothing
+	}
+
+	mc_mode_save_to_config();
+	config_save_to_flash();
+	
+	return CLI_OK;
+	
+}
+
+extern cs_status config_get_from_flash(void);
+cs_status mc_mode_show(int mc_mode);
+
+
+int cmd_show_config(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	if(CLI_HELP_REQUESTED)
+	{
+		switch(argc)
+		{
+			case 1:
+            	return cli_arg_help(cli, 0,
+                "config", "show onu config",
+                 NULL);
+			case 2:
+            	return cli_arg_help(cli, 0,
+                "<cr>", "enter to execuse command(show onu config)",
+                 NULL);
+        	default:
+           		return cli_arg_help(cli, argc > 1, NULL);
+		}
+	}
+	else
+	{
+		//do nothing
+	}
+
+	int mc_mode = 0;
+	mc_mode = g_slow_path_ip_cfg.mc_mode;
+	if(3 == mc_mode)
+	{
+		mc_mode_show(mc_mode);
+	}
+	else
+	{
+		//do nothing
+	}
+
+	return CLI_OK;
+	
+}
+
+
+#endif
+
 void cli_reg_usr_cmd(struct cli_command **cmd_root)
 {
     struct cli_command *c;
     struct cli_command *igmp, *snoop, *enable;
     struct cli_command *show_run, * show_run_system,*show_onu;
-    struct cli_command *save,*show_ver;
+    struct cli_command *show_ver = NULL;
+	//struct cli_command *save = NULL;
+	struct cli_command *show = NULL;
 	
 #ifdef HAVE_ONU_RSTP
     struct cli_command *   show_stp;
@@ -965,12 +1369,23 @@ void cli_reg_usr_cmd(struct cli_command **cmd_root)
     snoop  = cli_register_command(cmd_root, igmp, "snooping",  NULL,     PRIVILEGE_PRIVILEGED, MODE_CONFIG_INTF, "IGMP snooping configuration");
     enable = cli_register_command(cmd_root, snoop, "enable",    cmd_snoop_enable,     PRIVILEGE_PRIVILEGED, MODE_CONFIG_INTF, "Enable");
 
+	cli_register_command(cmd_root, NULL, "igmp-mode",  cmd_igmp_mode,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "IGMP mode get/set");
+	
 #ifdef HAVE_ZTE_OAM   
     cli_register_command(cmd_root, NULL, "serial-number",   cmd_serial_number,   PRIVILEGE_PRIVILEGED,   MODE_CONFIG,     "ONU serial number");
 #endif
+
     cli_register_command(cmd_root, NULL, "ctc-loid-pass", cmd_ctc_loid_password, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "Set CTC loid and password");
+
+	#if 0
     save = cli_register_command(cmd_root,  NULL, "save",NULL, PRIVILEGE_PRIVILEGED, MODE_ANY, "Save ONU config");
     cli_register_command(cmd_root,  save, "config", cmd_save_config,PRIVILEGE_PRIVILEGED, MODE_ANY, "Save ONU current config to flash,such as SN and LOID/Password");
+	#endif
+	#if 1
+	cli_register_command(cmd_root, NULL, "save", cmd_save,PRIVILEGE_PRIVILEGED, MODE_ANY, "Save ONU current config to flash");
+	show = cli_register_command(cmd_root, NULL, "show", NULL,PRIVILEGE_PRIVILEGED, MODE_ANY, "show ONU information");
+	cli_register_command(cmd_root, show, "config", cmd_show_config,PRIVILEGE_PRIVILEGED, MODE_ANY, "show ONU config");
+	#endif
     cli_register_command(cmd_root, NULL, "onu-mac",   cmd_pon_mac,   PRIVILEGE_PRIVILEGED,   MODE_CONFIG,     "ONU PON mac");
 
   //  cli_register_command(cmd_root, NULL, "debug",    cmd_debug_mode_int, PRIVILEGE_PRIVILEGED,   MODE_CONFIG,    "Enter debug mode");

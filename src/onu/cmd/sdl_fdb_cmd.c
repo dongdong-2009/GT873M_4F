@@ -357,7 +357,10 @@ void fdb_cmd_learn(int argc, char **argv)
     cs_port_id_t  portid = CS_UNI_PORT_ID1;
     cs_boolean en = 0;
 
-    if(argc > 4) return ;
+    if(argc != 2)
+    {
+		return;
+    }
     
     en = iros_strtol(argv[0]);
     portid = iros_strtol(argv[1]);  
@@ -370,16 +373,16 @@ void fdb_cmd_learn(int argc, char **argv)
         return ;
     }
 	if(status == CS_E_OK)
-		{
-			if(en == 1)
-				{
-					cs_printf("set port %d fdb learn enable success\n",portid);
-				}
-			else
-				{
-					cs_printf("set port %d fdb learn disable success\n",portid);
-				}
-		}
+	{
+		if(en == 1)
+			{
+				cs_printf("set port %d fdb learn enable success\n",portid);
+			}
+		else
+			{
+				cs_printf("set port %d fdb learn disable success\n",portid);
+			}
+	}
     if(status != CS_E_OK){
         cs_printf("epon_request_onu_mac_learn_set failed \n");    
         cs_status_2_cmd_rc_map(status);

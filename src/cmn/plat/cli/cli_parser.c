@@ -1555,16 +1555,24 @@ int cli_loop(struct cli_def *cli)
 
 
             if (c == 0) continue;
-			#if 0
-            if (c == '\n')
-            {
-            	c = '\r';
-            }
-			#else
-			if (c == '\n')
-            {
-            	continue;
-            }
+			#if 1
+            static unsigned char ch_front = 0;
+			static unsigned char ch_rear = 0;
+			ch_front = ch_rear;
+			ch_rear = c;
+
+			if(('\r' == ch_front)&&('\n' == c))
+			{
+				continue;
+			}
+			else
+			{
+				//do nothing
+			}
+			if('\n' == c)
+			{
+				c = '\r';
+			}
 			#endif
 
             if (c == '\r')

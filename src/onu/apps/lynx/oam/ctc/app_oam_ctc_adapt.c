@@ -1626,6 +1626,8 @@ cs_status ctc_oam_onu_mgmt_config_get_adapt(
 }
 #define GWD_PRODUCT_CFG_OFFSET_INBAND  (1024*20)
 extern onu_slow_path_cfg_cfg_t   g_slow_path_ip_cfg;
+extern cs_status ip_mode_set(int mode);
+
 cs_status ctc_oam_onu_mgmt_config_set_adapt(
         ctc_oam_mgmt_parm_t * parm)
 {
@@ -1654,6 +1656,9 @@ cs_status ctc_oam_onu_mgmt_config_set_adapt(
 		{
            cs_printf( "%% Save fail .");
         }
+		#if 1
+		ip_mode_set(2);
+		#endif
 		if((epon_request_onu_ip_config_set(parm->mgmt_ip.addr.ipv4, parm->mask, parm->mgmt_gateway.addr.ipv4) == CS_OK) &&
 			(epon_request_onu_inband_ip_config_set(APP_IPINTF_INBNAD_MGNT, parm->mgmt_data_pri, parm->mgmt_cvlan , 0, 0) == CS_OK))
 			return CS_OK;

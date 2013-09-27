@@ -50,6 +50,10 @@
 #ifdef HAVE_ZTE_OAM
 #define MODE_ZTE                12
 #endif/* END_HAVE_ZTE_OAM */
+#ifdef HAVE_TERMINAL_SERVER
+#define MODE_SERIAL_TO_ENET		13
+#endif
+
 
 #define PRINT_PLAIN             0x00
 #define PRINT_FILTERED          0x01
@@ -98,7 +102,12 @@ enum cli_states {
 
 #define CTRL(c) (c - '@')
 
+#if 0
 #define CS_CONSOLE_BUF_LEN  8192
+#else
+#define CS_CONSOLE_BUF_LEN  5120
+#endif
+
 
 
 
@@ -206,6 +215,10 @@ typedef struct {
 		cs_uint32	device_mask;	//采用本地字节序
 		cs_uint32	device_gateway;	//采用本地字节序
 		cs_uint16	device_vlan;	//采用本地字节序
+		#endif
+
+		#if 1
+		int			mc_mode;	//0:MC_SNOOPING, 1:MC_MANUAL, 2:MC_PROXY, 3:MC_DISABLE
 		#endif
 } onu_slow_path_cfg_cfg_t;
 typedef void (*USER_CMD_INIT)(struct cli_command **);

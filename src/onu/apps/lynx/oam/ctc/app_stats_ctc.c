@@ -146,10 +146,21 @@ cs_status ctc_onu_stats_monitor_stop(cs_port_id_t port)
     if(port > CTC_MAX_ONU_UNI_PORTS)
         return CS_E_PARAM;
 
+	#if 1
+	if(NULL == g_moitor_stats)
+	{
+		return CS_E_PARAM;
+	}
+	else
+	{
+		//do nothing
+	}
+	#endif
     ctrl = &g_moitor_stats[port];
     if(ctrl->timer != 0)
     {
-        cs_timer_del(ctrl->timer);
+    	//cs_printf("ctrl->timer :0x%x\n", ctrl->timer);
+        cs_timer_del(ctrl->timer);	//出错的位置(把1 做地址，出错)
     }
     memset(ctrl, 0, sizeof(ctc_stats_monitor_ctrl_t));
     ctrl->port = port;

@@ -214,6 +214,30 @@ void onu_link_changed_led_proc(cs_uint16 dev, cs_int32 evt, void *msg)
     }
 }
 
+#if 1
+void onu_reset(void)
+{
+	iros_system_reset(RESET_TYPE_FORCE);
+}
+void onu_pon_link_down_proc(cs_uint16 dev, cs_int32 evt, void *msg)
+{
+    sdl_event_reg_t *pMsg = (sdl_event_reg_t *)msg;
+
+    if(msg == NULL)
+        return;
+
+    if(pMsg->reg)
+    {
+    	//do nothing
+    }
+	else
+	{
+		onu_reset();
+	}
+
+	
+}
+#endif
 
 void event_init()
 {
@@ -227,6 +251,7 @@ void event_init()
         (sdl_event_cb_f)event_detect);
     onu_evt_reg(EPON_EVENT_REG_CHANGE, (void *)onu_evt_changed_led_proc, NULL);
     onu_evt_reg(EPON_EVENT_PORT_LINK_CHANGE,(void *)onu_link_changed_led_proc, NULL);
+	onu_evt_reg(EPON_EVENT_REG_CHANGE,(void *)onu_pon_link_down_proc, NULL);
 }
 
 void event_main_proc(cs_int32 type, cs_uint32 msg_len, void* msg, cs_boolean relay)

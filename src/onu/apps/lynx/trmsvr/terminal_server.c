@@ -107,6 +107,11 @@ extern cs_status socket_status_clear(term_server_config_t* pTerm_serv_cfg);
 extern cs_uint8 socket_status_get(term_server_config_t* pTerm_serv_cfg);
 extern cs_status buf_print(cs_uint8 *buf, cs_uint16 len);
 
+#if 0
+static cs_status uart_enable_semaphore_init(cs_uint8 uart);
+static cs_status uart_enable_semaphore_post(cs_uint8 uart);
+static cs_status uart_enable_semaphore_wait(cs_uint8 uart);
+#endif
 
 
 /*****************************************************************************
@@ -174,7 +179,9 @@ cs_int32 ts_server_fd_close(term_server_config_t* pTs_cfg)
     //add sem to protect
     if((server_fd = pTs_cfg->server_fd) >= 0) {
         pTs_cfg->server_fd = -1;
+		#if 1
         close(server_fd);
+		#endif
         TS_DBG("%s, close server fd %d, %d\n", __func__, server_fd, __LINE__);
     }
     else {
@@ -622,17 +629,8 @@ static cs_status tc_tcp_socket_setup(term_server_config_t* pTerm_serv_cfg)
 
     memset(&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
-	#if 0
-    serv_addr.sin_addr.s_addr = htonl(LOCAL_IP);
-	#else
 	serv_addr.sin_addr.s_addr = htonl(pTsCfg->remote_server_ip);
-	#endif
-
-	#if 0
-    serv_addr.sin_port = htons(pTerm_serv_cfg->proto_port);
-	#else
 	serv_addr.sin_port = htons(pTerm_serv_cfg->remote_server_port);
-	#endif
 
 	#if 1
 	if(connect(pTsCfg->client_fd,(struct sockaddr *)(&serv_addr),sizeof(struct sockaddr)) == -1)
@@ -642,42 +640,23 @@ static cs_status tc_tcp_socket_setup(term_server_config_t* pTerm_serv_cfg)
 			cs_thread_delay(5000);
 			return CS_E_ERROR;
 		}
+	cs_printf("...................(547)client create success\n");
 	#else
-	int status = 0;
-	do
+	int connect_status =0;
+	while(1)
 	{
-		cs_printf("while start\n");
-		status = connect(pTsCfg->client_fd,(struct sockaddr *)(&serv_addr),sizeof(struct sockaddr));
-		cs_printf("status :%d\n", status);
-		if(-1 == status)
+		connect_status = connect(pTsCfg->client_fd,(struct sockaddr *)(&serv_addr),sizeof(struct sockaddr));
+		if(-1 == connect_status)
 		{
-			#if 0
-			cs_printf("Connect Error:%s\a\n",strerror(errno));
-			cs_printf("..................................(586)connect error\n");
-			#else
-			cs_printf("connect failed\n");
-			#endif
+			cs_printf("Connect Error *********\n");
 		}
 		else
 		{
-			cs_printf("connect success\n");
-		}
-		cs_printf("status :%d\n", status);
-		if(-1 != status)
-		{
-			cs_printf("break\n");
+			cs_printf("connect seccess***********\n");
 			break;
 		}
-		else
-		{
-			//do nothing
-			cs_printf("continue\n");
-		}
-	}while(1);
-	cs_printf("while end\n");
-
+	}
 	#endif
-	//cs_printf("...................(547)client create success\n");
 	return CS_E_OK;
 
 }
@@ -1076,6 +1055,10 @@ extern cs_status uart_ip_info_get_from_global(cs_uint32 *uart_ip, cs_uint32 *uar
 **---------------------------------------------*/
 static cs_status ts_udp_socket_setup(term_server_config_t* pTerm_serv_cfg)
 {
+	#if 0
+		cs_printf("in ts_udp_socket_setup****\n");
+	#endif
+
     struct sockaddr_in serv_addr;
     //cs_uint32 index;
     struct timeval tv;
@@ -1153,128 +1136,155 @@ static cs_status ts_udp_socket_setup(term_server_config_t* pTerm_serv_cfg)
 /**/
 static void ts_udp_receive(term_server_config_t* pTerm_serv_cfg)
 {
-#if 0
+	#if 0
 	cs_printf("in ts_udp_receive************\n");
-#endif
-     socklen_t cli_len;
-     fd_set in_fds;
-     struct timeval   timeout;
-     cs_int32 len,sr;
-     struct timeval * p_timeout = NULL; /* default never timeout*/
-     net_msg_t * buffer;
-     cs_int32 dbg_loop;
-     cs_uint32 index;
-     struct sockaddr_in client_addr;
+	#endif
+	socklen_t cli_len;
+	fd_set in_fds;
+	struct timeval   timeout;
+	cs_int32 len,sr;
+	struct timeval * p_timeout = NULL; /* default never timeout*/
+	net_msg_t * buffer;
+	cs_int32 dbg_loop;
+	cs_uint32 index;
+	struct sockaddr_in client_addr;
 
-     while(1)
-    {
-       if(TERM_SERV_ENABLE_FLAG != pTerm_serv_cfg->enable_flag)
-	   {
-	   		#if 0
+	 
+	#if 1
+	cs_uint8 uart_id = 0;
+	uart_id = pTerm_serv_cfg->uart_cfg.uart_id;
+	pTerm_serv_cfg = TS_CFG_GET(uart_id); 
+	#endif
+
+	#if 0
+	cs_printf("pTerm_serv_cfg->server_fd :0x%x\n", pTerm_serv_cfg->server_fd);
+	#endif
+	while(pTerm_serv_cfg->server_fd >= 0)
+	{
+		if(TERM_SERV_ENABLE_FLAG != pTerm_serv_cfg->enable_flag)
+		{
+			#if 0
 			cs_printf("TERM_SERV_ENABLE_FLAG != pTerm_serv_cfg->enable_flag \n");
 			#endif
-            break;
-       }
-       
-       index = UART_TO_TERM_SERV(pTerm_serv_cfg->uart_cfg.uart_id);
+			break;
+		}
 
-       cli_len = sizeof(struct sockaddr_in);
-        
-       FD_ZERO(&in_fds);
-       FD_SET(pTerm_serv_cfg->server_fd, &in_fds); 
-       /* client timeout setting */
-       if(pTerm_serv_cfg->client_timeout > 0)
-	   {
-              timeout.tv_sec = pTerm_serv_cfg->client_timeout;
-              timeout.tv_usec = 0;
-              p_timeout = (struct timeval *)&timeout;
-       }
+		index = UART_TO_TERM_SERV(pTerm_serv_cfg->uart_cfg.uart_id);
 
-       if ((sr = select(pTerm_serv_cfg->server_fd + 1, &in_fds, NULL, NULL, p_timeout)) < 0)
-	   {
-              /* select error */
-              if (errno == EINTR)
-			  {
-                   continue;
-              }
-    
-            TS_DBG("select(UDP for client) error\n");
+		cli_len = sizeof(struct sockaddr_in);
+
+		/* client timeout setting */
+		if(pTerm_serv_cfg->client_timeout > 0)
+		{
+			timeout.tv_sec = pTerm_serv_cfg->client_timeout;
+			timeout.tv_usec = 0;
+			p_timeout = (struct timeval *)&timeout;
+		}
+
+		if((buffer = ring_buffer_get(pTerm_serv_cfg)) == NULL)
+		{
+			//cs_thread_delay(10);
+			//continue;
 			#if 0
-			cs_printf("select err\n");
-			#endif
-              /* error kick off client */
-              break;
-       }
-    
-       if (0 == sr)
-	   {
-              /* timeout kick off client */
-            TS_DBG("select(UDP for client) timeout\n");
-			  #if 0
-				cs_printf("select(UDP for client) timeout\n\n");
-				#endif
-              break;
-       }
-
-       if((buffer = ring_buffer_get(pTerm_serv_cfg)) == NULL)
-	   {
-            //cs_thread_delay(10);
-            //continue;
-            #if 0
 			cs_printf(" buffer = (net_msg_t *)ts_dummy_buf; \n");
 			#endif
-            buffer = (net_msg_t *)ts_dummy_buf;
-       }
-        
-       memset(buffer, 0, TS_BUF_SIZE);
-       memset(&client_addr, 0, sizeof(client_addr));
-       if ((len = recvfrom(pTerm_serv_cfg->server_fd, buffer->net_data,
-                   TS_BUF_SIZE-sizeof(net_msg_t),0,
-                   (struct sockaddr *)&client_addr,&cli_len)) < 0  ) 
-		{
-              TS_DBG("recvfrom fd %d error %d\n", pTerm_serv_cfg->server_fd, len);
-        }
-        else
-        {
-        	#if 0
-			cs_printf("recvform fd %d\n", pTerm_serv_cfg->server_fd);
-			cs_printf("pTerm_serv_cfg->client_ip :0x%x\n", pTerm_serv_cfg->client_ip);
-			cs_printf("pTerm_serv_cfg->client_port :0x%x\n", pTerm_serv_cfg->client_port);
-			cs_printf("ntohl(client_addr.sin_addr.s_addr) :0x%x\n", ntohl(client_addr.sin_addr.s_addr));
-			cs_printf("ntohs(client_addr.sin_port) :0x%x\n", ntohs(client_addr.sin_port));
-			#endif
-            /* First client or equal to first client */
-            if((0 == pTerm_serv_cfg->client_ip) ||
-               ((ntohl(client_addr.sin_addr.s_addr) == pTerm_serv_cfg->client_ip) &&
-                (ntohs(client_addr.sin_port) == pTerm_serv_cfg->client_port))){
-                #if 0
-				cs_printf("First client or equal to first client \n");
-				#endif
-                /* Client connection setup update flag */
-                pTerm_serv_cfg->client_closed_flag = 0;
-                pTerm_serv_cfg->client_ip   = ntohl(client_addr.sin_addr.s_addr);
-                pTerm_serv_cfg->client_port = ntohs(client_addr.sin_port);
-                pTerm_serv_cfg->term_serv_rx_ip_packets ++;
-                pTerm_serv_cfg->term_serv_rx_ip_cnt += len;
-                if(term_serv_dbg){
-                    cs_printf("Server %d received Message : ",index);
-                    for( dbg_loop = 0; dbg_loop < len; dbg_loop++)
-                     cs_printf("%x ",(buffer->net_data[dbg_loop]));
-                    cs_printf(" \n");
-                }
-                //ts_uart_send(pTerm_serv_cfg->uart_cfg.uart_id,buffer, len);
-                if(buffer != (net_msg_t *)ts_dummy_buf) {
-                    buffer->length = len;
-                    buffer->uart_num = pTerm_serv_cfg->uart_cfg.uart_id;
-                    ts_net_msg_send(buffer);
-                }
-                //  cs_thread_delay(50);
-            }
-         }
- }
+			buffer = (net_msg_t *)ts_dummy_buf;
+		}
 
+		memset(buffer, 0, TS_BUF_SIZE);
+		memset(&client_addr, 0, sizeof(client_addr));
+
+		
+		FD_ZERO(&in_fds);
+		FD_SET(pTerm_serv_cfg->server_fd, &in_fds); 
+		sr = select(pTerm_serv_cfg->server_fd + 1, &in_fds, NULL, NULL, p_timeout);
+		if(sr < 0)
+		{
+			/* select error */
+			if (errno == EINTR)
+			{
+				continue;
+			}
+
+			TS_DBG("select(UDP for client) error\n");
+			/* error kick off client */
+			break;
+		}
+		else if (0 == sr)
+		{
+			/* timeout kick off client */
+			TS_DBG("select(UDP for client) timeout\n");
+			break;
+		}
+		else
+		{
+			#if 0
+			cs_printf("sr :0x%x\n", sr);
+			#endif
+			if(FD_ISSET(pTerm_serv_cfg->server_fd, &in_fds))
+			{
+				if ((len = recvfrom(pTerm_serv_cfg->server_fd, buffer->net_data,
+							TS_BUF_SIZE-sizeof(net_msg_t),0,
+							(struct sockaddr *)&client_addr,&cli_len)) < 0	) 
+				 {
+					   TS_DBG("recvfrom fd %d error %d\n", pTerm_serv_cfg->server_fd, len);
+					   #if 0
+					   cs_printf("recvfrom error\n");
+					   #endif
+					   break;
+				 }
+				 else
+				 {
+				 	#if 0
+					cs_printf("recvfrom success, len :0x%x\n", len);
+					cs_printf("pTerm_serv_cfg->client_ip :0x%x\n", pTerm_serv_cfg->client_ip);
+					cs_printf("pTerm_serv_cfg->client_port :0x%x\n", pTerm_serv_cfg->client_port);
+					cs_printf("ntohl(client_addr.sin_addr.s_addr) :0x%x\n", ntohl(client_addr.sin_addr.s_addr));
+					cs_printf("ntohs(client_addr.sin_port) :0x%x\n", ntohs(client_addr.sin_port));
+					#endif
+					 /* First client or equal to first client */
+					 if((0 == pTerm_serv_cfg->client_ip) ||
+						((ntohl(client_addr.sin_addr.s_addr) == pTerm_serv_cfg->client_ip) &&
+						 (ntohs(client_addr.sin_port) == pTerm_serv_cfg->client_port))){
+						 #if 0
+						 cs_printf("Client connection setup update flag \n");
+						 #endif
+						 /* Client connection setup update flag */
+						 pTerm_serv_cfg->client_closed_flag = 0;
+						 pTerm_serv_cfg->client_ip	 = ntohl(client_addr.sin_addr.s_addr);
+						 pTerm_serv_cfg->client_port = ntohs(client_addr.sin_port);
+						 pTerm_serv_cfg->term_serv_rx_ip_packets ++;
+						 pTerm_serv_cfg->term_serv_rx_ip_cnt += len;
+						 if(term_serv_dbg){
+							 cs_printf("Server %d received Message : ",index);
+							 for( dbg_loop = 0; dbg_loop < len; dbg_loop++)
+							  cs_printf("%x ",(buffer->net_data[dbg_loop]));
+							 cs_printf(" \n");
+						 }
+						 //ts_uart_send(pTerm_serv_cfg->uart_cfg.uart_id,buffer, len);
+						 if(buffer != (net_msg_t *)ts_dummy_buf) {
+							 buffer->length = len;
+							 buffer->uart_num = pTerm_serv_cfg->uart_cfg.uart_id;
+							 ts_net_msg_send(buffer);
+						 }
+						 //  cs_thread_delay(50);
+					 }
+				  }
+			
+			}
+		}
+
+	}
+
+	#if 0
+	cs_printf("after udp recvfrom*****\n");
+	#endif
+	#if 0
     /* error or timeout kick off client */
     ts_client_fd_close(pTerm_serv_cfg);
+	#else
+	//ts_server_fd_close(pTerm_serv_cfg);
+	#endif
     /* Client closed update flag */
     pTerm_serv_cfg->client_closed_flag = 1;
     pTerm_serv_cfg->term_serv_rx_ip_packets = 0;
@@ -1500,7 +1510,7 @@ static void ts_net_rx_process(term_server_config_t* pTerm_serv_cfg)
     }
 #else
 	#if 0
-	cs_printf("in ts_net_rx_process 1225\n");
+	uart_enable_semaphore_init(pTerm_serv_cfg->uart_cfg.uart_id);
 	#endif
 //	cyg_thread_delay(600); // delay 600 ticks, that is, 6 seconds
 //	cs_printf("cyg_thread_delay(600)\n");
@@ -1508,8 +1518,8 @@ static void ts_net_rx_process(term_server_config_t* pTerm_serv_cfg)
 	{
 		if(1 == socket_status_get(pTerm_serv_cfg))		/*已建立socket*/
 		{
-			#if 0
-			cs_printf("has created socket. 1230\n");
+			#if 1
+			cs_printf("has created socket.\n");
 			#endif
 			if(IPPROTO_TCP == pTerm_serv_cfg->proto_type)	/*tcp 协议*/
 			{
@@ -1534,7 +1544,7 @@ static void ts_net_rx_process(term_server_config_t* pTerm_serv_cfg)
 				{
 					// do nothing
 					#if 1
-					cs_printf("wrong pTerm_serv_cfg server/client1247\n");
+					cs_printf("wrong pTerm_serv_cfg server/client\n");
 					socket_status_clear(pTerm_serv_cfg);
 					cs_thread_delay(2000);
 					#endif
@@ -1565,9 +1575,40 @@ static void ts_net_rx_process(term_server_config_t* pTerm_serv_cfg)
 //			cs_printf("cs_thread_delay(2000) 1264\n");
 //			cs_thread_delay(2000);
 			//cs_printf("create socket. 1266\n");
-			//cs_printf("pTerm_serv_cfg->proto_type :0x%x (1270)\n", pTerm_serv_cfg->proto_type);
+			#if 0
+			if(1 == pTerm_serv_cfg->uart_cfg.uart_id)
+			{
+				cs_printf("pTerm_serv_cfg->socket_control :0x%x\n", pTerm_serv_cfg->socket_control);
+			}
+			#endif
+			
+			#if 1
+			if(0 == pTerm_serv_cfg->socket_control)		//是否要创建socket
+			{
+				cs_thread_delay(2000);
+				continue;
+			}
+			else
+			{
+				//do nothing
+			}
+			#endif
+			#if 0
+			uart_enable_semaphore_wait(pTerm_serv_cfg->uart_cfg.uart_id);
+			cs_printf("pTerm_serv_cfg->uart_cfg.uart_id :0x%x\n", pTerm_serv_cfg->uart_cfg.uart_id);
+			cs_printf("pTerm_serv_cfg->proto_type :0x%x\n", pTerm_serv_cfg->proto_type);
+			cs_printf("pTerm_serv_cfg->server_enable :0x%x\n", pTerm_serv_cfg->server_enable);
+			cs_printf("pTerm_serv_cfg->client_enable :0x%x\n", pTerm_serv_cfg->client_enable);
+			#endif
 			if(IPPROTO_TCP == pTerm_serv_cfg->proto_type)
 			{
+				#if 0
+				if(1 == pTerm_serv_cfg->uart_cfg.uart_id)
+				{
+					cs_printf("pTerm_serv_cfg->proto_type :0x%x (1590)\n", pTerm_serv_cfg->proto_type);
+				}
+				#endif
+				
 				if(0 != pTerm_serv_cfg->server_enable)
 				{
 					#if 0
@@ -1591,8 +1632,8 @@ static void ts_net_rx_process(term_server_config_t* pTerm_serv_cfg)
 				}
 				else if(0 != pTerm_serv_cfg->client_enable)
 				{
-					#if 0
-					cs_printf("tc_enable. 1276\n");
+					#if 1
+					cs_printf("tc_enable.\n");
 					#endif
 					cs_status status = CS_E_OK;
 					status = tc_enable(pTerm_serv_cfg);	/*建立 tcp client socket*/
@@ -1611,35 +1652,62 @@ static void ts_net_rx_process(term_server_config_t* pTerm_serv_cfg)
 				else
 				{
 					// do nothing
-				//	cs_printf("wrong pTerm_serv_cfg server/client 1282\n");
+					//cs_printf("wrong pTerm_serv_cfg server/client 1282\n");
 					cs_thread_delay(2000);
 				}
 			}
 			else if(IPPROTO_UDP == pTerm_serv_cfg->proto_type)
 			{
+				
 				#if 0
-				cs_printf("ts_udp_socket_setup. 1287\n");
-				#endif
-				cs_status status = CS_E_OK;
-				#if 0
-				status = ts_udp_socket_setup(pTerm_serv_cfg);	/*建立 udp socket*/
-				#else
-				status = ts_enable(pTerm_serv_cfg);
-				#endif
-				if(CS_E_OK == status)
+				if(1 == pTerm_serv_cfg->uart_cfg.uart_id)
 				{
-					//do nothing
-					cs_printf("ts_enable success\n");
-					cs_thread_delay(2000);
+					cs_printf("pTerm_serv_cfg->proto_type :0x%x (1647)\n", pTerm_serv_cfg->proto_type);
+				}
+				#endif
+				if(0 != pTerm_serv_cfg->server_enable)
+				{
+
+					cs_status status = CS_E_OK;
+					#if 0
+					status = ts_udp_socket_setup(pTerm_serv_cfg);	/*建立 udp socket*/
+					#else
+					status = ts_enable(pTerm_serv_cfg);
+					#endif
+					if(CS_E_OK == status)
+					{
+						//do nothing
+						cs_printf("ts_enable success\n");
+						cs_thread_delay(2000);
+					}
+					else
+					{
+						cs_printf("ts_enable failed\n");
+						cs_thread_delay(2000);
+					}
+					
+				}
+				else if(0 != pTerm_serv_cfg->client_enable)
+				{
+			
 				}
 				else
 				{
-					cs_printf("ts_enable failed\n");
 					cs_thread_delay(2000);
 				}
+				
+
 			}
 			else
 			{
+				
+				#if 0
+				if(1 == pTerm_serv_cfg->uart_cfg.uart_id)
+				{
+					cs_printf("pTerm_serv_cfg->proto_type :0x%x (1678)\n", pTerm_serv_cfg->proto_type);
+				}
+				#endif
+				
 				//do nothing
 //			cs_printf("cs_thread_delay(2000) 1293\n");
 //				cs_thread_delay(2000);
@@ -1817,6 +1885,7 @@ static void ts_thread_create(void)
             TERM_SERV_IP_RX_THREAD_PRIORITY, 0);        
     cs_printf("term_server0_rx_thread created\n");
 
+	
     cs_thread_create(&ip_rx1_thread_id, "Term Serv Rx1",
             ts_net_rx_thread,(void *)1,TERM_SERV_THREAD_STACKSIZE,
             TERM_SERV_IP_RX_THREAD_PRIORITY, 0);        
@@ -1831,6 +1900,7 @@ static void ts_thread_create(void)
             ts_net_rx_thread,(void *)3,TERM_SERV_THREAD_STACKSIZE,
             TERM_SERV_IP_RX_THREAD_PRIORITY, 0);        
     cs_printf("term_server3_rx_thread created\n");
+
 
     /* The task process transmitting UART data */
     cs_thread_create(&uart2net_thread_id, "Term Serv uart2net",
@@ -1923,6 +1993,9 @@ extern cs_status Pterm_serv_cheak(term_server_config_t* pTerm_serv_cfg,term_serv
 /* Create a terminal server and attach it with a given uart. */
 cs_status ts_enable(term_server_config_t* pTerm_serv_cfg)
 {
+#if 0
+	cs_printf("in ts_enable****\n");
+#endif
     cs_status status = CS_E_OK;
  //   cs_uint32 i = 0;
     term_server_config_t *pTsCfg = NULL;
@@ -2204,6 +2277,9 @@ cs_status Pterm_serv_cheak(term_server_config_t* pTerm_serv_cfg,term_server_conf
     }
     memcpy(pTsCfg, pTerm_serv_cfg, sizeof(term_server_config_t));
 
+	#if 0
+	cs_printf("pTerm_serv_cfg->server_enable :0x%x\n", pTerm_serv_cfg->server_enable);
+	#endif
     /* init IP receive ring buffer */
 	if(pTerm_serv_cfg->server_enable)
 	{
@@ -2232,7 +2308,7 @@ cs_status Pterm_serv_cheak(term_server_config_t* pTerm_serv_cfg,term_server_conf
 	else
 	{
 		pTerm_serv_cfg->server_enable = 0;
-		#if 1
+		#if 0
 		cs_printf("pTerm_serv_cfg->server_enable = 0x%x\n", pTerm_serv_cfg->server_enable);
 		#endif
 	}
@@ -2315,7 +2391,7 @@ cs_status Pterm_client_cheak(term_server_config_t* pTerm_serv_cfg,term_server_co
 
 extern cs_status tc_disable(cs_uint8 uart)
 {
-#if 0
+#if 1
 	cs_printf("in tc_disable\n");
 #endif
 
@@ -2538,7 +2614,7 @@ cs_status pConfig_set(cs_uint32 uart_num, term_server_config_t *pConfig)
 	else
 	{
 		//do nothing
-		cs_printf("wrong pTemp->model_flag.\n");
+		//cs_printf("wrong pTemp->model_flag.\n");
 	}
 	
 #endif
@@ -2573,7 +2649,9 @@ extern cs_uint8 socket_status_get(term_server_config_t* pTerm_serv_cfg);
 
 cs_status uart_server_enable(cs_uint8 uart)
 {
-#ifdef HAVE_DB_MANAGMENT
+#if 0
+	uart_enable_semaphore_post(uart);
+#endif
     term_server_config_t * pConfig = NULL;
     pConfig = TS_CFG_GET(uart);
 	if(0 == socket_status_get(pConfig))
@@ -2594,8 +2672,6 @@ cs_status uart_server_enable(cs_uint8 uart)
 		#endif
 		return CS_E_ERROR;
 	}
-
-#endif
 }
 
 extern cs_status uart_server_disable(cs_uint8 uart)
@@ -2625,6 +2701,10 @@ extern cs_uint8 socket_status_get(term_server_config_t* pTerm_serv_cfg);
 
 extern cs_status uart_client_enable(cs_uint8 uart)
 {
+#if 0
+	uart_enable_semaphore_post(uart);
+#endif
+
 	term_server_config_t * pConfig = NULL;
 	pConfig = TS_CFG_GET(uart);
 	if(0 == socket_status_get(pConfig))
@@ -3097,6 +3177,8 @@ extern int cmd_uart_configure(struct cli_def *cli, char *command, char *argv[], 
 	return CLI_OK;
 }
 
+#if 0
+
 extern int cmd_uart_client_set_server_ip(struct cli_def *cli, char *command, char *argv[], int argc)
 {
 	if(CLI_HELP_REQUESTED)
@@ -3284,7 +3366,7 @@ extern int cmd_uart_client_get_server_port(struct cli_def *cli, char *command, c
 	cs_printf("cmd_uart_client_set_server_ip success\n");
 	return CLI_OK;
 }
-
+#endif
 
 
 
@@ -3586,7 +3668,7 @@ extern cs_status uart_ip_init(void)
 	uart_mask = g_slow_path_ip_cfg.uart_mask;
 	uart_gateway = g_slow_path_ip_cfg.uart_gateway;
 	uart_vlan = g_slow_path_ip_cfg.uart_vlan;
-	uart_ip_info_save_to_global(uart_ip, uart_mask, uart_gateway, uart_vlan);
+	//uart_ip_info_save_to_global(uart_ip, uart_mask, uart_gateway, uart_vlan);
 	ip_mode_set(0);
 	app_ipintf_add_ip_address(uart_ip, uart_gateway, uart_mask);
 	ip_mode_set(1);
@@ -3630,6 +3712,715 @@ static cs_status uart_ip_set_default(cs_uint32 *ip, cs_uint32 *mask, cs_uint32 *
 
 
 #endif
+
+#if 0
+static cyg_sem_t uart_enable_sem[4];
+static cs_status uart_enable_semaphore_init(cs_uint8 uart)
+{
+	cs_status ret = CS_E_OK;
+	cyg_count32 sem_default = 0;
+	cs_uint8 uart_id = 0;
+	uart_id = uart - 1;
+	cyg_semaphore_init(&uart_enable_sem[uart_id], sem_default);
+#if 1
+	cs_printf("in uart_enable_semaphore_init********\n");
+#endif
+
+	return ret;
+}
+
+static cs_status uart_enable_semaphore_post(cs_uint8 uart)
+{
+	cs_status ret = CS_E_OK;
+	cs_uint8 uart_id = 0;
+	uart_id = uart - 1;
+	cyg_semaphore_post(&uart_enable_sem[uart_id]);
+	#if 1
+	cs_printf("in uart_enable_semaphore_post********\n");
+	#endif
+	return ret;
+}
+
+static cs_status uart_enable_semaphore_wait(cs_uint8 uart)
+{
+	cs_status ret = CS_E_OK;
+	cs_uint8 uart_id = 0;
+	uart_id = uart - 1;
+	cyg_semaphore_wait(&uart_enable_sem[uart_id]);
+	#if 1
+	cs_printf("in uart_enable_semaphore_wait********\n");
+	#endif
+	return ret;
+}
+#endif
+
+#if 1
+extern cs_status gw_serial_port_baud_set(cs_uint16 serial_port_id, int baud)
+{
+	#if 0
+	cs_printf("in gw_serial_port_baud_set\n");
+	cs_printf("serial_port_id :0x%x\n", serial_port_id);
+	cs_printf("baud :%d\n", baud);
+	#endif
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+	pConfig->uart_cfg.baud_rate = baud;
+
+	return ret;
+}
+
+cs_status serial_port_buf_malloc(cs_uint16 serial_port_id)
+{
+	#if 0
+	cs_printf("in serial_port_buf_free\n");
+	#endif
+	
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+
+	int i = 0;
+	for(i=0; i<MAX_RING_BUF_NUM; i++)
+	{
+		if((pConfig->ip_rx_buf.pBuf[i] = iros_malloc(IROS_MID_SYS,TS_BUF_SIZE)) == NULL)
+		{
+			cs_printf("Terminal server enable failed for no memory\r\n");
+			int j = 0;
+			for(j=0;j<i;j++)
+			{
+				iros_free(pConfig->ip_rx_buf.pBuf[j]);
+			}
+			ret = CS_E_ERROR;
+			break;
+		}
+		else
+		{
+			ret = CS_E_OK;
+			continue;
+		}
+
+	}
+	return ret;
+}
+cs_status serial_port_buf_free(cs_uint16 serial_port_id)
+{
+	#if 0
+	cs_printf("in serial_port_buf_free\n");
+	#endif
+	
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+
+	cs_uint16 i = 0;
+	for(i=0; i<MAX_RING_BUF_NUM; i++)
+	{
+		iros_free(pConfig->ip_rx_buf.pBuf[i]);
+		pConfig->ip_rx_buf.pBuf[i] = NULL;
+	}
+	ret = CS_E_OK;
+	
+	return ret;
+}
+cs_status tcp_server_disable(cs_uint16 serial_port_id)
+{
+	#if 0
+	cs_printf("in tcp_server_disable\n");
+	#endif
+
+
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+
+	pConfig->enable_flag = 0;
+	pConfig->server_enable = 0;
+	pConfig->client_enable = 0;
+
+	socket_status_clear(pConfig);
+	ts_onu_uart_disable(serial_port_id);
+	ts_client_fd_close(pConfig);
+	ts_server_fd_close(pConfig);
+	#if 1
+	pConfig->socket_control = 0;
+	#endif
+
+	#if 1
+	ret = serial_port_buf_free(serial_port_id);
+	#endif
+	
+	return ret;
+}
+
+cs_status tcp_client_disable(cs_uint16 serial_port_id)
+{
+	#if 0
+	cs_printf("in tcp_client_disable\n");
+	#endif
+	
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+	pConfig->enable_flag = 0;
+	pConfig->server_enable = 0;
+	pConfig->client_enable = 0;
+	
+	socket_status_clear(pConfig);
+	ts_onu_uart_disable(serial_port_id);
+	ts_client_fd_close(pConfig);
+	ts_server_fd_close(pConfig);
+	#if 1
+	pConfig->socket_control = 0;
+	#endif
+	ret = serial_port_buf_free(serial_port_id);
+	
+	return ret;	
+}
+
+cs_status udp_disable(cs_uint16 serial_port_id)
+{
+	#if 0
+	cs_printf("in udp_disable\n");
+	#endif
+	
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+	pConfig->enable_flag = 0;
+	pConfig->server_enable = 0;
+	pConfig->client_enable = 0;
+	
+	socket_status_clear(pConfig);
+	ts_onu_uart_disable(serial_port_id);
+	ts_server_fd_close(pConfig);
+	#if 1
+	pConfig->socket_control = 0;
+	#endif
+	ret = serial_port_buf_free(serial_port_id);
+
+	return ret;		
+}
+
+extern cs_status serial_port_connect_disable(cs_uint16 serial_port_id)
+{
+	#if 0
+	cs_printf("in serial_port_connect_disable\n");
+	#endif
+
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+	if(1 == socket_status_get(pConfig))
+	{
+		if(IPPROTO_TCP == pConfig->proto_type)
+		{
+			if(0 != pConfig->server_enable)
+			{
+				//tcp server disable
+				ret = tcp_server_disable(serial_port_id);
+				if(CS_E_OK == ret)
+				{
+					cs_printf("tcp_server_disable success\n");
+				}
+				else
+				{
+					cs_printf("tcp_server_disable failed\n");
+				}
+			}
+			else if(0 != pConfig->client_enable)
+			{
+				//tcp client disable
+				ret = tcp_client_disable(serial_port_id);
+				if(CS_E_OK == ret)
+				{
+					cs_printf("tcp_client_disable success\n");
+				}
+				else
+				{
+					cs_printf("tcp_client_disable failed\n");
+				}
+			}
+			else
+			{
+				ret = CS_E_ERROR;
+			}
+		}
+		else if(IPPROTO_UDP == pConfig->proto_type)
+		{
+			//udp disable
+			ret = udp_disable(serial_port_id);
+			if(CS_E_OK == ret)
+			{
+				cs_printf("tcp_client_disable success\n");
+			}
+			else
+			{
+				cs_printf("tcp_client_disable failed\n");
+			}
+		}
+		else
+		{
+			ret = CS_E_ERROR;
+		}
+	}
+	else
+	{
+		pConfig->server_enable = 0;
+		pConfig->client_enable = 0;
+		cs_printf("serial port %d socket has been disabled\n", serial_port_id);
+		ret = CS_E_ERROR;
+	}
+	return ret;
+}
+
+cs_status serial_port_connect_status_show(cs_uint16 serial_port_id)
+{
+	#if 0
+	cs_printf("in serial_port_connect_status_show\n");
+	#endif
+	
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+
+	if(1 == socket_status_get(pConfig))
+	{
+		if(IPPROTO_TCP == pConfig->proto_type)
+		{
+			if(0 == pConfig->server_client_mode)
+			{
+				cs_printf("serial port %d, tcp server has been enabled!\n", serial_port_id);
+				
+			}
+			else if(1 == pConfig->client_enable)
+			{
+				cs_printf("serial port %d, tcp client has been enabled!\n", serial_port_id);
+			}
+			else
+			{
+				//do nothing
+			}
+		}
+		else if(IPPROTO_UDP == pConfig->proto_type)
+		{
+			cs_printf("serial port %d, udp has been enabled!\n", serial_port_id);
+		}
+		else
+		{
+			//do nothing
+		}
+	}
+	else
+	{
+		cs_printf("serial port %d, socket disabled!\n", serial_port_id);
+	}
+
+	return ret;
+}
+cs_status tcp_server_enable(cs_uint16 serial_port_id)
+{
+	#if 0
+	cs_printf("in tcp_server_enable\n");
+	#endif
+	
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+	if(1 == socket_status_get(pConfig))
+	{
+		serial_port_connect_status_show(serial_port_id);
+		ret = CS_E_ERROR;
+	}
+	else
+	{
+		pConfig->server_enable = 1;
+		pConfig->client_enable = 0;
+		#if 1
+		pConfig->socket_control = 1;
+		#endif
+		ret = CS_E_OK;
+	}
+	
+	return ret;
+}
+
+cs_status tcp_client_enable(cs_uint16 serial_port_id)
+{
+	#if 0
+	cs_printf("in tcp_client_enable\n");
+	#endif
+	
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+	if(1 == socket_status_get(pConfig))
+	{
+		serial_port_connect_status_show(serial_port_id);
+		ret = CS_E_ERROR;
+	}
+	else
+	{
+		pConfig->server_enable = 0;
+		pConfig->client_enable = 1;
+		
+		#if 1
+		pConfig->socket_control = 1;
+		#endif
+
+		ret = CS_E_OK;
+	}
+	
+	return ret;
+}
+
+cs_status udp_enable(cs_uint16 serial_port_id)
+{
+	#if 0
+	cs_printf("in udp_enable\n");
+	#endif
+	
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+	if(1 == socket_status_get(pConfig))
+	{
+		serial_port_connect_status_show(serial_port_id);
+		ret = CS_E_ERROR;
+	}
+	else
+	{
+		pConfig->server_enable = 1;
+		pConfig->client_enable = 0;
+		#if 1
+		pConfig->socket_control = 1;
+		#endif
+		ret = CS_E_OK;
+	}
+
+	return ret;
+}
+
+
+
+extern cs_status serial_port_connect_enable(cs_uint16 serial_port_id)
+{
+	#if 1
+	cs_printf("in serial_port_connect_enable\n");
+	#endif
+	
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+	if(0 == socket_status_get(pConfig))
+	{
+		if(IPPROTO_TCP == pConfig->proto_type)
+		{
+			if(0 == pConfig->server_client_mode)
+			{
+				//tcp server enable
+				ret = tcp_server_enable(serial_port_id);
+				if(CS_E_OK == ret)
+				{
+					cs_printf("tcp_server_enable start...\n");
+				}
+				else
+				{
+					cs_printf("tcp_server_enable failed\n");
+				}
+				
+			}
+			else if(1 == pConfig->server_client_mode)
+			{
+				//tcp client enable
+				ret = tcp_client_enable(serial_port_id);
+				if(CS_E_OK == ret)
+				{
+					cs_printf("tcp_client_enable start...\n");
+				}
+				else
+				{
+					cs_printf("tcp_client_enable failed\n");
+				}
+				
+			}
+			else
+			{
+				ret = CS_E_ERROR;
+			}
+		}
+		else if(IPPROTO_UDP == pConfig->proto_type)
+		{
+			//udp enable
+			ret = udp_enable(serial_port_id);
+			if(CS_E_OK == ret)
+			{
+				cs_printf("udp_enable start...\n");
+			}
+			else
+			{
+				cs_printf("udp_enable failed\n");
+			}
+		}
+		else
+		{
+			ret = CS_E_ERROR;
+		}		
+	}
+	else
+	{
+		ret = CS_E_ERROR;
+	}
+	return ret;
+}
+
+
+extern cs_status serial_port_connect_mode_tcp_server_set(cs_uint16 serial_port_id)
+{
+	#if 0
+	cs_printf("in serial_port_connect_mode_tcp_server_set\n");
+	#endif
+	
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+	pConfig->uart_cfg.uart_id = serial_port_id;
+	pConfig->proto_type = IPPROTO_TCP;
+	pConfig->server_client_mode = 0;
+	return ret;
+
+}
+extern cs_status serial_port_connect_mode_tcp_client_set(cs_uint16 serial_port_id)
+{
+#if 0
+	cs_printf("in serial_port_connect_mode_tcp_client_set\n");
+#endif
+	
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+	pConfig->uart_cfg.uart_id = serial_port_id;
+	pConfig->proto_type = IPPROTO_TCP;
+	pConfig->server_client_mode = 1;
+	return ret;
+
+}
+
+extern cs_status serial_port_connect_mode_udp_set(cs_uint16 serial_port_id)
+{
+#if 0
+	cs_printf("in serial_port_connect_mode_udp_set\n");
+#endif
+	
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+	pConfig->uart_cfg.uart_id = serial_port_id;
+	pConfig->proto_type = IPPROTO_UDP;
+	return ret;
+
+}
+
+
+extern cs_status gw_serial_port_data_size_set(cs_uint16 serial_port_id, cs_uint8 data_size)
+{
+	#if 0
+	cs_printf("in gw_serial_port_data_size_set\n");
+	#endif
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+	pConfig->uart_cfg.uart_id = serial_port_id;
+	pConfig->uart_cfg.data_bits = data_size;
+	return ret;
+}
+
+extern cs_status gw_serial_port_local_port_set(cs_uint16 serial_port_id, cs_uint32 local_port)
+{
+	#if 1
+	cs_printf("in gw_serial_port_local_port_set, serial_port_id :%d, local_port :%d\n", serial_port_id, local_port);
+	#endif
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+	pConfig->uart_cfg.uart_id = serial_port_id;
+	pConfig->proto_port= local_port;
+	#if 1
+	cs_printf("pConfig->proto_port :%d\n", pConfig->proto_port);
+	#endif
+	return ret;
+}
+
+extern cs_status gw_serial_port_parity_set(cs_uint16 serial_port_id, char *parity)
+{
+	#if 0
+	cs_printf("in gw_serial_port_parity_set\n");
+	#endif
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+	pConfig->uart_cfg.uart_id = serial_port_id;
+	pConfig->uart_cfg.parity = UART_PARITY_NONE;
+	if(0 == strcmp(parity, "none"))
+	{
+		pConfig->uart_cfg.parity = UART_PARITY_NONE;
+		ret = CS_E_OK;
+	}
+	else if(0 == strcmp(parity, "odd"))
+	{
+		pConfig->uart_cfg.parity = UART_PARITY_ODD;
+		ret = CS_E_OK;
+	}
+	else if(0 == strcmp(parity, "even"))
+	{
+		pConfig->uart_cfg.parity = UART_PARITY_EVEN;
+		ret = CS_E_OK;
+	}
+	else
+	{
+		ret = CS_E_ERROR;
+	}
+	return ret;
+}
+
+
+extern cs_status gw_serial_port_purge_buf_set(cs_uint16 serial_port_id)
+{
+	#if 0
+	cs_printf("in gw_serial_port_purge_buf_set\n");
+	#endif
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+	pConfig->uart_cfg.uart_id = serial_port_id;
+	//purge buf
+	return ret;
+}
+
+extern cs_status gw_serial_port_remote_ip_set(cs_uint16 serial_port_id, cs_uint32 remote_ip)
+{
+	#if 0
+	cs_printf("in gw_serial_port_remote_ip_set\n");
+	#endif
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+	pConfig->uart_cfg.uart_id = serial_port_id;
+	pConfig->remote_server_ip = remote_ip;
+	return ret;	
+}
+
+extern cs_status gw_serial_port_remote_port_set(cs_uint16 serial_port_id, cs_uint32 remote_port)
+{
+	#if 0
+	cs_printf("in gw_serial_port_remote_port_set\n");
+	#endif
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+	pConfig->uart_cfg.uart_id = serial_port_id;
+	pConfig->remote_server_port = remote_port;
+	return ret;		
+}
+
+
+extern cs_status gw_serial_port_stop_bit_set(cs_uint16 serial_port_id, cs_uint16 stop_bit)
+{
+	#if 0
+	cs_printf("in gw_serial_port_stop_bit_set\n");
+	#endif
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+	pConfig->uart_cfg.uart_id = serial_port_id;
+	pConfig->uart_cfg.stop_bits= stop_bit;
+	return ret;	
+}
+
+
+extern cs_status serial_port_information_show(cs_uint16 serial_port_id)
+{
+#if 0
+	cs_printf("in serial_port_information_show\n");
+#endif
+	
+	cs_status ret = CS_E_OK;
+	term_server_config_t * pConfig = NULL;
+	pConfig = TS_CFG_GET(serial_port_id);
+	char net_connect_status[10] = {0};
+	if(1 == pConfig->socket_enable)
+	{
+		strncpy(net_connect_status, "enable", sizeof(net_connect_status));
+	}
+	else
+	{
+		strncpy(net_connect_status, "disable", sizeof(net_connect_status));
+	}
+
+	char connect_mode[15] = {"not set"};
+	if(IPPROTO_TCP == pConfig->proto_type)
+	{
+		if(0 == pConfig->server_client_mode)
+		{
+			strncpy(connect_mode, "tcp_server", sizeof(connect_mode));
+		}
+		else if(1 == pConfig->server_client_mode)
+		{
+			strncpy(connect_mode, "tcp_client", sizeof(connect_mode));
+		}
+		else
+		{
+			//do nothing
+			strncpy(connect_mode, "not set", sizeof(connect_mode));
+		}
+	}
+	else if(IPPROTO_UDP == pConfig->proto_type)
+	{
+		strncpy(connect_mode, "udp", sizeof(connect_mode));
+	}
+	else
+	{
+		//do nothing
+		strncpy(connect_mode, "not set", sizeof(connect_mode));
+	}
+
+	struct sockaddr_in addrp[1];
+	addrp[0].sin_addr.s_addr = htonl(pConfig->remote_server_ip);
+
+	char connect_status[15] = {0};
+	if(pConfig->client_fd >= 0)
+	{
+		strncpy(connect_status, "connected", sizeof(connect_status));
+	}
+	else
+	{
+		strncpy(connect_status, "disconnected", sizeof(connect_status));
+	}
+				
+	cs_printf("serial port number   :%d\n", serial_port_id);
+	//cs_printf("serial port mode          :%d\n", );
+	cs_printf("baud rate            :%d\n", pConfig->uart_cfg.baud_rate);
+	cs_printf("data size            :%d\n", pConfig->uart_cfg.data_bits);
+	cs_printf("parity               :%d\n", pConfig->uart_cfg.parity);
+	cs_printf("stop bit             :%d\n", pConfig->uart_cfg.stop_bits);
+	cs_printf("flow control         :%d\n", pConfig->uart_cfg.flow_control);
+	cs_printf("net connect          :%s\n", net_connect_status);
+	cs_printf("connect mode         :%s\n", connect_mode);
+	cs_printf("local tcp/udp port   :%d\n", pConfig->proto_port);
+	cs_printf("remote tcp/udp port  :%d\n", pConfig->remote_server_port);
+	cs_printf("remote ip address    :%s\n", inet_ntoa(addrp[0].sin_addr));
+	cs_printf("connect state        :%s\n", connect_status);
+	cs_printf("bytes in serial port :%d\n", pConfig->uart_rx_char_cnt);
+	cs_printf("bytes out of port    :%d\n", pConfig->uart_tx_char_cnt);
+	
+	
+	
+	return ret;
+}
+
+
+#endif
+
 
 
 

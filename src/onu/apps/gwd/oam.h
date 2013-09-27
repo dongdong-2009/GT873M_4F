@@ -9,6 +9,8 @@
 #define FLASH_USER_DATA_MAX_SIZE     	(1024*20)
 #define SLOW_PATH_CFG_OFFSET            (1024*19+512)
 #define GWD_PRODUCT_CFG_OFFSET          (SLOW_PATH_CFG_OFFSET+64) 
+#define GWD_PRODUCT_CFG_OFFSET_W		(1024*20)
+#define GWD_PRODUCT_CFG_OFFSET_INBAND	(1024*20)
 
 
 /* This struct should be moved to a header file */

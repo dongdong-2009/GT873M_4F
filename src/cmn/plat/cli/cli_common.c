@@ -154,7 +154,9 @@ int cli_int_exit(struct cli_def *cli, char *command, char *argv[], int argc)
 extern void cli_debeg_gwd_cmd(struct cli_command **cmd_root);
 extern void cli_switch_gwd_cmd(struct cli_command **cmd_root);
 extern void cli_reg_gwd_cmd(struct cli_command **cmd_root);
-extern void cli_uart_gwd_cmd(struct cli_command **cmd_root);
+//extern void cli_uart_gwd_cmd(struct cli_command **cmd_root);
+extern void cli_reg_serial_to_enet_cmd(struct cli_command **cmd_root);
+
 struct cli_command *cli_tree_init()
 {
     struct cli_command *cmd_root = NULL;
@@ -175,7 +177,7 @@ struct cli_command *cli_tree_init()
     user_register_command_entry(&cmd_root);
 
 	#ifdef HAVE_TERMINAL_SERVER
-	cli_uart_gwd_cmd(&cmd_root);
+	cli_reg_serial_to_enet_cmd(&cmd_root);
 	#endif
 
     return cmd_root;

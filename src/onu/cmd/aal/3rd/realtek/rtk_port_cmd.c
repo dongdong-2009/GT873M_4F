@@ -534,6 +534,8 @@ void __sw_cmd_rtk_port_isolation_get(int argc, char **argv)
     rtk_api_ret_t rt;
     rtk_port_t port_id,port;
     rtk_portmask_t iso;
+	
+	#if 0
     if(__port_isolation)
     	{
     		cs_printf("all uni port isolation satas is enable\n");
@@ -552,6 +554,19 @@ void __sw_cmd_rtk_port_isolation_get(int argc, char **argv)
 					diag_printf("port %d get isolation stats is disable\n",port_id);
 				}
 		}
+	#else
+	port_id = (rtk_port_t)iros_strtol(argv[0]);
+	port = L2P_PORT(port_id);
+	rt = rtk_port_isolation_get(port,&iso);
+	if(iso.bits[0]== 0xf0)
+	{
+		diag_printf("port %d get isolation stats is enable\n",port_id);
+	}
+	else
+	{
+		diag_printf("port %d get isolation stats is disable\n",port_id);
+	}
+	#endif
 }
 
 
