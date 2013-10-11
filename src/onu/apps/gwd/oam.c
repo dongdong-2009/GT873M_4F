@@ -47,7 +47,7 @@ unsigned long	gulGwOamConnect = 0;
 #ifdef HAVE_TERMINAL_SERVER
 	const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
 	const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
-	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 10;
+	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 11;
 	const unsigned char SYS_SOFTWARE_DEBUG_VERSION_NO = 1;
 
 	const unsigned char SYS_HARDWARE_MAJOR_VERSION_NO = 2;
@@ -3015,6 +3015,206 @@ int cmd_bsctrl_policy(struct cli_def *cli, char *command, char *argv[], int argc
 	return CLI_OK;
 }
 
+extern int broadcast_storm_threshold_set(cs_uint32 gw_threshold)
+{
+	int ret = 0;
+	if(gw_threshold > BC_STORM_THRESHOLD_MAX || gw_threshold < BC_STORM_THRESHOLD_LAS)
+	{
+		cs_printf("set broadcast storm threshold fail\n");
+		return CLI_ERROR;
+	}
+	else
+	{
+		broad_storm.gulBcStormThreshold = gw_threshold;
+	}
+	return ret;
+}
+
+extern int broadcast_storm_threshold_get(cs_uint32 *gw_threshold)
+{
+	int ret = 0;
+	if(NULL != gw_threshold)
+	{
+		*gw_threshold = broad_storm.gulBcStormThreshold;
+		ret = 0;
+	}
+	else
+	{
+		ret = -1;
+	}
+	return ret;
+}
+
+
+#define GW_THRESHOLD_DEFAULT	1000
+extern int broadcast_storm_threshold_default_get(cs_uint32 *gw_threshold)
+{
+	int ret = 0;
+	*gw_threshold = GW_THRESHOLD_DEFAULT;
+	return ret;
+}
+
+extern int broadcast_storm_threshold_default_check(cs_uint32 gw_threshold)
+{
+	int ret = 0;
+	cs_uint32 gw_threshold_default = 0;
+	broadcast_storm_threshold_default_get(&gw_threshold_default);
+	if(gw_threshold_default == gw_threshold)
+	{
+		ret = 0;
+	}
+	else
+	{
+		ret = -1;
+	}
+	return ret;
+}
+
+
+extern int broadcast_storm_threshold_tlv_infor_get(int *len, char **value, int *free_need)
+{
+	int ret = 0;
+	cs_uint32 *gw_threshold = NULL;
+	cs_uint32 value_len = 0;
+	int status = 0;
+	
+	if(NULL != len)
+	{
+		*len = 0;
+	}
+	else
+	{
+		goto error;
+	}
+
+	if(NULL != value)
+	{
+		*value = NULL;
+	}
+	else
+	{
+		goto error;
+	}
+	
+	if(NULL != free_need)
+	{
+		*free_need = 0;
+	}
+	else
+	{
+		goto error;
+	}
+	ret = 0;
+	value_len = sizeof(cs_uint32);
+	gw_threshold = (cs_uint32 *)iros_malloc(IROS_MID_APP, value_len);
+	memset(gw_threshold, 0, value_len);
+	*free_need = 1;
+	status = broadcast_storm_threshold_get(gw_threshold);
+	if(0 == status)
+	{
+		if(0 != broadcast_storm_threshold_default_check(*gw_threshold))
+		{
+			*len = value_len;
+			*value = (char *)gw_threshold;
+		}
+		else
+		{
+			//do nothing
+		}
+	}
+	else
+	{
+	
+	}
+
+	goto end;
+	
+error:
+	ret = -1;
+	
+end:
+	if((0 == *len)&&(NULL != gw_threshold))
+	{
+		iros_free(gw_threshold);
+		gw_threshold = NULL;
+	}
+	return ret;
+}
+
+
+extern int broadcast_storm_module_default_config_recover()
+{
+	int ret = 0;
+	cs_uint32 gw_threshold = 0;
+	broadcast_storm_threshold_default_get(&gw_threshold);
+	broadcast_storm_threshold_set(gw_threshold);
+	return ret;
+}
+
+
+extern int broadcast_storm_threshold_tlv_infor_handle(int len, char *data, int opcode)
+{
+	int ret = 0;
+	cs_uint32 gw_threshold = 0;
+	
+	if(0 != len)
+	{
+		//do nothing	
+	}
+	else
+	{
+		goto error;
+	}
+
+	if(NULL != data)
+	{
+		//do nothing	
+	}
+	else
+	{
+		goto error;
+	}
+	
+	memcpy(&gw_threshold, data, sizeof(cs_uint32));
+	if(DATA_RECOVER == opcode)
+	{
+		broadcast_storm_threshold_set(gw_threshold);
+	}
+	else if(DATA_SHOW == opcode)
+	{
+		cs_printf("\n----------------------------------------------------------\n");
+		cs_printf("broadcast storm threshold %d\n", gw_threshold);
+		cs_printf("----------------------------------------------------------\n");
+	}
+	else
+	{
+		cs_printf("in %s, wrong opcode :0x%x\n", __func__, opcode);
+	}
+	goto end;
+error:
+	ret = -1;
+	
+end:
+	return ret;
+}
+
+extern int broadcast_storm_threshold_running_config_show(void)
+{
+	int ret = 0;
+	cs_uint32 gw_threshold;
+	broadcast_storm_threshold_get(&gw_threshold);
+	if(0 != broadcast_storm_threshold_default_check(gw_threshold))
+	{
+		cs_printf("\n----------------------------------------------------------\n");
+		cs_printf("broadcast storm threshold %d\n", gw_threshold);
+		cs_printf("----------------------------------------------------------\n");
+	}
+	return ret;
+}
+
+
+
+
 int cmd_bsctrl_threshold(struct cli_def *cli, char *command, char *argv[], int argc)
 {
 
@@ -3171,7 +3371,45 @@ extern void Rcp_Mgt_init(void);
 	#endif
 }
 
+#if 1
+cs_status onu_hardware_version_get(char *hw_version, cs_int16 hw_version_len)
+{
+	cs_status ret = CS_E_OK;
+	memset(hw_version, '\0', hw_version_len);
+#if 0
+	ret = startup_config_read(CFG_ID_HW_VERSION, 32, hw_version);
+	return ret;
+#endif
+	if(CS_E_OK != Onu_Sysinfo_Get())
+	{
+		ret = CS_E_ERROR;
+		goto end;
+	}
+	else
+	{
+		//do nothing
+	}
+	memcpy(hw_version, onu_system_info_total.hw_version, sizeof(onu_system_info_total.hw_version));
 
+end:
+	return ret;
+
+	
+}
+#endif
+
+#if 1
+cs_status onu_software_version_get(char *sw_version, cs_uint16 sw_version_len)
+{
+	cs_status ret = CS_E_OK;
+	memset(sw_version, '\0', sw_version_len);
+	sprintf(sw_version,"V%dR%02dB%03d",
+			SYS_SOFTWARE_MAJOR_VERSION_NO,
+			SYS_SOFTWARE_RELEASE_VERSION_NO,
+			SYS_SOFTWARE_BRANCH_VERSION_NO);
+	return ret;	
+}
+#endif
 
 
 

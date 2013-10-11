@@ -652,6 +652,9 @@ int cmd_tftp_download(struct cli_def *cli, char *command, char *argv[], int argc
     return CLI_OK;
 }
 
+extern cs_status onu_software_version_get(char *sw_version, cs_uint16 sw_version_len);
+extern cs_status onu_hardware_version_get(char *hw_version, cs_int16 hw_version_len);
+
 int cmd_show_zte_version(struct cli_def *cli, char *command, char *argv[], int argc)
 {
     char hd_version[32] = "v1.0.0";
@@ -684,7 +687,8 @@ int cmd_show_zte_version(struct cli_def *cli, char *command, char *argv[], int a
           memset(hd_version, 0, sizeof(hd_version));
           onu_hw_version_get(hd_version, ONU_HW_VER_LEN);
 #endif 
-
+	onu_hardware_version_get(hd_version, sizeof(hd_version));
+	onu_software_version_get(sw_version, sizeof(sw_version));
     cli_print(cli,  "Software Version  : %s", sw_version);
     cli_print(cli,  "Hardware Version  : %s", hd_version);    
     return CLI_OK;
@@ -828,7 +832,192 @@ int cmd_snoop_enable(struct cli_def *cli, char *command, char *argv[], int argc)
 
 #if 1
 extern cs_status mc_mode_get(cs_dev_id_t device, mc_mode_t *mode);
-extern cs_status mc_mode_set(cs_dev_id_t device, mc_mode_t mode);
+cs_status mc_mode_set(cs_dev_id_t device, mc_mode_t mode);
+
+extern int igmp_mode_show(mc_mode_t mc_mode)
+{
+	int ret = 0;
+	char mode[15] = {0};
+	switch(mc_mode) 
+	{
+        case MC_SNOOPING:
+            strncpy(mode, "snooping", sizeof(mode));
+            break;
+
+        case MC_MANUAL:
+            strncpy(mode, "manual", sizeof(mode));
+            break;
+
+		case MC_PROXY:
+            strncpy(mode, "proxy", sizeof(mode));
+            break;
+
+		case MC_DISABLE:
+            strncpy(mode, "transparent", sizeof(mode));
+            break;
+
+        default:
+            strncpy(mode, "unknown", sizeof(mode));
+            break;
+	}
+	cs_printf("igmp %s mode\n", mode);
+	
+	return ret;
+}
+
+
+extern int igmp_mode_config_recover(mc_mode_t mc_mode)
+{
+	int ret = 0;
+	ret = mc_mode_set(0, mc_mode);
+	if(CS_E_OK == ret)
+	{
+		cs_printf("mc_mode_set success\n");
+	}
+	else
+	{
+		cs_printf("mc_mode_set failed\n");
+	}
+	return ret;
+}
+
+#define IGMP_MODE_DEFAULT	MC_DISABLE
+
+extern int igmp_mode_tlv_infor_get(int *len, char **value, int *free_need)
+{
+	int ret = 0;
+	mc_mode_t *mc_mode = NULL;
+	cs_status status = CS_E_OK;
+	if(NULL == len)
+	{
+		goto error;
+	}
+	else
+	{
+		*len = 0;
+	}
+
+	if(NULL == value)
+	{
+		goto error;
+		
+	}
+	else
+	{
+		*value = NULL;
+	}
+	
+	if(NULL == free_need)
+	{
+		goto error;
+	}
+	else
+	{
+		*free_need = 0;
+	}
+
+	mc_mode = (mc_mode_t *)iros_malloc(IROS_MID_APP, sizeof(mc_mode_t));
+	memset(mc_mode, 0, sizeof(mc_mode_t));
+	*free_need = 1;
+	status = mc_mode_get(0, mc_mode);
+	if(CS_E_OK == status)
+	{
+		if(IGMP_MODE_DEFAULT == *mc_mode)
+		{
+			goto end;
+		}
+		else
+		{
+			*len = sizeof(mc_mode_t);
+			*value = (char *)mc_mode;
+		}
+	}
+	else
+	{
+		cs_printf("mc_mode_get failed\n");
+		goto error;
+	}
+	
+	ret = 0;
+	goto end;
+	
+error:
+	ret = -1;
+	
+end:
+	if((0 == *len)&&(NULL != mc_mode))
+	{
+		iros_free(mc_mode);
+		mc_mode = NULL;
+	}
+	return ret;
+}
+
+extern int igmp_mode_tlv_infor_handle(int len, char *data, int opcode)
+{
+	int ret = 0;
+	mc_mode_t mc_mode;
+	
+	if(0 != len)
+	{
+		//do nothing
+	}
+	else
+	{
+		goto error;
+	}
+	
+	if(NULL != data)
+	{
+		//do nothing
+	}
+	else
+	{
+		goto error;
+	}
+	memcpy(&mc_mode, data, len);
+	
+	if(DATA_RECOVER == opcode)
+	{
+		igmp_mode_config_recover(mc_mode);
+	}
+	else if(DATA_SHOW == opcode)
+	{
+		igmp_mode_show(mc_mode);
+	}
+	else
+	{
+		cs_printf("in %s\n", __func__);
+	}
+	ret = 0;
+	goto end;
+	
+error:
+	ret = -1;
+	
+end:
+	return ret;
+}
+
+extern int igmp_mode_running_config_show(void)
+{
+	int ret = 0;
+	mc_mode_t mc_mode;
+	ret = mc_mode_get(0, &mc_mode);
+	if(CS_E_OK == ret)
+	{
+		if(IGMP_MODE_DEFAULT != mc_mode)
+		{
+			igmp_mode_show(mc_mode);
+		}
+	}
+	else
+	{
+		cs_printf("mc_mode_get failed\n");
+	}
+	
+	return ret;
+}
 
 
 extern int cmd_igmp_mode(struct cli_def *cli, char *command, char *argv[], int argc)
@@ -875,11 +1064,15 @@ extern int cmd_igmp_mode(struct cli_def *cli, char *command, char *argv[], int a
 	if(0 == argc)
 	{
 		cs_status ret = CS_E_OK;
-		char mode[15] = {0};
+//		char mode[15] = {0};
 		mc_mode_t mc_mode;
     	ret = mc_mode_get(0, &mc_mode);
 		if(CS_E_OK == ret)
 		{
+			#if 1
+			igmp_mode_show(mc_mode);
+			#endif
+			#if 0
 			switch(mc_mode) 
 			{
 		        case MC_SNOOPING:
@@ -903,6 +1096,7 @@ extern int cmd_igmp_mode(struct cli_def *cli, char *command, char *argv[], int a
 		            break;
 	    	}
 			cs_printf("igmp %s mode\n", mode);
+			#endif
 		}
 		else
 		{
@@ -938,7 +1132,7 @@ extern int cmd_igmp_mode(struct cli_def *cli, char *command, char *argv[], int a
 		if(CS_E_OK == ret)
 		{
 			cs_printf("mode :0x%x\n", mode);
-			cs_printf("mc_mode_set success\n");	
+			cs_printf("mc_mode_set success\n");
 		}
 		else
 		{
@@ -952,8 +1146,6 @@ extern int cmd_igmp_mode(struct cli_def *cli, char *command, char *argv[], int a
 
 	return CLI_OK;
 }
-
-
 
 #endif
 
@@ -1230,79 +1422,108 @@ void pc(struct cli_def *cli, char *string)
 }
 
 #if 1
-//extern cs_status mc_mode_save_to_flash(int mc_mode);
-//cs_status mc_mode_get(cs_dev_id_t device, mc_mode_t *mode);
-
-extern cs_status mc_mode_save_to_config(void);
-extern cs_status config_save_to_flash(void);
+extern int save_user_tlv_data_to_flash(void);
 int cmd_save(struct cli_def *cli, char *command, char *argv[], int argc)
 {
-	if(CLI_HELP_REQUESTED)
+	int ret = 0;
+    if (CLI_HELP_REQUESTED)
+        return CLI_HELP_NO_ARGS;
+
+    if(argc > 0)
+    {
+        cli_print(cli, "%% Invalid input.");
+        return CLI_OK;
+    }
+    #if 0
+	cs_printf("in %s\n", __func__);
+	#endif
+	ret = save_user_tlv_data_to_flash();
+	if(0 == ret)
 	{
-		switch(argc)
-		{
-			case 1:
-            	return cli_arg_help(cli, 0,
-                "<cr>", "save config",
-                 NULL);
-        	default:
-           		return cli_arg_help(cli, argc > 1, NULL);
-		}
+		cs_printf("save config to flash success\n");
 	}
 	else
 	{
-		//do nothing
+		cs_printf("save config to flash failed\n");
 	}
-
-	mc_mode_save_to_config();
-	config_save_to_flash();
 	
-	return CLI_OK;
-	
+    return CLI_OK;
 }
 
-extern cs_status config_get_from_flash(void);
-cs_status mc_mode_show(int mc_mode);
+extern int running_config_show(void);
 
-
-int cmd_show_config(struct cli_def *cli, char *command, char *argv[], int argc)
+int cmd_show_running_config(struct cli_def *cli, char *command, char *argv[], int argc)
 {
-	if(CLI_HELP_REQUESTED)
-	{
-		switch(argc)
-		{
-			case 1:
-            	return cli_arg_help(cli, 0,
-                "config", "show onu config",
-                 NULL);
-			case 2:
-            	return cli_arg_help(cli, 0,
-                "<cr>", "enter to execuse command(show onu config)",
-                 NULL);
-        	default:
-           		return cli_arg_help(cli, argc > 1, NULL);
-		}
-	}
-	else
-	{
-		//do nothing
-	}
+    if (CLI_HELP_REQUESTED)
+        return CLI_HELP_NO_ARGS;
 
-	int mc_mode = 0;
-	mc_mode = g_slow_path_ip_cfg.mc_mode;
-	if(3 == mc_mode)
-	{
-		mc_mode_show(mc_mode);
-	}
-	else
-	{
-		//do nothing
-	}
-
-	return CLI_OK;
-	
+    if(argc > 0)
+    {
+        cli_print(cli, "%% Invalid input.");
+        return CLI_OK;
+    }
+    #if 0
+	cs_printf("in %s\n", __func__);
+	#endif
+	running_config_show();
+    return CLI_OK;
 }
 
+extern int start_up_show(void);
+
+int cmd_show_start_up(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	int ret = 0;
+    if (CLI_HELP_REQUESTED)
+        return CLI_HELP_NO_ARGS;
+
+    if(argc > 0)
+    {
+        cli_print(cli, "%% Invalid input.");
+        return CLI_OK;
+    }
+    #if 0
+	cs_printf("in %s\n", __func__);
+	#endif
+	ret = start_up_show();
+	if(0 == ret)
+	{
+		
+	}
+	else
+	{
+		cs_printf("show start-up failed\n");
+	}
+    return CLI_OK;
+}
+
+extern int start_up_config_erase(void);
+int cmd_erase_config(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	int ret = 0;
+    if (CLI_HELP_REQUESTED)
+        return CLI_HELP_NO_ARGS;
+
+    if(argc > 0)
+    {
+        cli_print(cli, "%% Invalid input.");
+        return CLI_OK;
+    }
+    #if 0
+	cs_printf("in %s\n", __func__);
+	#endif
+	ret = start_up_config_erase();
+	if(0 == ret)
+	{
+		cs_printf("erase config success\n");
+	}
+	else
+	{
+		cs_printf("erase config failed\n");
+	}
+	
+    return CLI_OK;
+}
 
 #endif
 
@@ -1313,7 +1534,8 @@ void cli_reg_usr_cmd(struct cli_command **cmd_root)
     struct cli_command *show_run, * show_run_system,*show_onu;
     struct cli_command *show_ver = NULL;
 	//struct cli_command *save = NULL;
-	struct cli_command *show = NULL;
+//	struct cli_command *show = NULL;
+	struct cli_command *erase = NULL;
 	
 #ifdef HAVE_ONU_RSTP
     struct cli_command *   show_stp;
@@ -1332,7 +1554,7 @@ void cli_reg_usr_cmd(struct cli_command **cmd_root)
         cli_register_command(cmd_root, 0, "Onulaser", cmd_laser,                         PRIVILEGE_PRIVILEGED, MODE_EXEC, "Laser on/off");
         cli_register_command(cmd_root, 0, "led", cmd_led,                         PRIVILEGE_PRIVILEGED, MODE_EXEC, "Led on/off");
         
-    c = cli_register_command(cmd_root, NULL, "show",     NULL,               PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Show running system information");
+    c = cli_register_command(cmd_root, NULL, "show",     NULL,               PRIVILEGE_UNPRIVILEGED, MODE_ANY, "Show running system information");
         cli_register_command(cmd_root, c,    "regular",  cmd_show_regular,   PRIVILEGE_UNPRIVILEGED, MODE_ANY, "The counter for the times cli_regular has run");
     show_ver = cli_register_command(cmd_root,  c, "version",cmd_show_zte_version,       PRIVILEGE_UNPRIVILEGED, MODE_ANY, "The version info");
         cli_register_command(cmd_root,  show_ver, "detail", cmd_show_zte_version_detail,PRIVILEGE_UNPRIVILEGED, MODE_ANY, "The detail version info");
@@ -1382,9 +1604,11 @@ void cli_reg_usr_cmd(struct cli_command **cmd_root)
     cli_register_command(cmd_root,  save, "config", cmd_save_config,PRIVILEGE_PRIVILEGED, MODE_ANY, "Save ONU current config to flash,such as SN and LOID/Password");
 	#endif
 	#if 1
-	cli_register_command(cmd_root, NULL, "save", cmd_save,PRIVILEGE_PRIVILEGED, MODE_ANY, "Save ONU current config to flash");
-	show = cli_register_command(cmd_root, NULL, "show", NULL,PRIVILEGE_PRIVILEGED, MODE_ANY, "show ONU information");
-	cli_register_command(cmd_root, show, "config", cmd_show_config,PRIVILEGE_PRIVILEGED, MODE_ANY, "show ONU config");
+	cli_register_command(cmd_root,  NULL, "save", cmd_save,PRIVILEGE_PRIVILEGED, MODE_ANY, "Save ONU current config to flash");
+	cli_register_command(cmd_root,  c, "running-config", cmd_show_running_config,PRIVILEGE_PRIVILEGED, MODE_ANY, "Show ONU current config");
+	cli_register_command(cmd_root,  c, "start-up", cmd_show_start_up,PRIVILEGE_PRIVILEGED, MODE_ANY, "Show ONU saved config");
+	erase = cli_register_command(cmd_root,  NULL, "erase", NULL,PRIVILEGE_PRIVILEGED, MODE_ANY, "Erase");
+	cli_register_command(cmd_root,  erase, "config", cmd_erase_config,PRIVILEGE_PRIVILEGED, MODE_ANY, "Erase saved config");
 	#endif
     cli_register_command(cmd_root, NULL, "onu-mac",   cmd_pon_mac,   PRIVILEGE_PRIVILEGED,   MODE_CONFIG,     "ONU PON mac");
 

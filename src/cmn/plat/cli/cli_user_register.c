@@ -1959,6 +1959,8 @@ extern int cmd_if_config(struct cli_def *cli, char *command, char *argv[], int a
 
 #ifdef HAVE_TERMINAL_SERVER
 cs_status serial_port_check(cs_uint16 serial_port);
+extern int serial_port_num_list_get(int *list);
+extern int serial_port_num_string_get(char *string);
 
 int cmd_serial_to_enet_mode_int(struct cli_def *cli, char *command, char *argv[], int argc)
 {
@@ -2012,7 +2014,12 @@ int cmd_show_serial_port(struct cli_def *cli, char *command, char *argv[], int a
 		{
 			if(1 == argc)
 			{
-				cli_arg_help(cli, 0, "<serial_port>","Serial port number. ep:1,2", NULL);
+				char serial_port_infor[50] = {0};
+				char serial_port_num_string[2*MAX_TERM_SERV_NUM] = {0};
+				serial_port_num_string_get(serial_port_num_string);
+				strcpy(serial_port_infor, "Serial port number. ep:");
+				strcat(serial_port_infor, serial_port_num_string);
+				cli_arg_help(cli, 0, "<serial_port>",serial_port_infor, NULL);
 				return CLI_OK;
 			}
 			else
@@ -3100,14 +3107,11 @@ cs_status serial_port_stop_bit_set(struct cli_def *cli, cs_uint16 serial_port_id
 cs_status serial_port_check(cs_uint16 serial_port)
 {
 	cs_status ret = CS_E_OK;
-	cs_uint16 serial_port_value[TS_MAX_UART_NUM];
+	int serial_port_value[TS_MAX_UART_NUM] = {0};
 	cs_uint16 i = 0;
-	for(i=0;i<TS_MAX_UART_NUM;i++)
-	{
-		serial_port_value[i] = i;
-	}
-	//cs_uint16 i = 0;
 	cs_uint16 num = 0;
+	serial_port_num_list_get(serial_port_value);
+
 	num = sizeof(serial_port_value) / sizeof(serial_port_value[0]);
 	for(i=0;i<num;i++)
 	{
@@ -3163,22 +3167,11 @@ int cmd_serial_port_set(struct cli_def *cli, char *command, char *argv[], int ar
 
 	cs_uint16 serial_port = 0;
 
-	char port_list[2*TS_MAX_UART_NUM];
-	memset(port_list, 0, sizeof(port_list));
-	cs_uint16 i = 0;
-	for(i=0;i<TS_MAX_UART_NUM;i++)
-	{
-		port_list[2*i] = i + '0';
-		port_list[2*i+1] = ',';
-	}
-	port_list[2*i-1] = 0;
-	char infor[] = "Serial port number. ep:";
-	cs_uint16 len = 0;
-	len = strlen(infor) + strlen(port_list) + 1;
-	char port_infor[len];
-	memset(port_infor, 0, sizeof(port_infor));
-	strncpy(port_infor, infor, strlen(infor));
-	strncat(port_infor, port_list, strlen(port_list));
+	char serial_port_infor[50] = {0};
+	char serial_port_num_string[2*MAX_TERM_SERV_NUM] = {0};
+	serial_port_num_string_get(serial_port_num_string);
+	strcpy(serial_port_infor, "Serial port number. ep:");
+	strcat(serial_port_infor, serial_port_num_string);
 	
 	if(argc >= 1)
 	{
@@ -3186,7 +3179,7 @@ int cmd_serial_port_set(struct cli_def *cli, char *command, char *argv[], int ar
 		{
 			if(1 == argc)
 			{
-				cli_arg_help(cli, 0, "<serial_port>",port_infor, NULL);
+				cli_arg_help(cli, 0, "<serial_port>",serial_port_num_string, NULL);
 				return CLI_OK;
 			}
 			else

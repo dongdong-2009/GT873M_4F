@@ -213,5 +213,31 @@ extern void flash_partition_table_update(void);
 extern int iros_flash_write(cs_int8* flash_addr, cs_int8* buf, cs_int32 len);
 extern void iros_flash_read(cs_int8* flash_addr, cs_int8* buf, cs_int32 len);
 
+#if 1
+#define DATA_RECOVER 	0
+#define DATA_SHOW		1
+
+enum data_type
+{
+	TYPE_START = 1,
+#ifdef HAVE_TERMINAL_SERVER
+	SERIAL_PORT = 1,
+#endif
+	BROADCAST_STORM_THRESHOLD,
+	IGMP_MODE,
+	TYPE_NUM
+};
+#endif
+
+#define FLASH_USER_DATA_MAX_SIZE	(1024*20)
+
+#define GWD_PRODUCT_CFG_OFFSET_W	(1024*20)
+//#define GWD_PRODUCT_CFG_OFFSET		(1024*19+512+64) /* follow slow path config */
+#define DB_DATA_OFFSET				0x8000	//32*1024
+#define FLASH_GWD_RCG_SWITCH_CFG_MAX_SIZE	(11*1024)	/*the end of the gwd rcg switch config file*/
+#define FLASH_GWD_RCG_SWITCH_CFG_OFFSET		(8*1024) /*the start of the gwd rc switch config file*/
+
+#define TLV_OFFSET	0
+
 #endif /* _iros_flash_oper_h_ */
 

@@ -27,8 +27,7 @@ extern cs_uint32 app_thread_count;
 extern cs_uint32 intr_thread_count;
 extern int tolower( int );
 extern void uart_electricity_meter_test(cs_uint8 uart_id);
-void uart_meter_date_read_on(cs_uint8 uart_id);
-void uart_meter_date_read_off(cs_uint8 uart_id);
+
 extern cs_boolean  uart_receive(cs_uint8 uart_id,cs_uint8* ch);
 #ifdef UART
 cs_uint8 rev_buf_one[100]= {0};
@@ -691,91 +690,6 @@ static void do_uart_help(void)
 
 
 
-#ifdef UART
-
-
-/******************************************************
-  *the author: WangZhiwei
-  *date: 2012-11-14  15-00
-  *description: 测试UART 上行数据是否可以读到
-*******************************************************/
-extern cs_uint32 text_uart_read_enable();
-extern cs_uint32 text_uart_read_disable();
-extern ts_uart_ring_t text_uart_date[MAX_TERM_SERV_NUM];
-cs_uint32 text_uart_id = 0;
-extern text_uart_id_save uart_save[32];
-cs_uint32 uart_port=1;
-void test_uart_thread(cyg_addrword_t p)
-{
-	cs_uint32 i = 0;
-//	cs_uint32 uart_id ;
-	cs_uint32 chang = 0;
-	cs_printf("uart_id:%d\n",uart_port);
-	while(1)
-		{
-
-			for(i = 0;i < text_uart_date[uart_port-1].wr_pos; i++)
-				{
-					if(i == 10)
-						cs_printf("\n");
-					cs_printf("0x%02x ",text_uart_date[uart_port-1].data[i]);
-					chang = 1;
-				}
-			text_uart_date[uart_port-1].wr_pos = 0;
-			memset(text_uart_date[uart_port].data,0,1024);
-			if(chang)
-				{
-					chang = 0;
-					cs_printf("\n");
-				}
-			cyg_thread_delay(5);
-			//text_uart_date[uart_port].wr_pos = 0;
-			//memset(text_uart_date[uart_port].data,0,1024);
-
-		}
-}
-void uart_meter_date_read_on(cs_uint8 uart_id)
-{
-	diag_printf("on uart %d date recv:\n",uart_id);
-	cs_uint32 ret = 0;
-	uart_port = uart_id;
-	ret = text_uart_read_enable();
-	if(!ret)
-		{
-			cs_printf("set text uart read on fail\n");
-			return;
-		}
-	cs_thread_create(&text_uart_id,UART_THREAD_ONE, test_uart_thread,NULL, 4096 ,UART1_THREAD_PRIORITY, 0);
-	
-	cs_printf("set on uart %d read rev msg success\n",uart_id);
-	return ;
-	
-}
-void uart_meter_date_read_off(cs_uint8 uart_id)
-{
-	diag_printf("off uart %d date recv:\n",uart_id);
-	cs_uint32 ret =0;
-	cs_uint32 i =0;
-	ret = text_uart_read_disable();
-	for(i = 0; i < 32; i++)
-		{
-			if(uart_save[i].thread_id == text_uart_id )
-				{
-					cyg_thread_kill(uart_save[i].id);
-					break;
-				}
-		}
-	if(!ret)
-		{
-			cs_printf("set text uart read off fail\n");
-			return;
-		}
-	cs_printf("set off uart %d read rev msg success\n",uart_id);
-	return ;
-	
-}
-
-#endif
 
 
 
@@ -949,11 +863,11 @@ static int uart_cmd_proc(int argc, char **argv)
 						}
 					if(cmd_cmp(argv[3],"on"))
 						{
-							uart_meter_date_read_on(uart_id);
+
 						}
 					if(cmd_cmp(argv[3],"off"))
 						{
-							uart_meter_date_read_off(uart_id);
+
 						}
 					cs_printf("set success\n");
         		}

@@ -1,0 +1,2 @@
+#define PRODUCTS	PRODUCTS_GT811D 
+

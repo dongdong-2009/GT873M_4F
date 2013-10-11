@@ -847,15 +847,15 @@ int  save_userdata_to_flash (char * src, unsigned int flash_offset,unsigned int 
         diag_printf("data overflow;max size is %d\n",UserdataMaxLen);
          return 1;
     }
-	cs_printf("len:%d\n",flash_offset+data_lenth);
-    temp_ptr=iros_malloc(IROS_MID_SYS, USER_DATA_USED_LEN);
+
+    temp_ptr=iros_malloc(IROS_MID_SYS, USER_DATA_USED_LEN );
      if(!temp_ptr){
         diag_printf("save_userdate_to_flash malloc failed\n");
          return 1;
      }
 
      memcpy(temp_ptr,FlashStartAddr,USER_DATA_USED_LEN);
-     memcpy(temp_ptr+flash_offset, src, data_lenth);
+     memcpy((temp_ptr+flash_offset), src, data_lenth);
 
      if (flash_part_write_init(part_index, FlashStartAddr)) { /* prepare to write flash */
 
@@ -890,7 +890,487 @@ int  get_userdata_from_flash (char * dest, unsigned int flash_offset,unsigned in
 
 }
 
+#if 1
+#define USER_DATA_LEN	0x4000
+typedef unsigned int uint32;
+typedef struct
+{
+	uint32 head_len;
+	uint32 tlv_area_len;
+}tlv_area_head_t;
 
+//需调用的外部接口
+extern int serial_port_tlv_infor_get(int *len, char **data, int *state_free);
+extern int serial_port_tlv_infor_handle(int len, char *data, int opcode);
+extern int serial_port_running_config_show(void);
+
+extern int broadcast_storm_threshold_tlv_infor_get(int *len, char **value, int *free_need);
+extern int broadcast_storm_threshold_tlv_infor_handle(int len, char *data, int opcode);
+extern int broadcast_storm_threshold_running_config_show(void);
+
+extern int igmp_mode_tlv_infor_get(int *len, char **value, int *free_need);
+extern int igmp_mode_tlv_infor_handle(int len, char *data, int opcode);
+extern int igmp_mode_running_config_show(void);
+
+
+//向外提供的接口
+extern int save_user_tlv_data_to_flash(void);
+extern int get_user_tlv_data_from_flash(int opcode);
+extern int start_up_config_erase(void);
+extern int running_config_show(void);
+extern int start_up_config_syn_to_running_config(void);
+extern int start_up_show(void);
+
+//内部接口
+
+
+//change name
+//NULL panduan
+
+#define TLV_BUF_LEN		432
+extern int save_user_tlv_data_to_flash(void)
+{
+	#if 1
+	int ret = 0;
+	const uint32 tlv_area_volume = USER_DATA_LEN;
+	const uint32 user_data_tlv_offset = TLV_OFFSET;
+	tlv_area_head_t tlv_area_head;
+	uint32 tlv_area_saved_len = 0;
+	char *buf = NULL;
+	uint32 buf_len = 0;
+	uint32 buf_valid_len = 0;
+	uint32 type = 0;
+	uint32 len = 0;
+	char *value = NULL;
+	int free_need = 0;
+	char *p = NULL;
+	uint32 single_tlv_len = 0;
+	
+	//buf_len = USER_DATA_LEN;
+	buf_len = TLV_BUF_LEN;
+	buf_valid_len = 0;
+	buf = (char *)iros_malloc(IROS_MID_SYS, buf_len);
+	memset(buf, 0, buf_len);
+
+	tlv_area_head.head_len = sizeof(tlv_area_head);
+	for(type=TYPE_START;type<TYPE_NUM;type++)		//遍历每个tlv
+	{
+		switch(type)
+		{
+		#ifdef HAVE_TERMINAL_SERVER
+			case SERIAL_PORT:
+				serial_port_tlv_infor_get(&len, &value, &free_need);
+				break;
+		#endif
+			case BROADCAST_STORM_THRESHOLD:
+				broadcast_storm_threshold_tlv_infor_get(&len, &value, &free_need);
+				break;
+			case IGMP_MODE:
+				igmp_mode_tlv_infor_get(&len, &value, &free_need);
+				break;
+			default:
+				len = 0;
+				value = NULL;
+				free_need =0;
+				break;
+		}
+		#if 0
+		cs_printf("type :0x%x, len :0x%x\n", type, len);
+		#endif
+		if(0 != len)
+		{
+			//do nothing
+		}
+		else
+		{
+			continue;
+		}
+		single_tlv_len = sizeof(type) + sizeof(len) + len;
+		#if 0
+		cs_printf("buf_len :%d\n", buf_len);
+		cs_printf("single_tlv_len :%d\n", single_tlv_len);
+		#endif
+		if(single_tlv_len > buf_len)
+		{
+			cs_printf("error: in %s, line :%d, single_tlv_len > buf_len\n", __func__, __LINE__);
+		}
+		if(tlv_area_volume >= tlv_area_head.head_len + tlv_area_saved_len + single_tlv_len)
+		{
+			//do nothing
+		}
+		else
+		{
+			//tishi
+			cs_printf("type :%d and the rest type is not saved to flash, tlv area is full!");
+			break;
+		}
+		
+		if(buf_len - buf_valid_len >= single_tlv_len)
+		{
+			//do nothing
+		}
+		else
+		{
+			ret = save_userdata_to_flash(buf, user_data_tlv_offset + tlv_area_head.head_len + tlv_area_saved_len, buf_valid_len);	//保存tlv 数据区 
+			if(0 == ret)
+			{
+				//do nothing
+			}
+			else
+			{
+				iros_free(buf);
+				buf = NULL;
+				iros_free(value);
+				value = NULL;
+				goto end;
+			}
+			tlv_area_saved_len = tlv_area_saved_len + buf_valid_len;
+			memset(buf, 0, buf_len);
+			buf_valid_len = 0;
+		}
+		
+		if(buf_len - buf_valid_len >= single_tlv_len)
+		{
+			#if 0
+			cs_printf("buf_valid_len :%d\n", buf_valid_len);
+			#endif
+			p = buf + buf_valid_len;
+			memcpy(p, (char *)&type, sizeof(type));
+			p = p + sizeof(type);
+			memcpy(p, (char *)&len, sizeof(len));
+			p = p + sizeof(len);
+			memcpy(p, (char *)value, len);
+			p = p + len;
+			buf_valid_len = buf_valid_len + single_tlv_len;
+			
+			if(free_need != 0)
+			{
+				iros_free(value);
+				value = NULL;
+			}
+			else
+			{
+				//do nothing
+			}
+		}
+		else
+		{
+			if(free_need != 0)
+			{
+				iros_free(value);
+				value = NULL;
+			}
+			else
+			{
+				//do nothing
+			}
+			//tishi
+			break;
+		}
+		
+		
+	}
+
+	ret = save_userdata_to_flash(buf, user_data_tlv_offset + tlv_area_head.head_len + tlv_area_saved_len, buf_valid_len);		//保存tlv 数据区
+	if(0 == ret)
+	{
+		//do nothing
+	}
+	else
+	{
+		iros_free(buf);
+		buf = NULL;
+		goto end;
+	}
+	tlv_area_saved_len = tlv_area_saved_len + buf_valid_len;
+	memset(buf, 0, buf_len);
+	buf_valid_len = 0;
+
+	tlv_area_head.tlv_area_len = tlv_area_saved_len;
+	memcpy(buf, &tlv_area_head, sizeof(tlv_area_head_t));
+	buf_valid_len = sizeof(tlv_area_head_t);
+	ret = save_userdata_to_flash(buf, user_data_tlv_offset, buf_valid_len);	//保存tlv 区 头	
+	if(0 == ret)
+	{
+		//do nothing
+	}
+	else
+	{
+		iros_free(buf);
+		buf = NULL;
+		goto end;
+	}
+	iros_free(buf);
+	buf = NULL;
+	
+end:	
+	return ret;
+	#endif
+}
+
+
+extern int get_user_tlv_data_from_flash(int opcode)
+{
+	#if 0
+	cs_printf("in %s\n", __func__);
+	#endif
+	int ret = 0;
+	const uint32 user_data_tlv_offset = TLV_OFFSET;
+	tlv_area_head_t tlv_area_head;
+	uint32 tlv_area_len = 0;
+	char *buf = NULL;
+	uint32 buf_len = 0;
+	uint32 buf_valid_len = 0;
+	uint32 buf_parsed_len = 0;
+	uint32 type = 0;
+	uint32 len = 0;
+	char *value = NULL;
+	uint32 tlv_parsed_len = 0;
+	uint32 single_tlv_len = 0;
+	tlv_parsed_len = 0;
+	
+	ret = get_userdata_from_flash((char *)&tlv_area_head, user_data_tlv_offset, sizeof(tlv_area_head_t));		//获得tlv 头
+	if(0 == ret)
+	{
+		//do nothing
+	}
+	else
+	{
+		goto end;
+	}
+	#if 0
+	cs_printf("tlv_area_head.tlv_area_len :0x%x\n", tlv_area_head.tlv_area_len);
+	#endif
+	tlv_area_len = tlv_area_head.tlv_area_len;
+	buf_len = TLV_BUF_LEN;
+	if(0 == buf_len)
+	{
+		goto end;
+	}
+	else
+	{
+		
+	}
+	buf = (char *)iros_malloc(IROS_MID_SYS,buf_len);
+	if(NULL != buf)
+	{
+		//do nothing
+	}
+	else
+	{
+		cs_printf("in %s, malloc error!\n", __func__);
+		goto end;
+	}
+	buf_parsed_len = 0;
+	memset(buf, 0, buf_len);
+	if(buf_len <= tlv_area_len)
+	{
+		buf_valid_len = buf_len;
+	}
+	else
+	{
+		buf_valid_len = tlv_area_len;
+	}
+	ret = get_userdata_from_flash(buf, user_data_tlv_offset + tlv_area_head.head_len + tlv_parsed_len, buf_valid_len);		//获得tlv 数据区
+	if(0 == ret)
+	{
+		//do nothing
+	}
+	else
+	{
+		iros_free(buf);
+		goto end;
+	}
+	#if 0
+	cs_printf("tlv_area_len :0x%x\n", tlv_area_len);
+	cs_printf("buf_valid_len :0x%x\n", buf_valid_len);
+	cs_printf("tlv_area_head.head_len :0x%x\n", tlv_area_head.head_len);
+	cs_printf("tlv_parsed_len :0x%x\n", tlv_parsed_len);
+	#endif
+	char *p = NULL;
+	while(tlv_parsed_len < tlv_area_len)
+	{
+		p = buf + buf_parsed_len;
+		if(buf_valid_len - buf_parsed_len >= sizeof(type) + sizeof(len))
+		{
+			memcpy((char *)&type, p, sizeof(type));
+			p = p + sizeof(type);
+			memcpy((char *)&len, p, sizeof(len));
+			p = p + sizeof(len);
+			#if 0
+			cs_printf("type :0x%x\n", type);
+			cs_printf("len :0x%x\n", len);
+			#endif
+			if(buf_valid_len - buf_parsed_len >= sizeof(type) + sizeof(len) + len)
+			{
+				value = p;
+				switch(type)
+				{
+				#ifdef HAVE_TERMINAL_SERVER
+					case SERIAL_PORT:
+						serial_port_tlv_infor_handle(len, value, opcode);
+						break;
+				#endif
+					case BROADCAST_STORM_THRESHOLD:
+						broadcast_storm_threshold_tlv_infor_handle(len, value, opcode);
+						break;
+					case IGMP_MODE:
+						igmp_mode_tlv_infor_handle(len, value, opcode);
+						break;
+					default:
+						break;
+				}
+				p = p + len;
+				single_tlv_len = sizeof(type) + sizeof(len) + len;
+				buf_parsed_len = buf_parsed_len + single_tlv_len;
+				tlv_parsed_len = tlv_parsed_len + single_tlv_len;
+			}
+			else
+			{
+				if(tlv_area_len - tlv_parsed_len > sizeof(type) + sizeof(len) + len)
+				{
+					if(buf_len >= sizeof(type) + sizeof(len) + len)
+					{
+						buf_parsed_len = 0;
+						memset(buf, 0, buf_len);
+						ret = get_userdata_from_flash(buf, user_data_tlv_offset + tlv_area_head.head_len + tlv_parsed_len, buf_len);		//获得tlv 数据区
+						if(0 == ret)
+						{
+							//do nothing
+						}
+						else
+						{
+							iros_free(buf);
+							goto end;
+						}
+					}
+					else
+					{
+						break;
+					}
+					
+				}
+				else
+				{
+					break;
+				}
+			}
+		}
+		else
+		{
+			buf_parsed_len = 0;
+			memset(buf, 0, buf_len);
+			ret = get_userdata_from_flash(buf, user_data_tlv_offset + tlv_area_head.head_len + tlv_parsed_len, buf_len);		//获得tlv 数据区
+			if(0 == ret)
+			{
+				//do nothing
+			}
+			else
+			{
+				iros_free(buf);
+				goto end;
+			}
+		
+		}
+	}
+	
+end:
+	return ret;
+}
+
+
+extern int start_up_config_erase(void)
+{
+	#if 1
+	int ret = 0;
+	const uint32 user_data_tlv_offset = TLV_OFFSET;
+	tlv_area_head_t tlv_area_head;
+	tlv_area_head.head_len = sizeof(tlv_area_head_t);
+	tlv_area_head.tlv_area_len = 0;
+
+	ret = save_userdata_to_flash((char *)&tlv_area_head, user_data_tlv_offset, sizeof(tlv_area_head));	//保存tlv 区 头
+	return ret;
+	#endif
+
+}
+
+
+extern int serial_port_module_default_config_recover();
+extern int broadcast_storm_module_default_config_recover();
+
+#if 0
+extern int default_config_recover(void)
+{
+	#if 0
+	cs_printf("in %s\n", __func__);
+	#endif
+	int ret = 0;
+	int type = 0;
+	for(type=TYPE_START;type<TYPE_NUM;type++)		//遍历每个tlv
+	{
+		switch(type)
+		{
+			case SERIAL_PORT:
+				serial_port_module_default_config_recover();
+				break;
+			case BROADCAST_STORM_THRESHOLD:
+				broadcast_storm_module_default_config_recover();
+				break;
+			default:
+				break;
+		}
+	}
+	return ret;
+}
+#endif
+
+extern int start_up_config_syn_to_running_config(void)
+{
+	int ret = 0;
+
+	get_user_tlv_data_from_flash(DATA_RECOVER);
+	cs_printf("recover start-up config...\n");
+
+	return ret;
+}
+
+extern int start_up_show(void)
+{
+	int ret = 0;
+
+	ret = get_user_tlv_data_from_flash(DATA_SHOW);
+
+	return ret;
+}
+
+extern int running_config_show(void)
+{
+	int type = 0;
+	for(type=0;type<TYPE_NUM;type++)
+	{
+		switch(type)
+		{
+		#ifdef HAVE_TERMINAL_SERVER
+			case SERIAL_PORT:
+				serial_port_running_config_show();
+				break;
+		#endif
+			case BROADCAST_STORM_THRESHOLD:
+				broadcast_storm_threshold_running_config_show();
+				break;
+			case IGMP_MODE:
+				igmp_mode_running_config_show();
+				break;
+			default:
+				break;
+		}
+	}
+	return 0;
+}
+
+
+
+#endif
 
 int iros_flash_write(cs_int8* flash_addr, cs_int8* buf, cs_int32 len)
 {

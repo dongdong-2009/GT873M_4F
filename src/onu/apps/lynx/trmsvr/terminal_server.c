@@ -113,6 +113,15 @@ static cs_status uart_enable_semaphore_post(cs_uint8 uart);
 static cs_status uart_enable_semaphore_wait(cs_uint8 uart);
 #endif
 
+#if 1
+extern int serial_port_config_runing_format_switch_to_save_format(const term_server_config_t* running_format, serial_port_config_t *save_format);
+extern int serial_port_config_save_format_switch_to_runing_format(term_server_config_t* running_format, serial_port_config_t *save_format);
+extern int serial_port_config_save_format_set_default(cs_uint8 uart, serial_port_config_t *save_format);
+extern int serial_port_config_save_format_default_check(cs_uint8 uart, serial_port_config_t *save_format);
+extern term_server_config_t* serial_port_running_config_get(int uart);
+
+#endif
+
 
 /*****************************************************************************
  *
@@ -153,7 +162,9 @@ cs_uint32 net2uart_thread_id = 0;
 
 term_server_config_t * terminal_server_cfg[MAX_TERM_SERV_NUM];
 ts_uart_ring_t ts_uart_ring[MAX_TERM_SERV_NUM];
+#if 0
 ts_uart_ring_t text_uart_date[MAX_TERM_SERV_NUM];
+#endif
 //volatile 
 static void ts_def_uart_rx_func(cs_int32 uart, unsigned char *data, cs_int32 len);
 cs_int32 ts_client_fd_close(term_server_config_t* pTs_cfg)
@@ -481,6 +492,8 @@ cs_int32 ts_uart_intr_handler(cs_uint8 uart_id,void *data)
    return CS_E_OK;
    
 }
+
+#if 0
 cs_int32 text_uart_intr_handler(cs_uint8 uart_id,void *data)
 {
     cs_uint8 term_id;
@@ -520,7 +533,7 @@ cs_int32 text_uart_intr_handler(cs_uint8 uart_id,void *data)
    return CS_E_OK;
    
 }
-
+#endif
 
 
 extern cs_status uart_ip_info_get_from_global(cs_uint32 *uart_ip, cs_uint32 *uart_mask, cs_uint32 *uart_gateway, cs_uint16 *uart_vlan);
@@ -916,12 +929,22 @@ static void ts_tcp_receive(term_server_config_t* pTerm_serv_cfg)
             ts_client_fd_close(pTerm_serv_cfg);
             break;
         }
+		#if 0
         while(pTerm_serv_cfg->client_fd >= 0) {
             if(ts_client_data_proc(pTerm_serv_cfg) < 0){
                 ts_client_fd_close(pTerm_serv_cfg);
                 break;
             }
         }
+		#else
+		if(FD_ISSET(pTerm_serv_cfg->client_fd, &rfds))
+		{
+			if(ts_client_data_proc(pTerm_serv_cfg) < 0){
+                ts_client_fd_close(pTerm_serv_cfg);
+                break;
+            }
+		}
+		#endif
     }
     
     TS_DBG("%s , uart[%d], client closed.\n", __func__, pTerm_serv_cfg->uart_cfg.uart_id);  
@@ -1055,10 +1078,6 @@ extern cs_status uart_ip_info_get_from_global(cs_uint32 *uart_ip, cs_uint32 *uar
 **---------------------------------------------*/
 static cs_status ts_udp_socket_setup(term_server_config_t* pTerm_serv_cfg)
 {
-	#if 0
-		cs_printf("in ts_udp_socket_setup****\n");
-	#endif
-
     struct sockaddr_in serv_addr;
     //cs_uint32 index;
     struct timeval tv;
@@ -1514,6 +1533,7 @@ static void ts_net_rx_process(term_server_config_t* pTerm_serv_cfg)
 	#endif
 //	cyg_thread_delay(600); // delay 600 ticks, that is, 6 seconds
 //	cs_printf("cyg_thread_delay(600)\n");
+	cs_thread_delay(2000);
 	while(1)
 	{
 		if(1 == socket_status_get(pTerm_serv_cfg))		/*已建立socket*/
@@ -1525,19 +1545,22 @@ static void ts_net_rx_process(term_server_config_t* pTerm_serv_cfg)
 			{
 				if(0 != pTerm_serv_cfg->server_enable)	/* sever  服务器模式*/
 				{
-					#if 0
-					cs_printf("ts_tcp_receive 1235\n");
+					#if 1
+					cs_printf("ts_tcp_receive\n");
 					#endif
 					ts_tcp_receive(pTerm_serv_cfg);
+					#if 1
+					cs_printf("after ts_tcp_receive\n");
+					#endif
 				}
 				else if(0 != pTerm_serv_cfg->client_enable)		/*client 客户端模式*/
 				{
-					#if 0
-					cs_printf("tc_tcp_receive 1241\n");
+					#if 1
+					cs_printf("tc_tcp_receive\n");
 					#endif
 					tc_tcp_receive(pTerm_serv_cfg);
-					#if 0
-					cs_printf("after tc_tcp_receive 1241\n");
+					#if 1
+					cs_printf("after tc_tcp_receive\n");
 					#endif
 				}
 				else
@@ -1552,10 +1575,13 @@ static void ts_net_rx_process(term_server_config_t* pTerm_serv_cfg)
 			}
 			else if(IPPROTO_UDP == pTerm_serv_cfg->proto_type)	/*udp 协议*/
 			{
-				#if 0
-				cs_printf("ts_udp_receive 1252\n");
+				#if 1
+				cs_printf("ts_udp_receive\n");
 				#endif
 				ts_udp_receive(pTerm_serv_cfg);
+				#if 1
+				cs_printf("after ts_udp_receive\n");
+				#endif
 				#if 1
 				cs_thread_delay(2000);
 				#endif
@@ -1585,7 +1611,17 @@ static void ts_net_rx_process(term_server_config_t* pTerm_serv_cfg)
 			#if 1
 			if(0 == pTerm_serv_cfg->socket_control)		//是否要创建socket
 			{
-				cs_thread_delay(2000);
+				#if 0
+				if(1 == pTerm_serv_cfg->uart_cfg.uart_id)
+				{
+					cs_printf("***uart 1 dont create socket\n");
+				}
+				else
+				{
+				
+				}
+				#endif
+				cs_thread_delay(10000);
 				continue;
 			}
 			else
@@ -1891,6 +1927,7 @@ static void ts_thread_create(void)
             TERM_SERV_IP_RX_THREAD_PRIORITY, 0);        
     cs_printf("term_server1_rx_thread created\n");
 
+	#if 1
     cs_thread_create(&ip_rx2_thread_id, "Term Serv Rx2",
             ts_net_rx_thread,(void *)2,TERM_SERV_THREAD_STACKSIZE,
             TERM_SERV_IP_RX_THREAD_PRIORITY, 0);        
@@ -1900,7 +1937,7 @@ static void ts_thread_create(void)
             ts_net_rx_thread,(void *)3,TERM_SERV_THREAD_STACKSIZE,
             TERM_SERV_IP_RX_THREAD_PRIORITY, 0);        
     cs_printf("term_server3_rx_thread created\n");
-
+	#endif
 
     /* The task process transmitting UART data */
     cs_thread_create(&uart2net_thread_id, "Term Serv uart2net",
@@ -1935,9 +1972,6 @@ void ts_cfg_save(cs_uint8 uart)
     }
     pTsCfg = TS_CFG_GET(uart);
 
-	#if 1
-	cs_printf("pTsCfg->init_flag :0x%x\n", pTsCfg->init_flag);
-	#endif
    /* Check if uart has been initialized */
     if(VALID_CONFIG_FLAG != pTsCfg->init_flag){
         cs_printf("Invalid configure for UART%d \n",uart);
@@ -2750,6 +2784,7 @@ extern cs_status uart_client_disable(cs_uint8 uart)
 	return ret;	
 }
 
+#if 0
 static void ts_auto_create(void)
 {
 #if 1
@@ -2803,9 +2838,13 @@ static void ts_auto_create(void)
 	
 #endif    
 }
+#endif
+
 extern cs_status cs_gpio_mode_set(cs_uint8 gpio_id, gpio_mode_t mode);
 extern cs_status cs_gpio_write(cs_uint8 gpio_id, cs_uint8 data);
 extern int set_uart_mode_cfg(cs_uint32 uart_port,cs_uint32 act);
+extern int serial_port_module_default_config_recover();
+
 void ts_init(void)
 {
     cs_int32 ret = 0;
@@ -2875,6 +2914,9 @@ void ts_init(void)
     }
 
 	#if 1
+	serial_port_module_default_config_recover();
+	#endif
+	#if 0
 	ts_auto_create();
 	#endif
 	
@@ -3043,330 +3085,6 @@ extern cs_uint8 socket_status_get(term_server_config_t* pTerm_serv_cfg)
 
 extern void ts_cfg_save(cs_uint8 uart);
 
-
-extern int cmd_uart_configure(struct cli_def *cli, char *command, char *argv[], int argc)
-{
-
-	if(CLI_HELP_REQUESTED)
-	{
-		switch(argc)
-		{
-			case 1:
-				return cli_arg_help(cli, 0,
-				"<uart>", "1 for uart1, 2 for uart2...4 for uart4",
-				NULL);
-				break;
-			case 2:
-				return cli_arg_help(cli, 0,
-				"<baudrate>", "300~115200",
-				NULL);
-				break;
-			case 3:
-				return cli_arg_help(cli, 0,
-				"<databits>", "8",
-				NULL);
-				break;
-			case 4:
-				return cli_arg_help(cli, 0,
-				"<parity>", "0-None 1-Odd 2-Even",
-				NULL);
-				break;
-			case 5:
-				return cli_arg_help(cli, 0,
-				"<proto>", "17 for UDP, 6 for TCP",
-				NULL);
-				break;
-			case 6:
-				return cli_arg_help(cli, 0,
-				"<port>", "1024~65535",
-				NULL);
-				break;
-			case 7:
-				return cli_arg_help(cli, 0,
-				"<timeout>", "0~65535s for remote timeout, 0-never timeout",
-				NULL);
-				break;
-			case 8:
-				return cli_arg_help(cli, 0,
-				"<cr>", "finish uart configuration",
-				NULL);
-				break;
-				
-
-			default:
-			return cli_arg_help(cli, argc > 1, NULL);
-		}
-	}
-
-	if(2 == argc)
-	{
-		#if 0
-		cs_printf("argv[0] :%s\n", argv[0]);
-		cs_printf("argv[1] :%s\n", argv[1]);
-		#endif
-		if(0 == strcmp("save", argv[0]))
-		{
-			cs_uint8 uart = 0;
-			uart = iros_strtol(argv[1]);
-			ts_cfg_save(uart);
-			cs_printf("uart %d save success\n", uart);
-		}
-	}
-	else if(7 == argc)
-	{
-
-		term_server_config_t * pConfig = NULL;
-		cs_uint8 uart = 0;
-		uart = iros_strtol(argv[0]);
-	#if 0
-		cs_printf("uart :0x%x\n", uart);
-	#endif
-		pConfig = TS_CFG_GET(uart);
-	
-		memset(pConfig,0,sizeof(term_server_config_t));
-		pConfig->client_fd = -1;
-		pConfig->server_fd = -1;
-		pConfig->init_flag = VALID_CONFIG_FLAG;
-		pConfig->client_closed_flag = 1;
-		pConfig->uart_cfg.uart_id = iros_strtol(argv[0]);
-		pConfig->uart_cfg.baud_rate = iros_strtol(argv[1]);
-		pConfig->uart_cfg.data_bits = iros_strtol(argv[2]);
-		pConfig->uart_cfg.parity = iros_strtol(argv[3]);
-		pConfig->uart_cfg.mode = UART_MODE_INTR;
-		pConfig->uart_cfg.duplex = UART_DUPLEX_HALF;
-		pConfig->uart_cfg.stop_bits = 1;
-		pConfig->proto_type = iros_strtol(argv[4]);
-		pConfig->proto_port = iros_strtol(argv[5]);
-		pConfig->client_timeout = iros_strtol(argv[6]);
-	#if 0
-		pConfig->min_payload = iros_strtol(argv[9]);
-		pConfig->max_payload = iros_strtol(argv[10]);
-		pConfig->max_res_time = iros_strtol(argv[11]);
-	#else
-		pConfig->min_payload = 40;
-		pConfig->max_payload = 1024;
-		pConfig->max_res_time = 30;
-	#endif
-	
-	#if 0
-		cs_printf("pConfig->uart_cfg.uart_id :0x%x\n", pConfig->uart_cfg.uart_id);
-		cs_printf("pConfig->uart_cfg.baud_rate :0x%x\n", pConfig->uart_cfg.baud_rate);
-		cs_printf("pConfig->uart_cfg.data_bits :0x%x\n", pConfig->uart_cfg.data_bits);
-		cs_printf("pConfig->uart_cfg.parity :0x%x\n", pConfig->uart_cfg.parity);
-		cs_printf("pConfig->proto_type :0x%x\n", pConfig->proto_type);
-		cs_printf("pConfig->proto_port :0x%x\n", pConfig->proto_port);
-		cs_printf("pConfig->client_timeout :0x%x\n", pConfig->client_timeout);
-	#endif
-
-	#if 1
-		cs_printf("uart %d configure success\n", uart);
-	#endif
-	
-	}
-	else
-	{
-		//do nothing
-		cs_printf("invalid input\n");
-	}
-	
-
-
-
-
-	
-	return CLI_OK;
-}
-
-#if 0
-
-extern int cmd_uart_client_set_server_ip(struct cli_def *cli, char *command, char *argv[], int argc)
-{
-	if(CLI_HELP_REQUESTED)
-	{
-		switch(argc)
-		{
-			case 1:
-				return cli_arg_help(cli, 0, "<uart>","uart num, 1, 2, 3, 4", NULL);
-				break;
-			case 2:
-				return cli_arg_help(cli, 0, "<ip>", "remote server ip", NULL);
-				break;
-			case 3:
-				return cli_arg_help(cli, 0, "<cr>", "finish ip set", NULL);
-				break;
-			default:
-				return cli_arg_help(cli, argc > 1 ,NULL);
-		}
-	}
-	else
-	{
-		//do nothing
-	}
-
-	switch(argc)
-	{
-		case 2:
-			{
-				cs_uint8 uart_id = 0;
-				cs_uint32 ip = 0;
-				term_server_config_t * pConfig = NULL;
-				
-				uart_id = atoi(argv[0]);    
-				ip = ntohl(inet_addr(argv[1]));
-				pConfig = TS_CFG_GET(uart_id);
-				pConfig->remote_server_ip = ip;
-
-				#if 1
-				cs_printf("uart_id :0x%x\n", uart_id);
-				cs_printf("pConfig->remote_server_ip :0x%x\n", pConfig->remote_server_ip);
-				#endif
-				
-			}
-			break;
-		default:
-			cs_printf("invalid input\n");
-	}
-
-	cs_printf("cmd_uart_client_set_server_ip success\n");
-
-	return CLI_OK;
-}
-
-int cmd_uart_client_set_server_port(struct cli_def *cli, char *command, char *argv[], int argc)
-{
-	if(CLI_HELP_REQUESTED)
-	{
-		switch(argc)
-		{
-			case 1:
-				return cli_arg_help(cli, 0, "<uart>","uart num, 1, 2, 3, 4", NULL);
-				break;
-			case 2:
-				return cli_arg_help(cli, 0, "<port>", "remote server port", NULL);
-				break;
-			case 3:
-				return cli_arg_help(cli, 0, "<cr>", "finish port set", NULL);
-				break;
-			default:
-				return cli_arg_help(cli, argc > 1 ,NULL);
-		}
-	}
-	else
-	{
-		//do nothing
-	}
-
-	switch(argc)
-	{
-		case 2:
-			{
-				cs_uint8 uart_id = 0;
-				cs_uint32 port = 0;
-				term_server_config_t * pConfig = NULL;
-				
-				uart_id = atoi(argv[0]);    
-				port = atoi(argv[1]);
-				pConfig = TS_CFG_GET(uart_id);
-				pConfig->remote_server_port = port;
-
-				#if 1
-				cs_printf("uart_id :0x%x\n", uart_id);
-				cs_printf("pConfig->remote_server_port :0x%x\n", pConfig->remote_server_port);
-				#endif
-				
-			}
-			break;
-		default:
-			cs_printf("invalid input\n");
-	}
-
-
-	cs_printf("cmd_uart_client_set_server_ip success\n");
-	return CLI_OK;
-}
-
-int cmd_uart_client_get_server_ip(struct cli_def *cli, char *command, char *argv[], int argc)
-{
-	if(CLI_HELP_REQUESTED)
-	{
-		switch(argc)
-		{
-			case 1:
-				return cli_arg_help(cli, 0, "<uart>","uart num, 1, 2, 3, 4", NULL);
-				break;
-			default:
-				return cli_arg_help(cli, argc > 1 ,NULL);
-		}
-	}
-	switch(argc)
-	{
-		case 1:
-			{
-				cs_uint8 uart_id = 0;
-				term_server_config_t * pConfig = NULL;
-				cs_uint32 ip = 0;
-
-				uart_id = atoi(argv[0]);
-				pConfig = TS_CFG_GET(uart_id);
-				ip = pConfig->remote_server_ip;
-
-				struct sockaddr_in addrp[1];
-				addrp[0].sin_addr.s_addr = htonl(ip);
-
-				#if 1
-				cs_printf("uart_id :%d\n", uart_id);
-				#endif
-				cs_printf("remote server ip :%s\n", inet_ntoa(addrp[0].sin_addr));
-			}
-			break;
-		default:
-			cs_printf("invalid input\n");
-	}
-	cs_printf("cmd_uart_client_set_server_ip success\n");
-	return CLI_OK;
-}
-
-extern int cmd_uart_client_get_server_port(struct cli_def *cli, char *command, char *argv[], int argc)
-{
-	if(CLI_HELP_REQUESTED)
-	{
-		switch(argc)
-		{
-			case 1:
-				return cli_arg_help(cli, 0, "<uart>","uart num, 1, 2, 3, 4", NULL);
-				break;
-			default:
-				return cli_arg_help(cli, argc > 1 ,NULL);
-		}
-	}
-	switch(argc)
-	{
-		case 1:
-			{
-				cs_uint8 uart_id = 0;
-				term_server_config_t * pConfig = NULL;
-				cs_uint16 port = 0;
-
-				uart_id = atoi(argv[0]);
-				pConfig = TS_CFG_GET(uart_id);
-				port = pConfig->remote_server_port;
-
-				#if 1
-				cs_printf("uart_id :%d\n", uart_id);
-				#endif
-				
-				cs_printf("remote server port :%d\n", port);
-			}
-			break;
-		default:
-			cs_printf("invalid input\n");
-	}
-
-
-	cs_printf("cmd_uart_client_set_server_ip success\n");
-	return CLI_OK;
-}
-#endif
 
 
 
@@ -3849,7 +3567,7 @@ cs_status tcp_server_disable(cs_uint16 serial_port_id)
 	#if 1
 	ret = serial_port_buf_free(serial_port_id);
 	#endif
-	
+
 	return ret;
 }
 
@@ -3971,6 +3689,7 @@ extern cs_status serial_port_connect_disable(cs_uint16 serial_port_id)
 		cs_printf("serial port %d socket has been disabled\n", serial_port_id);
 		ret = CS_E_ERROR;
 	}
+
 	return ret;
 }
 
@@ -4171,6 +3890,7 @@ extern cs_status serial_port_connect_enable(cs_uint16 serial_port_id)
 	{
 		ret = CS_E_ERROR;
 	}
+
 	return ret;
 }
 
@@ -4237,7 +3957,7 @@ extern cs_status gw_serial_port_data_size_set(cs_uint16 serial_port_id, cs_uint8
 
 extern cs_status gw_serial_port_local_port_set(cs_uint16 serial_port_id, cs_uint32 local_port)
 {
-	#if 1
+	#if 0
 	cs_printf("in gw_serial_port_local_port_set, serial_port_id :%d, local_port :%d\n", serial_port_id, local_port);
 	#endif
 	cs_status ret = CS_E_OK;
@@ -4245,7 +3965,7 @@ extern cs_status gw_serial_port_local_port_set(cs_uint16 serial_port_id, cs_uint
 	pConfig = TS_CFG_GET(serial_port_id);
 	pConfig->uart_cfg.uart_id = serial_port_id;
 	pConfig->proto_port= local_port;
-	#if 1
+	#if 0
 	cs_printf("pConfig->proto_port :%d\n", pConfig->proto_port);
 	#endif
 	return ret;
@@ -4412,6 +4132,7 @@ extern cs_status serial_port_information_show(cs_uint16 serial_port_id)
 	cs_printf("connect state        :%s\n", connect_status);
 	cs_printf("bytes in serial port :%d\n", pConfig->uart_rx_char_cnt);
 	cs_printf("bytes out of port    :%d\n", pConfig->uart_tx_char_cnt);
+
 	
 	
 	
@@ -4420,9 +4141,1076 @@ extern cs_status serial_port_information_show(cs_uint16 serial_port_id)
 
 
 #endif
+extern int serial_port_config_show(term_server_config_t* pConfig);
+extern int serial_port_default_config_check(cs_uint8 uart, term_server_config_t* pConfig);
+
+
+extern int serial_port_tlv_infor_get(int *len, char **data, int *free_need)
+{	
+#if 0
+	cs_printf("in %s, sizeof(term_server_config_t):%d\n", __func__, sizeof(term_server_config_t));
+#endif
+	int ret = 0;
+	term_server_config_t *term_server_config_p = NULL;
+	serial_port_config_t *srial_port_config_save = NULL;
+	serial_port_config_t *p = NULL;
+	int i = 0;
+	int uart = 0;
+	int count = 0;
+	serial_port_config_t *save_format = NULL;
+	serial_port_config_t serial_save_format;
+	cs_uint32 size = 0;
+	if(NULL == len)
+	{
+		goto error;
+	}
+	else
+	{
+		*len = 0;
+	}
+	
+	if(NULL == data)
+	{
+		goto error;
+	}
+	else
+	{
+		*data = NULL;
+	}
+
+	if(NULL == free_need)
+	{
+		goto error;
+	}
+	else
+	{
+		*free_need = 0;
+	}
+	
+	size = sizeof(serial_port_config_t) * MAX_TERM_SERV_NUM;;
+	srial_port_config_save = (serial_port_config_t *)iros_malloc(IROS_MID_APP, size);
+	memset(srial_port_config_save, 0, size);
+	*free_need = 1;
+	save_format  = &serial_save_format;
+	
+	//获取串口配置
+	p = srial_port_config_save;
+	for(i=0;i<MAX_TERM_SERV_NUM;i++)
+	{
+		uart = i + TS_MIN_UART_NUM;
+		term_server_config_p = serial_port_running_config_get(uart);
+		serial_port_config_runing_format_switch_to_save_format(term_server_config_p, save_format);
+		if(serial_port_config_save_format_default_check(uart, save_format) != 0)
+		{
+			memcpy(p, save_format, sizeof(serial_port_config_t));
+			p++;
+			count++;
+		}
+		else
+		{
+			//do nothing
+		}
+	}
+	
+	*len = sizeof(term_server_config_t) * count;
+	*data = (char *)srial_port_config_save;
+
+	ret = 0;
+	goto end;
+	
+error:
+	ret = -1;
+end:
+	if((0 == *len)&&(NULL != srial_port_config_save))
+	{
+		iros_free(srial_port_config_save);
+		srial_port_config_save = NULL;
+	}
+	return ret;
+}
+
+
+extern int serial_port_running_config_show(void);
+extern int serial_port_default_config_set(cs_uint8 uart, term_server_config_t* pConfig);
+extern term_server_config_t* serial_port_running_config_get(int uart);
+extern int serial_port_config_show(term_server_config_t* pConfig);
 
 
 
+
+
+extern term_server_config_t* serial_port_running_config_get(int uart)
+{
+	return TS_CFG_GET(uart);
+}
+
+
+extern int serial_port_config_show(term_server_config_t* pConfig)
+{
+	#if 0
+	cs_printf("in %s\n", __func__);
+	#endif
+	
+	cs_uint8 serial_port_id = pConfig->uart_cfg.uart_id;
+	char net_connect_status[10] = {0};
+	if(1 == pConfig->socket_enable)
+	{
+		strncpy(net_connect_status, "enable", sizeof(net_connect_status));
+	}
+	else
+	{
+		strncpy(net_connect_status, "disable", sizeof(net_connect_status));
+	}
+
+	char connect_mode[15] = {"not set"};
+	if(IPPROTO_TCP == pConfig->proto_type)
+	{
+		if(0 == pConfig->server_client_mode)
+		{
+			strncpy(connect_mode, "tcp_server", sizeof(connect_mode));
+		}
+		else if(1 == pConfig->server_client_mode)
+		{
+			strncpy(connect_mode, "tcp_client", sizeof(connect_mode));
+		}
+		else
+		{
+			//do nothing
+			strncpy(connect_mode, "not set", sizeof(connect_mode));
+		}
+	}
+	else if(IPPROTO_UDP == pConfig->proto_type)
+	{
+		strncpy(connect_mode, "udp", sizeof(connect_mode));
+	}
+	else
+	{
+		//do nothing
+		strncpy(connect_mode, "not set", sizeof(connect_mode));
+	}
+
+	struct sockaddr_in addrp[1];
+	addrp[0].sin_addr.s_addr = htonl(pConfig->remote_server_ip);
+
+	char connect_status[15] = {0};
+	if(pConfig->client_fd >= 0)
+	{
+		strncpy(connect_status, "connected", sizeof(connect_status));
+	}
+	else
+	{
+		strncpy(connect_status, "disconnected", sizeof(connect_status));
+	}
+
+	cs_printf("\n----------------------------------------------------------\n");
+	cs_printf("serial port number   :%d\n", serial_port_id);
+	//cs_printf("serial port mode          :%d\n", );
+	cs_printf("baud rate            :%d\n", pConfig->uart_cfg.baud_rate);
+	cs_printf("data size            :%d\n", pConfig->uart_cfg.data_bits);
+	cs_printf("parity               :%d\n", pConfig->uart_cfg.parity);
+	cs_printf("stop bit             :%d\n", pConfig->uart_cfg.stop_bits);
+	cs_printf("flow control         :%d\n", pConfig->uart_cfg.flow_control);
+	cs_printf("net connect          :%s\n", net_connect_status);
+	cs_printf("connect mode         :%s\n", connect_mode);
+	cs_printf("local tcp/udp port   :%d\n", pConfig->proto_port);
+	cs_printf("remote tcp/udp port  :%d\n", pConfig->remote_server_port);
+	cs_printf("remote ip address    :%s\n", inet_ntoa(addrp[0].sin_addr));
+	cs_printf("connect state        :%s\n", connect_status);
+	cs_printf("----------------------------------------------------------\n");
+
+	return 0;
+}
+
+extern int serial_port_running_config_show(void)
+{
+	term_server_config_t* term_server_config_p = NULL;
+	serial_port_config_t* save_format_p = NULL;
+	serial_port_config_t save_format;
+	int i = 0;
+	int uart = 0;
+	save_format_p = &save_format;
+	for(i=0;i<MAX_TERM_SERV_NUM;i++)
+	{
+		uart = i + TS_MIN_UART_NUM;
+		term_server_config_p = serial_port_running_config_get(uart);
+		serial_port_config_runing_format_switch_to_save_format(term_server_config_p, save_format_p);
+		if(0 != serial_port_config_save_format_default_check(uart, save_format_p))
+		{
+			serial_port_config_show(term_server_config_p);
+		}
+	}
+	return 0;
+}
+
+extern int serial_port_default_config_set(cs_uint8 uart, term_server_config_t* pConfig)
+{
+	//设置串口默认配置
+	memset(pConfig,0,sizeof(term_server_config_t));
+
+	#if 1
+	pConfig->uart_cfg.uart_id = uart;
+	pConfig->uart_cfg.baud_rate = 115200;
+	pConfig->uart_cfg.data_bits = 8;
+	pConfig->uart_cfg.stop_bits = 1;
+	pConfig->uart_cfg.flow_control = 0;
+	pConfig->uart_cfg.parity = 0;
+	pConfig->uart_cfg.mode = UART_MODE_INTR;
+	pConfig->uart_cfg.duplex = UART_DUPLEX_HALF;
+	pConfig->proto_type = IPPROTO_TCP;
+	pConfig->proto_port = 6000 + uart;
+	pConfig->server_client_mode = 0;
+	pConfig->client_enable = 0;
+	pConfig->server_enable = 1;
+	pConfig->socket_enable = 0;
+	pConfig->socket_control = 1;
+	#endif
+	pConfig->init_flag = VALID_CONFIG_FLAG;
+	pConfig->client_fd = -1;
+	pConfig->server_fd = -1;
+	pConfig->client_closed_flag = 1;
+	pConfig->client_timeout = 1000;
+	pConfig->min_payload = 40;
+	pConfig->max_payload = 1024;
+	pConfig->max_res_time = 30;
+	
+	return 0;
+}
+
+extern int serial_port_config_runing_format_switch_to_save_format(const term_server_config_t* running_format, serial_port_config_t *save_format)
+{
+	int ret = 0;
+	if(NULL == running_format)
+	{
+		goto error;
+	}
+
+	if(NULL == save_format)
+	{
+		goto error;
+	}
+
+	save_format->init_flag = VALID_CONFIG_FLAG;
+	memcpy(&save_format->uart_cfg, &running_format->uart_cfg, sizeof(uart_config_t));
+	save_format->proto_type = running_format->proto_type;
+	save_format->proto_port = running_format->proto_port;
+	save_format->client_timeout = running_format->client_timeout;
+	save_format->max_payload = running_format->max_payload;
+	save_format->min_payload = running_format->min_payload;
+	save_format->max_res_time = running_format->max_res_time;
+	save_format->server_client_mode = running_format->server_client_mode;
+	save_format->client_enable = running_format->client_enable;
+	save_format->server_enable = running_format->server_enable;
+	save_format->socket_control = running_format->socket_control;
+	save_format->remote_server_ip = running_format->remote_server_ip;
+	save_format->remote_server_port = running_format->remote_server_port;
+	ret = 0;
+	goto end;
+	
+error:
+	ret = -1;
+	
+end:
+	return ret;
+}
+
+extern int serial_port_config_save_format_switch_to_runing_format(term_server_config_t* running_format, serial_port_config_t *save_format)
+{
+	int ret = 0;
+	if(NULL == running_format)
+	{
+		goto error;
+	}
+
+	if(NULL == save_format)
+	{
+		goto error;
+	}
+
+	memset(running_format, 0, sizeof(term_server_config_t));
+	
+	running_format->init_flag = VALID_CONFIG_FLAG;
+	memcpy(&running_format->uart_cfg, &save_format->uart_cfg, sizeof(uart_config_t));
+	running_format->proto_type = save_format->proto_type;
+	running_format->proto_port = save_format->proto_port;
+	running_format->client_timeout = save_format->client_timeout;
+	running_format->max_payload = save_format->max_payload;
+	running_format->min_payload = save_format->min_payload;
+	running_format->max_res_time = save_format->max_res_time;
+	running_format->server_client_mode = save_format->server_client_mode;
+	running_format->client_enable = save_format->client_enable;
+	running_format->server_enable = save_format->server_enable;
+	running_format->socket_control = save_format->socket_control;
+	running_format->remote_server_ip = save_format->remote_server_ip;
+	running_format->remote_server_port = save_format->remote_server_port;
+	ret = 0;
+	goto end;
+	
+error:
+	ret = -1;
+	
+end:
+	return ret;
+}
+
+extern int serial_port_config_save_format_set_default(cs_uint8 uart, serial_port_config_t *save_format)
+{
+	int ret = 0;
+	
+	if(NULL == save_format)
+	{
+		goto error;
+	}
+
+	memset(save_format, 0, sizeof(serial_port_config_t));
+	save_format->init_flag = VALID_CONFIG_FLAG;
+	
+	save_format->uart_cfg.uart_id = uart;
+	save_format->uart_cfg.baud_rate = 115200;
+	save_format->uart_cfg.data_bits = 8;
+	save_format->uart_cfg.stop_bits = 1;
+	save_format->uart_cfg.flow_control = 0;
+	save_format->uart_cfg.parity = 0;
+	save_format->uart_cfg.mode = UART_MODE_INTR;
+	save_format->uart_cfg.duplex = UART_DUPLEX_HALF;
+	
+	
+	save_format->proto_type = IPPROTO_TCP;
+	save_format->proto_port = 6000 + uart;
+	save_format->server_client_mode = 0;
+	save_format->client_enable = 0;
+	save_format->server_enable = 1;
+	save_format->socket_control = 1;
+	save_format->remote_server_ip = 0;
+	save_format->remote_server_port = 0;
+	save_format->client_timeout = 1000;
+	save_format->min_payload = 40;
+	save_format->max_payload = 1024;
+	save_format->max_res_time = 30;
+	
+	goto end;
+	
+error:
+	ret = -1;
+end:
+	return ret;
+}
+
+//#define SERIAL_PORT_DEBUG	1
+
+extern int serial_port_config_save_format_default_check(cs_uint8 uart, serial_port_config_t *save_format)
+{
+	int ret = 0;
+	serial_port_config_t *save_format_default = NULL;
+	serial_port_config_t config_default;
+	if(CS_E_OK != ts_uart_id_check(uart))
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+	if(NULL == save_format)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+
+	save_format_default = &config_default;
+	serial_port_config_save_format_set_default(uart, save_format_default);
+	
+	if(save_format->init_flag != save_format_default->init_flag)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+	
+	if(save_format->uart_cfg.uart_id != save_format_default->uart_cfg.uart_id)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+	if(save_format->uart_cfg.data_bits != save_format_default->uart_cfg.data_bits)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+	if(save_format->uart_cfg.stop_bits != save_format_default->uart_cfg.stop_bits)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+	if(save_format->uart_cfg.flow_control != save_format_default->uart_cfg.flow_control)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+	if(save_format->uart_cfg.parity != save_format_default->uart_cfg.parity)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+	if(save_format->uart_cfg.duplex != save_format_default->uart_cfg.duplex)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+	if(save_format->uart_cfg.mode != save_format_default->uart_cfg.mode)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+	if(save_format->uart_cfg.baud_rate != save_format_default->uart_cfg.baud_rate)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+
+	if(save_format->proto_type != save_format_default->proto_type)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		
+		#endif
+		goto error;
+	}
+	if(save_format->proto_port != save_format_default->proto_port)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+	if(save_format->client_timeout != save_format_default->client_timeout)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+	if(save_format->max_payload != save_format_default->max_payload)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+	if(save_format->min_payload != save_format_default->min_payload)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+	if(save_format->max_res_time != save_format_default->max_res_time)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+	if(save_format->server_client_mode != save_format_default->server_client_mode)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+	if(save_format->client_enable != save_format_default->client_enable)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+	if(save_format->server_enable != save_format_default->server_enable)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+	if(save_format->socket_control != save_format_default->socket_control)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+	if(save_format->remote_server_ip != save_format_default->remote_server_ip)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+	if(save_format->remote_server_port != save_format_default->remote_server_port)
+	{
+		#ifdef SERIAL_PORT_DEBUG
+		cs_printf("in %s, line: %d\n", __func__, __LINE__);
+		#endif
+		goto error;
+	}
+
+	ret = 0;
+	goto end;
+	
+error:
+	ret = -1;
+end:
+	return ret;
+}
+extern int serial_port_default_config_check(cs_uint8 uart, term_server_config_t* pConfig)
+{
+	int ret = 0;
+	if(pConfig != NULL)
+	{
+		//do nothing
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+	
+	if(uart == pConfig->uart_cfg.uart_id)
+	{
+		//do nothing
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+	
+	if(115200 == pConfig->uart_cfg.baud_rate)
+	{
+	
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+	
+	if(8 == pConfig->uart_cfg.data_bits)
+	{
+		
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+	
+	if(1 == pConfig->uart_cfg.stop_bits)
+	{
+	
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+
+	if(0 == pConfig->uart_cfg.flow_control)
+	{
+	
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+
+	if(0 == pConfig->uart_cfg.parity)
+	{
+	
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+
+	if(UART_MODE_INTR == pConfig->uart_cfg.mode)
+	{
+	
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+
+	if(UART_DUPLEX_HALF == pConfig->uart_cfg.duplex)
+	{
+	
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+
+	if(IPPROTO_TCP == pConfig->proto_type)
+	{
+		
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+	
+	if(6000 + uart == pConfig->proto_port)
+	{
+		
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+
+	if(0 == pConfig->server_client_mode)
+	{
+	
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+	
+	if(0 == pConfig->client_enable)
+	{
+	
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+	
+	if(1 == pConfig->server_enable)
+	{
+	
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+
+	#if 0
+	if(0 == pConfig->socket_enable)
+	{
+	
+	}
+	else
+	{
+		#if 1
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+	#endif
+
+	if(1 == pConfig->socket_control)
+	{
+	
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+
+	if(VALID_CONFIG_FLAG == pConfig->init_flag)
+	{
+	
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+
+	#if 0
+	if(-1 == pConfig->client_fd)
+	{
+	
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+
+	if(-1 == pConfig->server_fd)
+	{
+	
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+
+	if(1 == pConfig->client_closed_flag)
+	{
+	
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+	#endif
+
+	if(1000 == pConfig->client_timeout )
+	{
+	
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+
+	
+	if(40 == pConfig->min_payload)
+	{
+	
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+
+	if(1024 == pConfig->max_payload)
+	{
+	
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+
+	if(30 == pConfig->max_res_time)
+	{
+	
+	}
+	else
+	{
+		#if 0
+		cs_printf("line :0x%x\n", __LINE__);
+		#endif
+		ret = -1;
+		goto end;
+	}
+	ret = 0;
+end:
+	#if 0
+	cs_printf("ret :0x%x\n", ret);
+	#endif
+	return ret;
+}
+
+extern int serial_port_config_recover(term_server_config_t *uart_config)
+{
+	#if 0
+	cs_printf("in %s\n", __func__);
+	#endif
+	int ret = 0;
+	term_server_config_t *config_running = NULL;
+	int uart = 0;
+	if(NULL == uart_config)
+	{
+		ret = -1;
+		goto end;
+	}
+	
+	
+	uart = uart_config->uart_cfg.uart_id;
+	serial_port_connect_disable(uart);
+	config_running = serial_port_running_config_get(uart);
+
+	memcpy(config_running, uart_config, sizeof(term_server_config_t));
+	ret = 0;
+end:
+	return ret;
+}
+
+extern int serial_port_module_default_config_recover()
+{
+	#if 1
+	cs_printf("in %s\n", __func__);
+	#endif
+	int ret = 0;
+	cs_uint8 uart = 0;
+	term_server_config_t serial_port_default_config;
+	serial_port_config_t save_format;
+	int i = 0;
+	for(i=0;i<MAX_TERM_SERV_NUM;i++)
+	{
+		uart = i + TS_MIN_UART_NUM;
+		#if 0
+		serial_port_default_config_set(uart, &serial_port_default_config);
+		serial_port_config_recover(&serial_port_default_config);
+		#endif
+		serial_port_config_save_format_set_default(uart, &save_format);
+		serial_port_config_save_format_switch_to_runing_format(&serial_port_default_config, &save_format);
+		serial_port_config_recover(&serial_port_default_config);
+	}
+	return ret;
+}
+
+extern int serial_port_default_config_check(cs_uint8 uart, term_server_config_t* pConfig);
+
+
+extern int serial_port_tlv_infor_handle(int len, char *data, int opcode)
+{
+	#if 0
+	cs_printf("in %s, len:%d\n", __func__, len);
+	#endif
+	int ret = 0;
+	int uart = 0;
+	int i = 0;
+	int j = 0;
+	int uart_config_num = 0;
+
+	if(0 != len)
+	{
+		//do nothing
+	}
+	else
+	{
+		goto error;
+	}
+	
+	if(NULL != data)
+	{
+		//do nothing
+	}
+	else
+	{
+		goto error;
+	}
+
+	uart_config_num = len / sizeof(term_server_config_t);
+	#if 0
+	cs_printf("len :%d, uart_config_num :%d\n", len, uart_config_num);
+	#endif
+	serial_port_config_t *uart_config = NULL;
+	uart_config = (serial_port_config_t *)data;
+	term_server_config_t running_config;
+	if(DATA_RECOVER == opcode)
+	{
+		for(i=0;i<MAX_TERM_SERV_NUM;i++)
+		{
+			uart = i + TS_MIN_UART_NUM;
+			
+			for(j=0;j<uart_config_num;j++)
+			{
+				#if 0
+				cs_printf("uart_config[j].uart_cfg.uart_id :0x%x\n", uart_config[j].uart_cfg.uart_id);
+				#endif
+				if(uart == uart_config[j].uart_cfg.uart_id)
+				{
+					break;
+				}
+			}
+			if(uart == uart_config[j].uart_cfg.uart_id)
+			{
+				serial_port_config_save_format_switch_to_runing_format(&running_config, &uart_config[j]);
+				serial_port_config_recover(&running_config);
+			}
+			else
+			{
+			}
+		}	
+	}
+	else if(DATA_SHOW == opcode)
+	{
+		#if 0
+		for(i=0;i<MAX_TERM_SERV_NUM;i++)
+		{
+			uart = i + TS_MIN_UART_NUM;
+			
+			for(j=0;j<uart_config_num;j++)
+			{
+				if(uart == uart_config[j].uart_cfg.uart_id)
+				{
+					break;
+				}
+			}
+			if(uart == uart_config[j].uart_cfg.uart_id)
+			{
+				if(serial_port_default_config_check(uart, &uart_config[j]) != 0)
+				{
+					serial_port_config_show(&uart_config[j]);
+				}
+				else
+				{
+					//do nothing
+				}
+				
+			}
+			else
+			{
+			}
+		}	
+		#endif
+		
+		#if 1
+		for(i=0;i<uart_config_num;i++)
+		{
+			uart = uart_config[i].uart_cfg.uart_id;		
+			#if 0
+			cs_printf("uart :0x%x\n", uart);
+			#endif
+			if((uart >= TS_MIN_UART_NUM)&&(uart <= MAX_TERM_SERV_NUM))
+			{
+				serial_port_config_save_format_switch_to_runing_format(&running_config, &uart_config[j]);
+				serial_port_config_show(&running_config);
+			}
+			else
+			{
+				//do nothing
+			}
+		}
+		#endif
+	}
+	else
+	{
+		cs_printf("in %s\n", __func__);
+		cs_printf("wrong uart opcode\n");
+	}
+	ret = 0;
+	goto end;
+	
+error:
+	ret = -1;
+
+end:
+	return ret;	
+}
+
+int serial_port_num_list_get(int *list)
+{
+	int ret = 0;
+	int i = 0;
+	for(i=0;i<MAX_TERM_SERV_NUM;i++)
+	{
+		list[i] = i + TS_MIN_UART_NUM;
+	}
+	return ret;
+}
+
+int serial_port_num_string_get(char *string)
+{
+	int ret = 0;
+	int i =0;
+	int list[MAX_TERM_SERV_NUM] = {0};
+	serial_port_num_list_get(list);
+	for(i=0;i<MAX_TERM_SERV_NUM;i++)
+	{
+		string[2*i] = list[i] + '0';
+		string[2*i+1] = ',';
+	}
+	string[2*MAX_TERM_SERV_NUM-1] = 0;
+	return ret;
+}
 
 #endif
 

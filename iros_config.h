@@ -1,4 +1,19 @@
 #ifndef __IROS_CONFIG_H
+#include "products_config.h"
+#define PRODUCTS_GT811D			1
+#define PRODUCTS_GT811G			2
+#define PRODUCTS_GT873_M_4F4S	3
+
+#if (PRODUCTS == PRODUCTS_GT811D)
+#define HAVE_SWITCH_SPEED_100	1
+#endif
+#if (PRODUCTS == PRODUCTS_GT811G)
+#define HAVE_SWITCH_SPEED_1000	1
+#endif
+#if (PRODUCTS == PRODUCTS_GT873_M_4F4S)
+#define HAVE_TERMINAL_SERVER 1
+#endif
+
 #define __IROS_CONFIG_H
 #define HAVE_MPORTS 1
 #define HAVE_SYS_MEMPOOL 1
@@ -22,7 +37,7 @@
 #define HAVE_MC_CTRL 1
 #define HAVE_LOG_FILE 1
 //#define HAVE_LOOP_DETECT 1
-#define HAVE_TERMINAL_SERVER 1
+//#define HAVE_TERMINAL_SERVER 1
 #define HAVE_PPPOE 1
 #define HAVE_PPP 1
 #define HAVE_PTP 1

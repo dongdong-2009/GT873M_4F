@@ -145,11 +145,6 @@ static int multi_image_nand_update_init(unsigned char part_type){
         int blob_idx = 0x1 &(cur_blob_idx + 1);
         part_index = blob_part_tab[blob_idx];
         cs_printf("\nto update blob %d to %d\n", cur_blob_idx, blob_idx);
-		#if 0
-		cs_printf("\n current_blob_desc.blob_idx :0x%x\n", current_blob_desc.blob_idx);
-		current_blob_desc.blob_idx = blob_idx;
-		cs_printf("\n current_blob_desc.blob_idx :0x%x\n", current_blob_desc.blob_idx);
-		#endif
         blob_info_desc_t *blob_info = blob_info_tab[blob_idx];
 
         des = (char *)((unsigned int )blob_info + sizeof(blob_info_desc_t));

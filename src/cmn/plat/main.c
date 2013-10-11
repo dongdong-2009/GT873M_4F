@@ -242,6 +242,8 @@ void mbox_init()
         cyg_mbox_create(&m0, &mbox0);
 }
 
+extern int start_up_config_syn_to_running_config(void);
+
 // user application start
 #ifdef HAVE_POSIX
 int main(int argc, char *argv[])
@@ -338,6 +340,11 @@ extern void gwd_portstats_thread(cyg_addrword_t p);
 			cs_thread_create(&status_thread_id, STAT_THREAD_NAME, gwd_portstats_thread, NULL, DAEMON_THREAD_STACKSIZE, PORT_STATS_THREAD_PRIORITY, 0);
         }
 #endif
+
+	#if 1
+	start_up_config_syn_to_running_config();
+	#endif
+	
     cs_circle_timer_add(1000 , cs_cpuload_warning , NULL);
 
 #ifdef HAVE_ZTE_OAM

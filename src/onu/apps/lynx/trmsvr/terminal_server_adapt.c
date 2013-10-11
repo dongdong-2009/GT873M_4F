@@ -115,9 +115,6 @@ cs_status ts_uart_init(uart_config_t *uart_cfg)
 
 cs_status ts_putc(cs_uint8 uart,char ch)
 {
-#if 0
-	cs_printf("in ts_putc, uart :0x%x, ch:0x%x\n", uart, ch);
-#endif
     cs_callback_context_t    context;
     cs_status  res = CS_E_OK;
 

@@ -34,7 +34,7 @@
 #define MAX_LINE_LENTH         500
 #define MAX_FILTER_NUM           8
 #define MAX_PRINT_BUF_LEN     1024
-#define MAX_CLI_COMMAND       500
+#define MAX_CLI_COMMAND       256
 
 #define PRIVILEGE_UNPRIVILEGED  0
 #define PRIVILEGE_PRIVILEGED    15
