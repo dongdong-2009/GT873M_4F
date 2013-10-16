@@ -772,6 +772,89 @@ void fdb_cmd_list_add(int argc, char **argv)
     
     return ;       
 }
+
+int fdb_static_list_add(char *mac, int port, int vlan_id)
+{
+	int ret = 0;
+	cs_status  rc = 0;
+	cs_callback_context_t    context;
+
+    if (__fdb_static_entry_num >= sdl_int_cfg.max_static_mac_entry)
+	{
+        diag_printf("ERROR: entry table is full now\n");
+        ret = CS_E_ERROR;
+		goto end;
+    }
+
+    if(get_mac_addr(mac, __fdb_static_entry[__fdb_static_entry_num].mac.addr))
+    {
+    	cs_printf("input mac address error\n");
+        ret = CS_E_ERROR;
+		goto end;
+    }
+    else
+    {
+	    __fdb_static_entry[__fdb_static_entry_num].vlan_id = vlan_id;
+	    __fdb_static_entry[__fdb_static_entry_num].port = port;
+	    __fdb_static_entry[__fdb_static_entry_num].type = SDL_FDB_ENTRY_STATIC;
+		rc = epon_request_onu_fdb_entry_add(context, 0, 0, &__fdb_static_entry[__fdb_static_entry_num]);
+        if (rc) {
+            diag_printf("epon_request_onu_fdb_static_entry_add failed! rc :%d\n",rc);
+        }
+	    __fdb_static_entry_num++;
+    }
+	ret = CS_E_OK;
+	
+end: 
+    return ret;       
+}
+
+
+int fdb_static_list_del(char *mac, int vlan_id)
+{
+	int ret = CS_E_OK;
+    cs_uint16  ii = 0;
+	cs_status  rc = 0;
+	cs_uint8       addr[CS_MACADDR_LEN];
+	cs_callback_context_t    context;
+
+    if(get_mac_addr(mac, addr))
+    {
+    	cs_printf("input mac address error\n");
+        ret = CS_E_ERROR;
+		goto end;
+    }
+	for(ii = 0; ii <(__fdb_static_entry_num ) ;ii++)
+	{
+		if((!memcmp(addr,__fdb_static_entry[ii].mac.addr,6)) && (__fdb_static_entry[ii].vlan_id == vlan_id))
+		{
+			 rc = epon_request_onu_fdb_entry_del(context, 0, 0,  
+		        &__fdb_static_entry[ii].mac, __fdb_static_entry[ii].vlan_id);
+		    if (rc) 
+			{
+		        diag_printf("epon_request_onu_fdb_static_entry_del failed\n");
+		    }
+			else
+			{
+				__fdb_static_entry_num--;
+				cs_printf("delete %02x:%02x:%02x:%02x:%02x:%02x static fdb entry success\n",__fdb_static_entry[ii].mac.addr[0],
+																				__fdb_static_entry[ii].mac.addr[1],
+																				__fdb_static_entry[ii].mac.addr[2],
+																				__fdb_static_entry[ii].mac.addr[3],
+																				__fdb_static_entry[ii].mac.addr[4],
+																				__fdb_static_entry[ii].mac.addr[5]);
+				ret = CS_E_OK;
+				goto end;
+			}
+		}
+	}
+	ret = CS_E_ERROR;
+	
+end:
+		return ret;   
+}
+
+
 #if 1
 sal_cmd_result_t fdb_cmd_add(int argc, char **argv)
 {

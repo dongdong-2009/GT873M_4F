@@ -58,7 +58,7 @@ unsigned long	gulGwOamConnect = 0;
 	#ifdef HAVE_SWITCH_SPEED_100
 		const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
 		const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
-		const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 6;
+		const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 7;
 		const unsigned char SYS_SOFTWARE_DEBUG_VERSION_NO = 1;
 
 		const unsigned char SYS_HARDWARE_MAJOR_VERSION_NO = 2;
@@ -70,7 +70,7 @@ unsigned long	gulGwOamConnect = 0;
 	#ifdef HAVE_SWITCH_SPEED_1000
 		const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
 		const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
-		const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 3;
+		const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 6;
 		const unsigned char SYS_SOFTWARE_DEBUG_VERSION_NO = 1;
 
 		const unsigned char SYS_HARDWARE_MAJOR_VERSION_NO = 2;
@@ -2844,6 +2844,59 @@ int cmd_show_atu(struct cli_def *cli, char *command, char *argv[], int argc)
     return CLI_OK;
 }
 #else
+
+cs_uint32 learn_buf[4]={1,1,1,1};
+
+int fdb_learn_set(int portid, int en)
+{
+	int ret = CS_E_OK;
+ 	cs_status  status = 0;
+	cs_callback_context_t context;
+	
+    if (en == 1) 
+	{
+		status = epon_request_onu_mac_learn_set(context, 0, 0, portid, 1);
+    }
+	else if (en == 0) 
+    {
+        status = epon_request_onu_mac_learn_set(context, 0, 0, portid, 0);
+    } 
+	else 
+	{
+        goto error;
+    }
+	
+	if(status == CS_E_OK)
+	{
+		if(en == 1)
+		{	
+			learn_buf[portid-1] = 1;
+		}
+		else
+		{
+			learn_buf[portid-1] = 0;
+		}
+	}
+
+	ret = CS_E_OK;
+	goto end;
+	
+error:
+	ret = CS_E_ERROR;
+end:
+	return ret;
+}
+
+
+int fdb_learn_get(int portid, int *en)
+{
+	int ret = 0;
+
+	*en = learn_buf[portid-1];
+	return ret;
+}
+
+
 int cmd_show_atu(struct cli_def * cli, char *command, char *argv[], int argc)
 {
 	int ret = CLI_OK;
@@ -2884,6 +2937,401 @@ int cmd_show_atu(struct cli_def * cli, char *command, char *argv[], int argc)
 
 	return ret;
 }
+
+
+#define GW_CLI_INCOMPLETE_MSG "%% Command incomplete.\r\n"
+
+int cmd_oam_atu_learn(struct cli_def * cli, char *command, char *argv[], int argc)
+{
+	int ret = CLI_OK;
+	
+	int en = 0, portid = 0;
+
+	if(CLI_HELP_REQUESTED)
+	{
+		switch (argc)
+		{
+			case 1:
+				return cli_arg_help(cli, 0, 
+					"<portlist>", "Input one fe port number", NULL );
+				break;
+			case 2:
+				return cli_arg_help(cli, 0,
+					"{[1|0]}*1", "1 enable; 0 disable", NULL);
+				break;
+
+			default:
+				return cli_arg_help(cli, argc > 1, NULL  );
+				break;
+		}
+	}
+ 
+	if(argc >= 1)
+	{
+		portid = atoi(argv[0]);
+
+		if(argc == 2)
+			en = atoi(argv[1]);
+
+		if(argc == 2 )
+		{
+			if(CS_E_OK != fdb_learn_set(portid,  en))
+				cli_print(cli, "atu learning set %s fail!\r\n", en?"enable":"disable");
+		}
+		else
+		{
+			if(CS_E_OK != fdb_learn_get(portid, &en))
+				cli_print(cli, "get port %d atu learning fail!\r\n", portid);
+			else
+				cli_print(cli,"Port %d source mac address learn is %s\r\n",portid,en?"enable":"disable");
+		}
+	}
+	else
+	{
+		cli_print(cli, GW_CLI_INCOMPLETE_MSG);
+		return CLI_ERROR;
+	}
+	return ret;
+}
+
+extern cs_status epon_request_onu_fdb_age_set (
+    CS_IN cs_callback_context_t          context,
+    CS_IN cs_int32                       device_id,
+    CS_IN cs_int32                       llidport,
+    CS_IN cs_uint32                      aging_time
+);
+cs_status epon_request_onu_fdb_age_get (
+    CS_IN  cs_callback_context_t                   context,
+    CS_IN  cs_int32                                device_id,
+    CS_IN  cs_int32                                llidport,
+    CS_OUT cs_uint32                               *aging_time
+);
+
+int fdb_aging_set(cs_uint32 timer)
+{
+	int ret = CS_E_OK;
+    cs_callback_context_t context;
+
+    cs_status  status = 0;
+
+    status = epon_request_onu_fdb_age_set(context, 0, 0, timer);
+    if(status != CS_E_OK)
+	{
+		ret = CS_E_ERROR;
+    }
+	else
+	{
+		ret = CS_E_OK;
+	}
+
+    return ret;
+}
+
+int fdb_aging_get(cs_uint32 *timer)
+{
+	int ret = CS_E_OK;
+    cs_callback_context_t context;
+
+    cs_status  status = 0;
+
+    status = epon_request_onu_fdb_age_get(context, 0, 0, timer);
+    if(status != CS_E_OK)
+	{
+		ret = CS_E_ERROR;
+    }
+	else
+	{
+		ret = CS_E_OK;
+	}
+
+    return ret;
+}
+
+int cmd_oam_atu_age(struct cli_def * cli, char *command, char *argv[], int argc)
+{
+	int ret = CS_E_OK;
+	int age = 0;
+
+	if(CLI_HELP_REQUESTED)
+	{
+		switch (argc)
+		{
+			case 1:
+				return cli_arg_help(cli, 0,
+					"<0-600>", "l2 age time unit sec, 0: disable aging", NULL);
+
+			default:
+				return cli_arg_help(cli, argc > 1, NULL  );
+		}
+	}
+
+	if(argc == 1)
+	{
+		age = atoi(argv[0]);
+		if(age < 0 ||age > 600)
+			{
+				cli_print(cli,"set aging time error \n");
+				return CLI_ERROR;
+			}
+		if(CS_E_OK != fdb_aging_set(age))
+			cli_print(cli, "atu age set %d fail!\r\n", age);
+		else
+			cli_print(cli,"atu aging time set %d sucess",age);
+	}
+	else
+	{
+		if(CS_E_OK != fdb_aging_get(&age))
+			cli_print(cli, "get atu aging time fail!\r\n");
+		else
+			cli_print(cli, "Mac table aging time is %d seconds (PAS & BCM).\r\n", age);
+	}
+	
+	return ret;
+}
+
+
+extern int fdb_static_list_add(char *mac, int port, int vlan);
+extern int fdb_static_list_del(char *mac, int vlan_id);
+
+#define GW_VLAN_MAX 4094
+#define GW_VLAN_LAS 1
+
+#define GW_ONUPORT_MAX 4
+#define GW_ONUPORT_LAS 1
+
+#define GW_PORT_PRI_MAX 7
+#define GW_PORT_PRI_LAS 0
+
+#define gw_uint8	cs_uint8
+#define gw_uint16	cs_uint16
+#define gw_uint32	cs_uint32
+
+
+int cmd_static_mac_add_fdb(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	gw_uint32 gw_port;
+	gw_uint16 gw_vlan;
+	gw_uint32 gw_pri;
+	if (CLI_HELP_REQUESTED) {
+		switch (argc) {
+		case 1:
+			return cli_arg_help(cli, 0, "xxxx.xxxx.xxxx", "Please input the mac address",
+					NULL );
+		case 2:
+		    return cli_arg_help(cli, 0, "<port_list>", "Please input the port_list",
+					NULL );
+		case 3:
+			return cli_arg_help(cli, 0, "<1-4094>", "Please input vlan id",
+					NULL );
+		case 4:
+			return cli_arg_help(cli, 0, "<0-7>", "MAC address's priority",
+					NULL );			
+		default:
+			return cli_arg_help(cli, argc > 3, NULL );
+
+		}
+	}
+
+	if(argc == 4)
+	{
+		gw_port = iros_strtol(argv[1]);
+		if(gw_port > GW_ONUPORT_MAX || gw_port < GW_ONUPORT_LAS)
+		{
+			cli_print(cli,"port error\n");
+			return -1;
+		}
+		gw_vlan = iros_strtol(argv[2]);
+		if(gw_vlan >GW_VLAN_MAX ||gw_vlan < GW_VLAN_LAS)
+		{
+			cli_print(cli,"vlan error\n");
+			return -1;
+		}	
+		gw_pri = iros_strtol(argv[3]);
+		if(gw_pri < GW_PORT_PRI_LAS || gw_pri > GW_PORT_PRI_MAX)
+		{
+			cli_print(cli,"pri error\n");
+		}
+		char mac[13] = {0};
+		strncpy(&mac[0], &argv[0][0], 4);
+		strncpy(&mac[4], &argv[0][5], 4);
+		strncpy(&mac[8], &argv[0][10], 4);
+		mac[12] = '\0';
+		if(fdb_static_list_add(mac,gw_port,gw_vlan) != CS_E_OK)
+		{
+			cli_print(cli,"add static mac fail\n");
+		}
+		else
+		{
+			cli_print(cli,"add static mac success\n");
+		}
+	}
+	else
+	{
+		cli_print(cli,"%%input error\n");
+	}
+	return CLI_OK;
+}
+
+
+
+int cmd_static_mac_del_fdb(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	gw_uint16 gw_vlan;
+	if (CLI_HELP_REQUESTED) 
+	{
+		switch (argc) 
+		{
+			case 1:
+				return cli_arg_help(cli, 0, "xxxx.xxxx.xxxx", "Please input the mac address",
+						NULL );
+			case 2:
+				return cli_arg_help(cli, 0, "<1-4094>", "Please input vlan id",
+						NULL );
+			default:
+				return cli_arg_help(cli, argc > 1, NULL );
+		}
+
+	}
+	if(argc == 2)
+	{
+		gw_vlan = iros_strtol(argv[1]);
+		if(gw_vlan >GW_VLAN_MAX ||gw_vlan < GW_VLAN_LAS)
+		{
+			cli_print(cli,"vlan error\n");
+			return -1;
+		}
+		char mac[13] = {0};
+		strncpy(&mac[0], &argv[0][0], 4);
+		strncpy(&mac[4], &argv[0][5], 4);
+		strncpy(&mac[8], &argv[0][10], 4);
+		mac[12] = '\0';
+		if(fdb_static_list_del(mac,gw_vlan) != CS_E_OK)
+		{
+			cli_print(cli,"del static mac fail\n");
+		}
+		else
+		{
+			cli_print(cli,"del static mac success\n");
+		}
+	}
+	else
+	{
+		cli_print(cli,"%%input error\n");
+	}		
+	return CLI_OK;
+}
+
+
+extern int show_port_statistic(struct cli_def * cli, int portid);
+
+
+#define NUM_PORTS_PER_SYSTEM 5
+#define NUM_PORTS_MINIMUM_SYSYTEM 1
+int cmd_stat_port_show(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	int portid = 0;
+	int i = 0;
+	if(CLI_HELP_REQUESTED)
+	{
+		switch (argc)
+		{
+			case 1:
+				return cli_arg_help(cli, 0,
+					"<port_list>", "Input one fe port number", NULL );
+				break;
+
+			default:
+				return cli_arg_help(cli, argc > 1, NULL  );
+				break;
+		}
+	}
+
+	if(argc == 1)
+	{
+		portid = atoi(argv[0]);
+		
+		if(portid < NUM_PORTS_MINIMUM_SYSYTEM || portid >= NUM_PORTS_PER_SYSTEM)
+		{
+			cli_print(cli,"input port error <1-4>\n");
+			return CLI_ERROR;
+		}
+		
+		show_port_statistic(cli, portid);
+	}
+	else
+	{		
+		for (i = 1; i <= 2; i++)
+			{
+				cli_print(cli,"===========================port %d stat===========================",i);
+				show_port_statistic(cli, i);
+				cs_thread_delay(5);
+			}
+		for(i = 3; i <= 4; i++)
+			{
+				cli_print(cli,"===========================port %d stat===========================",i);
+				show_port_statistic(cli, i);
+				cs_thread_delay(5);
+			}
+	}
+
+	
+
+	return CLI_OK;
+}
+
+
+
+extern int port_aal_isolation_set(int enable);
+extern int port_aal_isolation_get(int *status);
+int cmd_oam_port_isolate(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+
+	int en = 0;
+	
+	if(CLI_HELP_REQUESTED)
+	{
+		switch (argc)
+		{
+			case 1:
+				return cli_arg_help(cli, 0, 
+					"{[0|1]}*1", "isolate 1 enable; 0 disable", NULL);
+			default:
+				return cli_arg_help(cli, argc > 1, NULL  );
+		}
+	}
+
+
+	if(argc >= 1)
+	{
+		if(argc == 1)
+		{
+			en = atoi(argv[0]);
+		}
+
+		if(port_aal_isolation_set(en) != CS_E_OK)
+			cli_print(cli, "set all port isolate %s fail!\r\n", en?"enabled":"disabled");
+		else
+			{
+				if(en)
+					cli_print(cli,"set all port isolate enable success\n");
+				else
+					cli_print(cli,"set all port isolate disable success\n");
+			}
+	}
+	else
+	{	
+		if(port_aal_isolation_get(&en) != CS_E_OK)
+			cli_print(cli, "get port isolate fail!\r\n");
+		else
+			cli_print(cli, "Port isolate is %s\r\n", en?"enabled":"disabled");
+
+	}
+	
+
+	return CLI_OK;
+}
+
+
 #endif
 
 extern cs_status ctc_oam_onu_mc_switch_set_adapt(
@@ -3269,6 +3717,9 @@ int cmd_onu_uart_ip_set(struct cli_def *cli, char *command, char *argv[], int ar
 
 #endif
 
+#if 1
+extern int cmd_laser(struct cli_def *cli, char *command, char *argv[], int argc);
+#endif
 void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 {
 	extern void cli_reg_rcp_cmd(struct cli_command **cmd_root);
@@ -3283,6 +3734,9 @@ void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 	#if 1
 	struct cli_command *cp = NULL;
 	#endif
+
+	struct cli_command *stat = NULL;
+	struct cli_command *vlan = NULL;
 
     // set cmds in config mode
     set = cli_register_command(cmd_root, NULL, "set", NULL, PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "Set system information");
@@ -3306,8 +3760,25 @@ void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 			cli_register_command(cmd_root, mode_ch, "ip_set",cmd_onu_uart_ip_set, PRIVILEGE_UNPRIVILEGED, MODE_ANY, "show uart server ip");
 			cli_register_command(cmd_root, mode_ch, "mode",cmd_onu_uart_mode_chang, PRIVILEGE_UNPRIVILEGED, MODE_ANY, "uart mode set");
 	#endif
+		#if 0
     	atu = cli_register_command(cmd_root, NULL, "atu", NULL, PRIVILEGE_UNPRIVILEGED, MODE_ANY, "Atu information");
     		  cli_register_command(cmd_root, atu, "show", cmd_show_atu, PRIVILEGE_UNPRIVILEGED, MODE_ANY, "Show information");
+		#else
+		atu = cli_register_command(cmd_root, NULL, "atu", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "atu command");
+		cli_register_command(cmd_root, atu, "learning", cmd_oam_atu_learn, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "learning enable");
+		cli_register_command(cmd_root, atu, "aging", cmd_oam_atu_age, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "age set");
+		cli_register_command(cmd_root, atu, "show", cmd_show_atu, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "show information");
+		cli_register_command(cmd_root, atu, "static_add", cmd_static_mac_add_fdb, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "static fdb mac add");
+		cli_register_command(cmd_root, atu, "static_del", cmd_static_mac_del_fdb, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "static fdb mac del");
+		
+		stat = cli_register_command(cmd_root, NULL, "stat", NULL,  PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "stat command");
+		cli_register_command(cmd_root, stat, "port_show", cmd_stat_port_show, PRIVILEGE_UNPRIVILEGED, MODE_ANY, "port statistic show");
+
+		vlan = cli_register_command(cmd_root, NULL, "vlan", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "vlan command");
+		cli_register_command(cmd_root, vlan, "port_isolate", cmd_oam_port_isolate, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "isolate command");
+
+		cli_register_command(cmd_root, 0, 		"laser", 		cmd_laser,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "Laser on/off");
+		#endif
 	igmp = cli_register_command(cmd_root, NULL, "igmp", NULL, PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "igmpsnooping set");
 		cli_register_command(cmd_root, igmp, "disable", cmd_igmp_disable, PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "igmpsnooping disable");
 		cli_register_command(cmd_root, igmp, "enable", cmd_igmp_enable, PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "igmpsnooping enable");

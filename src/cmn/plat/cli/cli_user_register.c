@@ -430,6 +430,48 @@ int cmd_statistics_uni(struct cli_def *cli, char *command, char *argv[], int arg
     return CLI_OK;
 }
 
+#if 1
+extern int show_port_statistic(struct cli_def * cli, int portid)
+{
+	oam_port_uni_stats_t uni_stats; 
+	cs_uint64 rxrate = 0,txrate = 0;
+	
+	if ((portid > uni_max_port_num)|| (portid < 1) ) 
+	{
+		cli_print(cli, "%% Invalid input.");
+		return CLI_ERROR;
+	}
+	
+	if(CS_E_OK != app_onu_port_stats_get(portid, &uni_stats))
+	{
+		return CS_E_ERROR;
+	}
+	if(gwd_portstats_get_rate(portid-1, &txrate, &rxrate) == EPON_TRUE)
+	{
+		//cli_print(cli, "	tx port rate %lld bps\t\t rx port rate %lld bps", txrate, rxrate);
+	}
+	else
+	{
+		cli_print(cli, "gwd_portstats_get_rate failed\n");
+		return CLI_ERROR;
+	}
+	
+	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In bit rate", rxrate, "Out bit rate", txrate);
+	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In bytes", uni_stats.rxbyte_cnt, "Out bytes", uni_stats.rxbyte_cnt);
+	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In total pkts", uni_stats.rxfrm_cnt, "Out total pkts", uni_stats.txfrm_cnt);
+	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In unicast pkts", uni_stats.rxucfrm_cnt, "Out unicast pkts", uni_stats.txucfrm_cnt);
+	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In multicast pkts", uni_stats.rxmcfrm_cnt, "Out multicast pkts", uni_stats.txmcfrm_cnt);
+	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In broadcast pkts", uni_stats.rxbcfrm_cnt, "Out broadcast pkts", uni_stats.txbcfrm_cnt);
+	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In pause pkts", uni_stats.rxpausefrm_cnt, "Out pause pkts", uni_stats.txpausefrm_cnt);
+	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In crc error pkts", uni_stats.rxcrcerrfrm_cnt, "Out crc error pkts", uni_stats.txcrcerrfrm_cnt);
+	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In jumbo pkts", uni_stats.rxoversizefrm_cnt, "Out jumbo pkts", (cs_uint64)0);
+	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In undersize pkts", uni_stats.rxundersizefrm_cnt, "Out undersize pkts", (cs_uint64)0);
+	
+	return CLI_OK;
+}
+
+#endif
+
 int cmd_statistics_cpu(struct cli_def *cli, char *command, char *argv[], int argc)
 {
 	/*cs_uint32 zero_cnt = 0;*/

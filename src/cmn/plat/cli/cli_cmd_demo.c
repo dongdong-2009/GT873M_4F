@@ -151,6 +151,7 @@ int cmd_led(struct cli_def *cli, char *command, char *argv[], int argc)
 }
 
 
+#if 0
 int cmd_laser(struct cli_def *cli, char *command, char *argv[], int argc)
 {
     unsigned char  laser_mode=0;
@@ -197,6 +198,59 @@ int cmd_laser(struct cli_def *cli, char *command, char *argv[], int argc)
 	
     return CLI_OK;
 }
+#else
+
+extern cs_status epon_request_onu_pon_laser_mode_set(
+    CS_IN cs_callback_context_t context,
+    CS_IN cs_int32            device_id,
+    CS_IN cs_int32            llidport,
+    CS_IN cs_sdl_pon_laser_mode_t mode
+);
+int cmd_laser(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	cs_callback_context_t context;
+	cs_port_id_t  port = CS_PON_PORT_ID;
+    cs_sdl_pon_laser_mode_t laser_mode;
+	
+    
+    // deal with help
+    if(CLI_HELP_REQUESTED)
+    {
+        switch(argc)
+        {
+        case 1:
+            return cli_arg_help(cli, 0,
+                "on | off", "Laser on or Laser off",
+                 NULL);
+        default:
+            return cli_arg_help(cli, argc > 1, NULL);
+        }
+    }
+
+    if(1 == argc)
+    {   
+        if(strcasecmp(argv[0],"on") == 0){
+            laser_mode = SDL_PON_LASER_MODE_ON;
+        }
+        else if(strcasecmp(argv[0],"off") == 0){
+            laser_mode = SDL_PON_LASER_MODE_OFF;
+        }
+        else{
+            cli_print(cli, "%% Invalid input.");
+            return CLI_ERROR;
+        }
+        
+        epon_request_onu_pon_laser_mode_set(context, 0, port, laser_mode);
+        
+    } else
+    {
+        cli_print(cli, "%% Invalid input.");
+    }
+    
+    return CLI_OK;
+}
+
+#endif
 
 int cmd_pon_mac(struct cli_def *cli, char *command, char *argv[], int argc)
 {
@@ -1040,7 +1094,7 @@ extern int cmd_igmp_mode(struct cli_def *cli, char *command, char *argv[], int a
 				"2", "set igmp proxy mode",
 				NULL);
 				cli_arg_help(cli, 0,
-				"3", "set igmp transparent mode",
+				"3", "set igmp disable mode",
 				NULL);
 				return CLI_OK;
 			case 2:
@@ -1551,7 +1605,7 @@ void cli_reg_usr_cmd(struct cli_command **cmd_root)
 
     c = cli_register_command(cmd_root, 0, "reset", cmd_reset,                         PRIVILEGE_PRIVILEGED, MODE_ANY, "Reset ONU");
         cli_register_command(cmd_root, c, "factorySetting", cmd_reset_factory,    PRIVILEGE_PRIVILEGED, MODE_EXEC, "Reset ONU with factory setting");
-        cli_register_command(cmd_root, 0, "Onulaser", cmd_laser,                         PRIVILEGE_PRIVILEGED, MODE_EXEC, "Laser on/off");
+        //cli_register_command(cmd_root, 0, "laser", cmd_laser,                         PRIVILEGE_PRIVILEGED, MODE_EXEC, "Laser on/off");
         cli_register_command(cmd_root, 0, "led", cmd_led,                         PRIVILEGE_PRIVILEGED, MODE_EXEC, "Led on/off");
         
     c = cli_register_command(cmd_root, NULL, "show",     NULL,               PRIVILEGE_UNPRIVILEGED, MODE_ANY, "Show running system information");

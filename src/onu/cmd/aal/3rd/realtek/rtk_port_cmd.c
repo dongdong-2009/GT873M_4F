@@ -529,6 +529,92 @@ void __sw_cmd_rtk_port_isolation_set(int argc, char **argv)
 
 }
 
+#if 1
+int port_aal_isolation_set(int enable)
+{
+	int ret = CS_E_OK;
+	rtk_port_t port_id,port;
+	rtk_portmask_t portmask;
+	rtk_api_ret_t rtk_ret;
+	for (port_id = CS_UNI_PORT_ID1; port_id <= CS_UNI_PORT_ID4; port_id++) 
+	{
+		port = L2P_PORT(port_id);
+		if (enable) 
+		{
+			portmask.bits[0] = 0xf0;
+		}
+		else 
+		{
+			portmask.bits[0] = 0xff;
+		}
+
+		rtk_ret = rtk_port_isolation_set(port, portmask);
+		if (RT_ERR_OK != rtk_ret) 
+		{
+			if(enable)
+			{
+				cs_printf("set port %d isolation enable faile\n",port_id);
+			}
+			else
+			{
+				cs_printf("set port %d isolation disable faile\n",port_id);
+			}
+			// SDL_MIN_LOG("rtk_port_isolation_set return %d\n", rtk_ret);
+			ret = CS_E_ERROR;
+			goto end;
+		}
+		else
+		{
+			if(enable)
+			{
+				//cs_printf("set port %d isolation enable success\n",port_id);
+			}
+			else
+			{
+				//cs_printf("set port %d isolation disable success\n",port_id);
+			}
+		}
+	}
+	__port_isolation = enable;
+	ret = CS_E_OK;
+
+end:
+	return ret;
+}
+
+#define ENABLE	1
+#define DISABLE	0
+int port_aal_isolation_get(int *status)
+{
+	int ret = CS_E_OK;
+	rtk_port_t port_id,port;
+    rtk_portmask_t iso;
+
+	for (port_id = CS_UNI_PORT_ID1; port_id <= CS_UNI_PORT_ID4; port_id++)
+	{
+		port = L2P_PORT(port_id);
+		ret = rtk_port_isolation_get(port,&iso);
+		if(iso.bits[0]== 0xf0)
+		{
+			//diag_printf("port %d get isolation stats is enable\n",port_id);
+			continue;
+		}
+		else
+		{
+			//diag_printf("port %d get isolation stats is disable\n",port_id);
+			*status = DISABLE;
+			goto end;
+		}
+	}
+	*status = ENABLE;
+
+end:
+	return ret;
+}
+
+
+#endif
+
 void __sw_cmd_rtk_port_isolation_get(int argc, char **argv)
 {
     rtk_api_ret_t rt;
