@@ -3334,69 +3334,6 @@ int cmd_oam_port_isolate(struct cli_def *cli, char *command, char *argv[], int a
 
 #endif
 
-extern cs_status ctc_oam_onu_mc_switch_set_adapt(
-        cs_uint8 mode);
-int cmd_igmp_disable(struct cli_def * cli, char *command, char *argv[], int argc)
-{
-	cs_status ret = CS_E_OK;
-	cs_uint8 mode = 2;
-
-	if(CLI_HELP_REQUESTED)
-    {
-        switch(argc)
-        {
-        case 1:
-            return cli_arg_help(cli, 0,
-                "cr",
-                 NULL);
-        default:
-            return cli_arg_help(cli, argc > 1, NULL);
-        }
-    }
-	
-	ret = ctc_oam_onu_mc_switch_set_adapt(mode);
-	if(CS_E_OK == ret)
-	{
-		//do nothing
-		cs_printf("igmp disaple suceess\n");
-	}
-	else
-	{
-		cs_printf("igmp disable failed\n");
-	}
-	return ret;
-}
-
-int cmd_igmp_enable(struct cli_def * cli, char *command, char *argv[], int argc)
-{
-	cs_status ret = CS_E_OK;
-	cs_uint8 mode = 0;
-
-	if(CLI_HELP_REQUESTED)
-    {
-        switch(argc)
-        {
-        case 1:
-            return cli_arg_help(cli, 0,
-                "cr",
-                 NULL);
-        default:
-            return cli_arg_help(cli, argc > 1, NULL);
-        }
-    }
-	
-	ret = ctc_oam_onu_mc_switch_set_adapt(mode);
-	if(CS_E_OK == ret)
-	{
-		//do nothing
-		cs_printf("igmp enable suceess\n");
-	}
-	else
-	{
-		cs_printf("igmp enable failed\n");
-	}
-	return ret;
-}
 
 #if 1
 #define BC_STORM_THRESHOLD_MAX 2000000
@@ -3729,7 +3666,6 @@ void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 	#if 0
 	struct cli_command *mode_ch;
 	#endif
-	struct cli_command *igmp = NULL;
 	
 	#if 1
 	struct cli_command *cp = NULL;
@@ -3779,11 +3715,6 @@ void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 
 		cli_register_command(cmd_root, 0, 		"laser", 		cmd_laser,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "Laser on/off");
 		#endif
-	igmp = cli_register_command(cmd_root, NULL, "igmp", NULL, PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "igmpsnooping set");
-		cli_register_command(cmd_root, igmp, "disable", cmd_igmp_disable, PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "igmpsnooping disable");
-		cli_register_command(cmd_root, igmp, "enable", cmd_igmp_enable, PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "igmpsnooping enable");
-
-
 	
 	#if 1
 	 // portdown {[enable|disable]}*1
