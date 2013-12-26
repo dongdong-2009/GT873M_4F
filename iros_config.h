@@ -1,5 +1,9 @@
 #ifndef __IROS_CONFIG_H
 #include "products_config.h"
+
+#define MODULE_YES	1
+#define MODULE_NO	0
+
 #define PRODUCTS_GT811D			1
 #define PRODUCTS_GT811G			2
 #define PRODUCTS_GT873_M_4F4S	3
@@ -47,6 +51,8 @@
 
 //#define HAVE_SWITCH_SPEED_1000	1
 //#define HAVE_SWITCH_SPEED_100	1
+
+#define IGMP_TRANSPARENT_CONFIG	 MODULE_YES
 
 
 #endif

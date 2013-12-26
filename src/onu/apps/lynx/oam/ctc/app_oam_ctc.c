@@ -3273,12 +3273,31 @@ cs_uint32 ctc_oam_onu_mc_switch_get(
     oam_ctc_onu_mc_switch_t*pData = 
         (oam_ctc_onu_mc_switch_t*)pOut;
     cs_status ret = CS_E_OK;
-    cs_uint8 switch_mode; 
+    cs_uint8 switch_mode = 0; 
 
     OAM_CTC_FUNCTION_ENTER(index);
 
     ret = ctc_oam_onu_mc_switch_get_adapt(&switch_mode);
-
+	
+	#if (IGMP_TRANSPARENT_CONFIG == MODULE_YES)
+	if(CS_E_OK == ret)
+	{
+		if(ZTE_MC_SWITCH_TRANSPARENT == switch_mode)
+		{
+			pData->hdr.width = OAM_CTC_ATTRIB_NOT_SUPPORTED;
+        	return sizeof(oam_var_cont_t);
+		}
+		else
+		{
+			//do nothing
+		}
+	}
+	else
+	{
+		//do nothing
+	}
+	#endif
+	
     if(ret != CS_E_OK){
         OAM_ORG_LOG("get adapt return failed, ret = %d \n",ret);
         pData->hdr.width = OAM_CTC_ATTRIB_NOT_SUPPORTED;
