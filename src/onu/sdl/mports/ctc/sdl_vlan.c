@@ -503,76 +503,8 @@ static void __transparent_us_set(rtk_port_t rtk_port, cs_boolean en)
     rtk_filter_igrAcl_cfg_del(__US_TRANSPARENT_ACL_ID);
     rtk_filter_igrAcl_cfg_add(__US_TRANSPARENT_ACL_ID, &cfg, &act, &ruleNum);
 }
-#if 1
-static void __trunk_hw_set(rtk_port_t rtk_port,rtk_vlan_acceptFrameType_t accept_frame_type)
-{
-	    rtl8367b_svlan_memconf_t svlan_memconf;
-	    memset(&svlan_memconf, 0, sizeof(rtl8367b_svlan_memconf_t));
-		rtk_port_t new_port = P2L_PORT(rtk_port);
-		__port_vlan_info_t *port_vlan = &__port_vlan_table[new_port];
-		rtk_vlan_portIgrFilterEnable_set(rtk_port, EPON_TRUE); 
-        rtk_vlan_portAcceptFrameType_set(rtk_port, accept_frame_type);
-		__transparent_us_set(rtk_port, EPON_FALSE);    
-        rtl8367b_getAsicSvlanMemberConfiguration(__DS_TRANSPARENT_SVID_INDEX, &svlan_memconf);
-        svlan_memconf.vs_svid = __SVID_RSVD_TRANSPARENT;
-        svlan_memconf.vs_member &= ~(1<<rtk_port);
-        if(0 == (svlan_memconf.vs_member & 0xf)) /* remove uplink port when no UNI port in the map*/
-        {
-            svlan_memconf.vs_member = 0;
-            svlan_memconf.vs_untag  = 0;
-            rtk_svlan_untag_action_set(UNTAG_DROP, __SVID_RSVD_TRANSPARENT);
-            rtk_svlan_unmatch_action_set(UNMATCH_DROP, __SVID_RSVD_TRANSPARENT);
-        }
-		#if 0
-		if(port_vlan->def_vlan.vid == 1 && FALG_DORB == 0)
-			{
-				svlan_memconf.vs_member |= (1<<rtk_port);
-		       	svlan_memconf.vs_member |= (1<<SWITCH_UPLINK_PORT);
-		        svlan_memconf.vs_untag  |= (1<<rtk_port);
-		       	svlan_memconf.vs_untag  |= (1<<SWITCH_UPLINK_PORT);
-				rtk_svlan_untag_action_set(UNTAG_ASSIGN,__SVID_RSVD_TRANSPARENT);
-				rtk_svlan_unmatch_action_set(UNMATCH_DROP,__SVID_RSVD_TRANSPARENT);
-			}
-		if(port_vlan->def_vlan.vid == 1 && FALG_DORB != 0)
-			{
-				svlan_memconf.vs_member |= (1<<rtk_port);
-		       	svlan_memconf.vs_member |= (1<<SWITCH_UPLINK_PORT);
-		        svlan_memconf.vs_untag  &= ~(1<<rtk_port);
-		       	svlan_memconf.vs_untag  |= (1<<SWITCH_UPLINK_PORT);
-				rtk_svlan_untag_action_set(UNTAG_ASSIGN,__SVID_RSVD_TRANSPARENT);
-				rtk_svlan_unmatch_action_set(UNMATCH_DROP,__SVID_RSVD_TRANSPARENT);
-			}
-			//FALG_DORB = 1;
-		#else
-		if(1 == port_vlan->def_vlan.vid)
-		{
-			if(FALG_DORB == 0)
-			{
-				svlan_memconf.vs_member |= (1<<rtk_port);
-		       	svlan_memconf.vs_member |= (1<<SWITCH_UPLINK_PORT);
-		        svlan_memconf.vs_untag  |= (1<<rtk_port);
-		       	svlan_memconf.vs_untag  |= (1<<SWITCH_UPLINK_PORT);
-				rtk_svlan_untag_action_set(UNTAG_ASSIGN,__SVID_RSVD_TRANSPARENT);
-				rtk_svlan_unmatch_action_set(UNMATCH_DROP,__SVID_RSVD_TRANSPARENT);
-			}
-			if(FALG_DORB != 0)
-			{
-				svlan_memconf.vs_member |= (1<<rtk_port);
-		       	svlan_memconf.vs_member |= (1<<SWITCH_UPLINK_PORT);
-		        svlan_memconf.vs_untag  &= ~(1<<rtk_port);
-		       	svlan_memconf.vs_untag  |= (1<<SWITCH_UPLINK_PORT);
-				rtk_svlan_untag_action_set(UNTAG_ASSIGN,__SVID_RSVD_TRANSPARENT);
-				rtk_svlan_unmatch_action_set(UNMATCH_DROP,__SVID_RSVD_TRANSPARENT);
-			}
-		}
-		else
-		{
-		}
 
-		#endif
-        rtl8367b_setAsicSvlanMemberConfiguration(0, &svlan_memconf);
-}
-#endif
+#if 0
 static void __transparent_hw_set(rtk_port_t rtk_port, cs_boolean tran_en, rtk_vlan_acceptFrameType_t accept_frame_type)
 {
     rtl8367b_svlan_memconf_t svlan_memconf;
@@ -618,6 +550,87 @@ static void __transparent_hw_set(rtk_port_t rtk_port, cs_boolean tran_en, rtk_vl
         rtl8367b_setAsicSvlanMemberConfiguration(0, &svlan_memconf);
     }
 }
+
+#else
+
+#define __SVID_RSVD_UNTAG	1
+
+static void __transparent_hw_set(rtk_port_t rtk_port, cs_boolean tran_en, rtk_vlan_acceptFrameType_t accept_frame_type)
+{
+	rtl8367b_svlan_memconf_t unmatch_svlan_memconf;
+	rtl8367b_svlan_memconf_t untag_svlan_memconf;
+	
+	memset(&unmatch_svlan_memconf, 0, sizeof(rtl8367b_svlan_memconf_t));
+	memset(&untag_svlan_memconf, 0, sizeof(rtl8367b_svlan_memconf_t));
+
+	/*vlan 标签0，用于透传*/
+	rtk_svlan_unmatch_action_set(UNMATCH_ASSIGN, __SVID_RSVD_TRANSPARENT);	//将vlan 不匹配的包都打上vlan 标签0
+	
+	/*vlan 标签1，用于untag 包*/
+	rtk_svlan_untag_action_set(UNTAG_ASSIGN, __SVID_RSVD_UNTAG);	//将untag 包打上vlan 标签1
+
+	/*vlan 0 的配置*/
+	rtl8367b_getAsicSvlanMemberConfiguration(__DS_TRANSPARENT_SVID_INDEX, &unmatch_svlan_memconf);
+	unmatch_svlan_memconf.vs_svid = __SVID_RSVD_TRANSPARENT;
+	unmatch_svlan_memconf.vs_member |= (1<<SWITCH_UPLINK_PORT);
+	unmatch_svlan_memconf.vs_untag  &= ~(1<<rtk_port);
+	unmatch_svlan_memconf.vs_untag  |= (1<<SWITCH_UPLINK_PORT);
+
+	/*vlan 1 的配置*/
+	rtl8367b_getAsicSvlanMemberConfiguration(__SVID_RSVD_UNTAG, &untag_svlan_memconf);	//untag vlan 1 的配置
+	untag_svlan_memconf.vs_svid = __SVID_RSVD_UNTAG;
+	untag_svlan_memconf.vs_member |= (1<<SWITCH_UPLINK_PORT);
+	untag_svlan_memconf.vs_untag  &= ~(1<<rtk_port);
+	untag_svlan_memconf.vs_untag  |= (1<<SWITCH_UPLINK_PORT);
+	if(tran_en)		//透传端口的配置
+	{
+		
+		rtk_vlan_portIgrFilterEnable_set(rtk_port, EPON_FALSE);				//关闭进入端口的包进行vlan 检查的功能
+		rtk_vlan_portAcceptFrameType_set(rtk_port, ACCEPT_FRAME_TYPE_ALL);	//端口接收所有的包
+		__transparent_us_set(rtk_port, EPON_TRUE);							//可能是将指定的端口加入到透传端口列表
+
+		/*vlan 0 的配置*/
+		unmatch_svlan_memconf.vs_member |= (1<<rtk_port);
+	
+		/*vlan 1 的配置*/
+		untag_svlan_memconf.vs_member |= (1<<rtk_port);
+	}
+	else			//非透传端口的配置
+	{
+		rtk_vlan_portIgrFilterEnable_set(rtk_port, EPON_TRUE);			//打开进入端口的包进行vlan 检查的功能
+		rtk_vlan_portAcceptFrameType_set(rtk_port, accept_frame_type);	//端口接收指定的包
+		__transparent_us_set(rtk_port, EPON_FALSE);						//可能是将指定的端口从透传端口列表中移除
+
+		/*vlan 0 的配置*/	
+		unmatch_svlan_memconf.vs_member &= ~(1<<rtk_port);
+
+		/*vlan 1 的配置*/
+		rtk_port_t new_port = P2L_PORT(rtk_port);
+		__port_vlan_info_t *port_vlan = &__port_vlan_table[new_port];
+		if(1 == port_vlan->def_vlan.vid)
+		{
+			untag_svlan_memconf.vs_member |= (1<<rtk_port);
+		}
+		else
+		{
+			untag_svlan_memconf.vs_member &= ~(1<<rtk_port);
+		}	
+	}	
+	rtl8367b_setAsicSvlanMemberConfiguration(__DS_TRANSPARENT_SVID_INDEX, &unmatch_svlan_memconf);
+	rtl8367b_setAsicSvlanMemberConfiguration(__SVID_RSVD_UNTAG, &untag_svlan_memconf);
+	#if 0
+	cs_printf("tran_en :0x%x\n", tran_en);
+	cs_printf("rtk_port :0x%x\n", rtk_port);
+	cs_printf("unmatch_svlan_memconf.vs_svid :0x%x\n", unmatch_svlan_memconf.vs_svid);
+	cs_printf("unmatch_svlan_memconf.vs_member :0x%x\n", unmatch_svlan_memconf.vs_member);
+	cs_printf("unmatch_svlan_memconf.vs_untag :0x%x\n", unmatch_svlan_memconf.vs_untag);
+	cs_printf("untag_svlan_memconf.vs_svid :0x%x\n", untag_svlan_memconf.vs_svid);
+	cs_printf("untag_svlan_memconf.vs_member :0x%x\n", untag_svlan_memconf.vs_member);
+	cs_printf("untag_svlan_memconf.vs_untag :0x%x\n", untag_svlan_memconf.vs_untag);
+	#endif	
+}
+
+#endif
 
 static void __remove_port_from_svlan(cs_uint16 s_vid, rtk_port_t rtk_port)
 {
@@ -1066,7 +1079,7 @@ static void __update_hw_uc(cs_port_id_t port_id)
             break;
 
         case SDL_VLAN_MODE_TRUNK:
-            __trunk_hw_set(rtk_port, ACCEPT_FRAME_TYPE_ALL);
+            __transparent_hw_set(rtk_port, EPON_FALSE, ACCEPT_FRAME_TYPE_ALL);
 
             for(i = 0; i < __VLAN_RULE_PER_PORT_MAX; ++i)
             {
