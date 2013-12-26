@@ -15,6 +15,43 @@
 #include "sys_cfg.h"
 #include "make_file.h"
 #include "sockets.h"
+
+#if (PRODUCTS == PRODUCTS_GT811D)
+	const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
+	const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
+	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 8;
+	const unsigned char SYS_SOFTWARE_DEBUG_VERSION_NO = 1;
+
+	const unsigned char SYS_HARDWARE_MAJOR_VERSION_NO = 2;
+	const unsigned char SYS_HARDWARE_RELEASE_VERSION_NO = 1;
+	const unsigned char SYS_HARDWARE_BRANCH_VERSION_NO = 1;
+	const unsigned char SYS_HARDWARE_DEBUG_VERSION_NO = 1;
+#endif
+
+#if (PRODUCTS == PRODUCTS_GT811G)
+	const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
+	const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
+	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 7;
+	const unsigned char SYS_SOFTWARE_DEBUG_VERSION_NO = 1;
+
+	const unsigned char SYS_HARDWARE_MAJOR_VERSION_NO = 2;
+	const unsigned char SYS_HARDWARE_RELEASE_VERSION_NO = 1;
+	const unsigned char SYS_HARDWARE_BRANCH_VERSION_NO = 1;
+	const unsigned char SYS_HARDWARE_DEBUG_VERSION_NO = 1;
+#endif
+
+#if (PRODUCTS == PRODUCTS_GT873_M_4F4S)
+	const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
+	const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
+	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 12;
+	const unsigned char SYS_SOFTWARE_DEBUG_VERSION_NO = 1;
+
+	const unsigned char SYS_HARDWARE_MAJOR_VERSION_NO = 2;
+	const unsigned char SYS_HARDWARE_RELEASE_VERSION_NO = 1;
+	const unsigned char SYS_HARDWARE_BRANCH_VERSION_NO = 1;
+	const unsigned char SYS_HARDWARE_DEBUG_VERSION_NO = 1;
+#endif
+
 unsigned char gwdOamTrace = 0;
 #define GWDOAMTRC               if(gwdOamTrace) diag_printf
 cs_llid_t active_pon_port = CS_PON_PORT_ID;
@@ -42,42 +79,6 @@ unsigned long	gulGwOamConnect = 0;
 
 #ifndef DHCP_RELAY_PACKET_DEBUG
 #define DHCP_RELAY_PACKET_DEBUG(str) if( gulDebugEthDhcpSwitch ){ OAMDBGERR str ;}
-#endif
-
-#ifdef HAVE_TERMINAL_SERVER
-	const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
-	const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
-	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 11;
-	const unsigned char SYS_SOFTWARE_DEBUG_VERSION_NO = 1;
-
-	const unsigned char SYS_HARDWARE_MAJOR_VERSION_NO = 2;
-	const unsigned char SYS_HARDWARE_RELEASE_VERSION_NO = 1;
-	const unsigned char SYS_HARDWARE_BRANCH_VERSION_NO = 1;
-	const unsigned char SYS_HARDWARE_DEBUG_VERSION_NO = 1;
-#else
-	#ifdef HAVE_SWITCH_SPEED_100
-		const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
-		const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
-		const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 7;
-		const unsigned char SYS_SOFTWARE_DEBUG_VERSION_NO = 1;
-
-		const unsigned char SYS_HARDWARE_MAJOR_VERSION_NO = 2;
-		const unsigned char SYS_HARDWARE_RELEASE_VERSION_NO = 1;
-		const unsigned char SYS_HARDWARE_BRANCH_VERSION_NO = 1;
-		const unsigned char SYS_HARDWARE_DEBUG_VERSION_NO = 1;
-	#endif
-
-	#ifdef HAVE_SWITCH_SPEED_1000
-		const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
-		const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
-		const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 6;
-		const unsigned char SYS_SOFTWARE_DEBUG_VERSION_NO = 1;
-
-		const unsigned char SYS_HARDWARE_MAJOR_VERSION_NO = 2;
-		const unsigned char SYS_HARDWARE_RELEASE_VERSION_NO = 1;
-		const unsigned char SYS_HARDWARE_BRANCH_VERSION_NO = 1;
-		const unsigned char SYS_HARDWARE_DEBUG_VERSION_NO = 1;
-	#endif
 #endif
 
 static int GwOamInformationRequest(GWTT_OAM_MESSAGE_NODE *pRequest );
