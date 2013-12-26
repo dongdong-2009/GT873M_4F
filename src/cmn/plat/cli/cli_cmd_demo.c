@@ -1091,10 +1091,7 @@ extern int cmd_igmp_mode(struct cli_def *cli, char *command, char *argv[], int a
 				"1", "set igmp auth mode",
 				NULL);
 				cli_arg_help(cli, 0,
-				"2", "set igmp proxy mode",
-				NULL);
-				cli_arg_help(cli, 0,
-				"3", "set igmp disable mode",
+				"2", "set igmp disable mode",
 				NULL);
 				return CLI_OK;
 			case 2:
@@ -1118,39 +1115,11 @@ extern int cmd_igmp_mode(struct cli_def *cli, char *command, char *argv[], int a
 	if(0 == argc)
 	{
 		cs_status ret = CS_E_OK;
-//		char mode[15] = {0};
 		mc_mode_t mc_mode;
     	ret = mc_mode_get(0, &mc_mode);
 		if(CS_E_OK == ret)
 		{
-			#if 1
 			igmp_mode_show(mc_mode);
-			#endif
-			#if 0
-			switch(mc_mode) 
-			{
-		        case MC_SNOOPING:
-		            strncpy(mode, "snooping", sizeof(mode));
-		            break;
-
-		        case MC_MANUAL:
-		            strncpy(mode, "manual", sizeof(mode));
-		            break;
-
-				case MC_PROXY:
-		            strncpy(mode, "proxy", sizeof(mode));
-		            break;
-
-				case MC_DISABLE:
-		            strncpy(mode, "transparent", sizeof(mode));
-		            break;
-
-		        default:
-		            strncpy(mode, "unknown", sizeof(mode));
-		            break;
-	    	}
-			cs_printf("igmp %s mode\n", mode);
-			#endif
 		}
 		else
 		{
@@ -1172,9 +1141,6 @@ extern int cmd_igmp_mode(struct cli_def *cli, char *command, char *argv[], int a
 				mc_mode = MC_MANUAL;
 				break;
 			case 2:
-				mc_mode = MC_PROXY;
-				break;
-			case 3:
 				mc_mode = MC_DISABLE;
 				break;
 			default:
@@ -1185,7 +1151,7 @@ extern int cmd_igmp_mode(struct cli_def *cli, char *command, char *argv[], int a
 		ret = mc_mode_set(0, mc_mode);
 		if(CS_E_OK == ret)
 		{
-			cs_printf("mode :0x%x\n", mode);
+			cs_printf("mode :0x%x\n", mc_mode);
 			cs_printf("mc_mode_set success\n");
 		}
 		else
