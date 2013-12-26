@@ -3742,7 +3742,7 @@ void cli_reg_gwd_cmd(struct cli_command **cmd_root)
     set = cli_register_command(cmd_root, NULL, "set", NULL, PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "Set system information");
     	cli_register_command(cmd_root, set, "date",    cmd_onu_mgt_config_product_date,     PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "Manufacture date");
     	cli_register_command(cmd_root, set, "serial",    cmd_onu_mgt_config_product_sn,     PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "Manufacture serial number(<16)");
-    	cli_register_command(cmd_root, set, "devicename",    cmd_onu_mgt_config_device_name,     PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "Device name(<15)");
+    	cli_register_command(cmd_root, set, "devicename",    cmd_onu_mgt_config_device_name,     PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "Device name(<=128)");
     	cli_register_command(cmd_root, set, "hw-version",    cmd_onu_mgt_config_product_hw_version,     PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "Hardware version");
 		cli_register_command(cmd_root, set, "mon_id",cmd_set_mod_id,PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "set mode id");
 
