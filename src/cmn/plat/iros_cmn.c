@@ -58,7 +58,7 @@ void iros_system_reset(RESET_TYPE_E reset_type)
 
     switch (reset_type) {
     case RESET_TYPE_FORCE:
-		#ifdef HAVE_SWITCH_SPEED_100
+		#if (PRODUCTS == PRODUCTS_GT811D)
 			if ( CS_E_OK == cs_gpio_mode_set(0, GPIO_OUTPUT))
 			{																 			
 				cs_gpio_write(0, (unsigned char)0);								

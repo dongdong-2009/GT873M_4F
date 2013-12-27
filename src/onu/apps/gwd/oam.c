@@ -2646,16 +2646,18 @@ int cmd_onu_mgt_config_device_name(struct cli_def *cli, char *command, char *arg
 
 int cmd_show_system_information(struct cli_def *cli, char *command, char *argv[], int argc)
 {
-#ifdef HAVE_TERMINAL_SERVER
-	char onu_type[] = "GT873M_4F4S";
-#else
-	#ifdef HAVE_SWITCH_SPEED_1000
-	char onu_type[] = "GT811G";
-	#endif
-	#ifdef HAVE_SWITCH_SPEED_100
+#if (PRODUCTS == PRODUCTS_GT811D)
 	char onu_type[] = "GT811D";
-	#endif
 #endif
+
+#if (PRODUCTS == PRODUCTS_GT811G)
+	char onu_type[] = "GT811G";
+#endif
+
+#if (PRODUCTS == PRODUCTS_GT873_M_4F4S)
+	char onu_type[] = "GT873M_4F4S";
+#endif
+
 	long lRet = GWD_RETURN_OK;
     char strMac[32];
 	extern int cli_get_onu_mac_addr(char *mac);
