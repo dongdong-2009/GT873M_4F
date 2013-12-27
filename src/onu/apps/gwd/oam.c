@@ -36,7 +36,7 @@
 #if (PRODUCTS == PRODUCTS_GT811G)
 	const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
 	const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
-	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 7;
+	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 8;
 	const unsigned char SYS_SOFTWARE_DEBUG_VERSION_NO = 1;
 
 	const unsigned char SYS_HARDWARE_MAJOR_VERSION_NO = 2;
