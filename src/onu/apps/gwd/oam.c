@@ -16,6 +16,11 @@
 #include "make_file.h"
 #include "sockets.h"
 
+#if (GE_RATE_LIMIT == MODULE_YES)
+#include "../../sdl/cmn/cmn/sdl.h"
+#endif
+
+
 #if (PRODUCTS == PRODUCTS_GT811D)
 	const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
 	const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
@@ -3651,6 +3656,848 @@ int cmd_bsctrl_threshold_get(struct cli_def *cli, char *command, char *argv[], i
 
 #endif
 
+#if (GE_RATE_LIMIT == MODULE_YES)
+#define UNI_EGRESS_RATE_SAVE		0
+#define UNI_EGRESS_RATE_MAX			1000000
+#define UNI_EGRESS_RATE_NO_LIMIT	UNI_EGRESS_RATE_MAX
+#define UNI_INGRESS_RATE_SAVE		0
+#define UNI_INGRESS_RATE_MAX		1000000
+#define UNI_INGRESS_RATE_NO_LIMIT	UNI_INGRESS_RATE_MAX
+
+
+typedef struct
+{
+	cs_port_id_t port;
+	cs_uint8 enable;
+	cs_uint32 egress_rate;
+} uni_egress_t;
+
+typedef struct
+{
+	cs_port_id_t port;
+	cs_uint8 enable;
+	cs_uint32 ingress_rate;
+} uni_ingress_t;
+
+
+/*外部提供的接口*/
+cs_status uni_port_check(cs_port_id_t port);
+
+cs_status ctc_oam_eth_ds_rate_limit_set_adapt(
+        cs_port_id_t port,
+        cs_uint8   oper,
+        cs_uint32  cir,
+        cs_uint32  pir);
+
+
+cs_status ctc_oam_eth_ds_rate_limit_get_adapt(
+        cs_port_id_t port,
+        cs_uint8 * oper,
+        cs_uint32 * cir,
+        cs_uint32 * pir);
+cs_status ctc_oam_eth_port_policing_get_adapt(
+        cs_port_id_t port,
+        cs_uint8 *oper,
+        cs_uint32 *cir,
+        cs_uint32 *cbs,
+        cs_uint32 *ebs);
+cs_status ctc_oam_eth_port_policing_set_adapt(
+        cs_port_id_t port,
+        cs_uint8   oper,
+        cs_uint32  cir,
+        cs_uint32  cbs,
+        cs_uint32  ebs);
+
+
+/*内部实现的接口*/
+cs_status port_egress_rate_get(cs_port_id_t port, cs_uint8 *enable, cs_uint32 *rate);
+cs_status port_egress_rate_set(cs_port_id_t port, cs_uint32 rate);
+int cmd_port_egress_rate_arg_check(char *argv[], int argc);
+cs_status port_ingress_rate_set(cs_port_id_t port, cs_uint32 rate);
+cs_status port_ingress_rate_get(cs_port_id_t port, cs_uint8 *enable, cs_uint32 *rate);
+int cmd_cmd_port_ingress_rate_arg_check(char *argv[], int argc);
+int uni_egress_rate_show(uni_egress_t *uni_egress_p);
+extern int uni_egress_rate_config_recover(uni_egress_t *uni_egress_p);
+int uni_ingress_rate_show(uni_ingress_t *uni_ingress_p);
+extern int uni_ingress_rate_config_recover(uni_ingress_t *uni_ingress_p);
+
+
+
+
+/*向外提供的接口*/
+int cmd_port_egress_rate(struct cli_def *cli, char *command, char *argv[], int argc);
+int cmd_port_ingress_rate(struct cli_def *cli, char *command, char *argv[], int argc);
+extern int uni_egress_rate_tlv_infor_handle(int len, char *data, int opcode);
+extern int uni_egress_rate_tlv_infor_get(int *len, char **value, int *free_need);
+extern int uni_egress_rate_running_config_show(void);
+
+extern int uni_ingress_rate_tlv_infor_handle(int len, char *data, int opcode);
+extern int uni_ingress_rate_tlv_infor_get(int *len, char **value, int *free_need);
+extern int uni_ingress_rate_running_config_show(void);
+
+
+cs_status port_egress_rate_set(cs_port_id_t port, cs_uint32 rate)
+{	
+	cs_status ret = CS_E_OK;
+	cs_uint8 oper = 0;
+	cs_uint32 pir = 0;
+	pir = rate;
+	oper = (0 == rate)?0:1;
+	ctc_oam_eth_ds_rate_limit_set_adapt(port, oper, rate, pir);
+	return ret;
+}
+cs_status port_egress_rate_get(cs_port_id_t port, cs_uint8 *enable, cs_uint32 *rate)
+{
+	cs_status ret = CS_E_OK;
+	cs_uint32 pir = 0;
+	ctc_oam_eth_ds_rate_limit_get_adapt(port, enable, rate, &pir);
+	return ret;
+}
+
+int cmd_port_egress_rate_arg_check(char *argv[], int argc)
+{
+	int ret = 0;
+	int uni_port_id = 0;
+	cs_uint32 rate = 0;
+
+	switch(argc)
+	{
+		case 2:
+			rate = atol(argv[1]);
+			if(!((0 == rate)||((rate >= 62)&&(rate <= 1000000))))
+			{
+				cs_printf("wrong rate :%d\n", rate);
+				ret = CLI_ERROR;
+				break;
+			}
+		case 1:
+			uni_port_id = atoi(argv[0]);
+			if(uni_port_check(uni_port_id) != CS_E_OK)
+			{
+				cs_printf("there is no port :%d\n", uni_port_id);
+				ret = CLI_ERROR;
+				break;
+			}
+		case 0:
+			ret = CLI_OK;
+			break;
+		default:
+			ret = CLI_ERROR;
+			break;
+			
+			
+	}
+
+	if(CLI_OK != ret)
+	{
+		cs_printf("%s\n", "arg check err!");
+	}
+	return ret;
+}
+
+int cmd_port_egress_rate(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	int uni_port_id = 0;
+	cs_uint8 enable = 0;
+	cs_uint32 rate = 0;
+	if(CLI_HELP_REQUESTED)
+	{
+		if(cmd_port_egress_rate_arg_check(argv, argc-1) != CS_E_OK)
+		{
+			return CLI_ERROR;
+		}
+		switch (argc)
+		{
+			case 1:
+				return cli_arg_help(cli, 0,
+					"<port_list>", "Please input the port number", NULL );
+			case 2:
+				cli_arg_help(cli, 0,
+					"<0>", "0-not limit", NULL );
+				cli_arg_help(cli, 0,
+					"<62-1000000>", "Please input the rate( 62-1000000) kbps", NULL );
+				cli_arg_help(cli, 0,
+					"<cr>", "Just press enter to execute command!", NULL );
+				return CLI_OK;
+			case 3:
+				return cli_arg_help(cli, 0,
+					"<cr>", "Just press enter to execute command!", NULL );
+			default:
+				return cli_arg_help(cli, argc > 1, NULL  );
+		}
+	}
+
+	if(cmd_port_egress_rate_arg_check(argv, argc) != CS_E_OK)
+	{
+		return CLI_ERROR;
+	}
+	switch(argc)
+	{
+		case 0:
+			cs_printf("%s\n", "% Command incomplete.");
+			break;
+		case 1:
+			uni_port_id = atoi(argv[0]);
+			port_egress_rate_get(uni_port_id, &enable, &rate);
+			uni_egress_t uni_egress;
+			uni_egress.port = uni_port_id;
+			uni_egress.enable = enable;
+			uni_egress.egress_rate = rate;
+			uni_egress_rate_show(&uni_egress);
+			
+			break;
+		case 2:
+			uni_port_id = atoi(argv[0]);
+			rate = atoi(argv[1]);
+			port_egress_rate_set(uni_port_id, rate);
+			break;
+	}
+
+	return CLI_OK;
+}
+
+
+cs_status port_ingress_rate_set(cs_port_id_t port, cs_uint32 rate)
+{
+	cs_status ret = CS_E_OK;
+	cs_uint8 oper = 0;
+	cs_uint32 cbs = 0;
+	cs_uint32 ebs = 0;
+	
+	if(0 == rate)
+	{
+		oper = 0;
+		cbs = 0;
+		ebs = 0;
+	}
+	else
+	{
+		oper = 1;
+		cbs = rate * 1000 / 8;
+		ebs = 1522;
+	}
+	
+	ret = ctc_oam_eth_port_policing_set_adapt(port, oper, rate, cbs, ebs);
+	
+	return ret;
+}
+
+
+
+cs_status port_ingress_rate_get(cs_port_id_t port, cs_uint8 *enable, cs_uint32 *rate)
+{
+	cs_status ret = CS_E_OK;
+	cs_uint32 cbs = 0;
+	cs_uint32 ebs = 0;
+	
+	ret = ctc_oam_eth_port_policing_get_adapt(port, enable, rate, &cbs, &ebs);
+	return ret;
+}
+
+
+int cmd_port_ingress_rate_arg_check(char *argv[], int argc)
+{
+	int ret = 0;
+	int uni_port_id = 0;
+	int limit_option = 0;
+	cs_uint32 rate = 0;
+	char frame_state[10] = "";
+	char burst_size[10] = "";
+	
+	switch(argc)
+	{
+		case 5:
+			memcpy(burst_size, argv[4], sizeof(burst_size)-1);
+			burst_size[sizeof(burst_size) -1] = '\0';
+			if(!((strcmp(burst_size, "12k")==0)||(strcmp(burst_size, "24k")==0)||(strcmp(burst_size, "48k")==0)||(strcmp(burst_size, "96k")==0)))
+			{
+				cs_printf("%s\n", "% There is no matched command.");
+				ret = CLI_ERROR;
+				break;
+			}
+		case 4:
+			memcpy(frame_state, argv[3], sizeof(frame_state)-1);
+			frame_state[sizeof(frame_state) -1] = '\0';
+			if(!((strcmp(frame_state, "drop")==0)||(strcmp(frame_state, "pause")==0)))
+			{
+				cs_printf("%s\n", "% There is no matched command.");
+				ret = CLI_ERROR;
+				break;
+			}
+		case 3:
+			rate = atol(argv[2]);
+			if(!((0 == rate)||((rate >= 62)&&(rate <= 1000000))))
+			{
+				cs_printf("wrong rate :%d\n", rate);
+				ret = CLI_ERROR;
+				break;
+			}
+		case 2:
+			limit_option = atoi(argv[1]);
+			if((limit_option < 0)||(limit_option > 3))
+			{
+				ret = CLI_ERROR;
+				break;
+			}
+		case 1:
+			uni_port_id = atoi(argv[0]);
+			if(uni_port_check(uni_port_id) != CS_E_OK)
+			{
+				cs_printf("there is no port :%d\n", uni_port_id);
+				ret = CLI_ERROR;
+			}
+			break;
+		case 0:
+			ret = CLI_OK;
+			break;
+		default:
+			ret = CLI_ERROR;
+			break;
+	}
+	
+	if(CLI_OK != ret)
+	{
+		cs_printf("%s\n", "arg check err!");
+	}
+	return ret;
+}
+
+
+int cmd_port_ingress_rate(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	int uni_port_id = 0;
+	cs_uint8 enable = 0;
+	cs_uint32 rate = 0;
+	
+	if(CLI_HELP_REQUESTED)
+	{
+		/*参数数据的合法性检查*/
+		if(cmd_port_ingress_rate_arg_check(argv, argc-1) != CLI_OK)
+		{
+			return CLI_ERROR;
+		}
+
+		/*显示帮助信息*/
+		switch (argc)
+		{
+			case 1:
+				return cli_arg_help(cli, 0,
+					"<port_list>", "Please input the port number", NULL );
+			case 2:			
+				cli_arg_help(cli, 0,
+					"0", "0-Limit all frames", NULL );
+				cli_arg_help(cli, 0,
+					"1", "1-Limit Broadcast, Multicast and flooded unicast frames", NULL );
+				cli_arg_help(cli, 0,
+					"2", "2-Limit Broadcast and Multicast frames only", NULL );
+				cli_arg_help(cli, 0,
+					"3", "3-Limit Broadcast frames only", NULL );
+				cli_arg_help(cli, 0,
+					"<cr>", "Just press enter to execute command!", NULL );
+				return CLI_OK;
+			case 3:			
+				cli_arg_help(cli, 0,
+					"<0>", "0-not limit", NULL );
+				cli_arg_help(cli, 0,
+					"<62-1000000>", "Port ingress rate,unit:kbps", NULL );
+				return CLI_OK;
+			case 4:
+				cli_arg_help(cli, 0,
+					"drop", "Frames will be dropped when exceed limit.", NULL );
+				cli_arg_help(cli, 0,
+					"pause", "Port will transmit pause frame when exceed limit.", NULL );
+				cli_arg_help(cli, 0,
+					"<cr>", "Ambiguous command !", NULL );
+				return CLI_OK;
+			case 5:
+				cli_arg_help(cli, 0,
+					"12k", "Burst mode : Burst Size is 12k bytes.", NULL );
+				cli_arg_help(cli, 0,
+					"24k", "Burst mode : Burst Size is 24k bytes.", NULL );
+				cli_arg_help(cli, 0,
+					"48k", "Burst mode : Burst Size is 48k bytes.", NULL );
+				cli_arg_help(cli, 0,
+					"96k", "Burst mode : Burst Size is 96k bytes.", NULL );
+				return CLI_OK;
+			case 6:
+				return cli_arg_help(cli, 0,
+					"<cr>", "Just press enter to execute command!", NULL );
+			default:
+				return cli_arg_help(cli, argc > 1, NULL  );
+		}
+	}
+
+	/*参数数据的合法性检查*/
+	if(cmd_port_ingress_rate_arg_check(argv, argc) != CLI_OK)
+	{
+		return CLI_ERROR;
+	}
+	switch(argc)
+	{
+		case 0:
+			cs_printf("%s\n", "% Command incomplete.");
+			break;
+		case 1:
+			uni_port_id = atoi(argv[0]);
+			port_ingress_rate_get(uni_port_id, &enable, &rate);
+			uni_ingress_t uni_ingress;
+			uni_ingress.port = uni_port_id;
+			uni_ingress.enable = enable;
+			uni_ingress.ingress_rate = rate;
+			uni_ingress_rate_show(&uni_ingress);			
+			break;
+		case 3:
+			
+		case 5:
+			uni_port_id = atoi(argv[0]);
+			rate = atol(argv[2]);
+			
+			port_ingress_rate_set(uni_port_id, rate);
+			break;
+		default:
+			cs_printf("%s\n", "there is no command!");
+	}
+
+	return CLI_OK;
+}
+
+extern int uni_egress_rate_config_recover(uni_egress_t *uni_egress_p)
+{
+	int ret = 0;
+	int port = 0;
+	cs_uint32 rate = 0;
+	port = uni_egress_p->port;
+	rate = uni_egress_p->egress_rate;
+
+	uni_egress_rate_show(uni_egress_p);
+	ret = port_egress_rate_set(port, rate);
+	if(CS_E_OK == ret)
+	{
+		cs_printf("port_egress_rate_set success\n");
+	}
+	else
+	{
+		cs_printf("port_egress_rate_set failed\n");
+	}
+	return ret;
+}
+int uni_egress_rate_show(uni_egress_t *uni_egress_p)
+{
+	int ret = 0;
+	int port = 0;
+	cs_uint8 enable = 0;
+	cs_uint32 rate = 0;
+	port = uni_egress_p->port;
+	enable = uni_egress_p->enable;
+	rate = uni_egress_p->egress_rate;
+	cs_printf("Port %d: egress rate configuration:\n", port);
+	if(0 == enable)
+	{
+		cs_printf("egress rate : %s\n", "No limited");
+	}
+	else
+	{
+		cs_printf("egress rate : %d kbps\n", rate);
+	}
+	return ret;
+}
+
+
+extern int uni_egress_rate_tlv_infor_get(int *len, char **value, int *free_need)
+{
+	int ret = 0;
+	uni_egress_t *uni_egress_p = NULL;
+	int i = 0;
+	int port = 0;
+	cs_uint32 rate = 0;
+	cs_uint8 enable = 0;
+	uni_egress_t uni_egress[UNI_PORT_MAX];
+	int count = 0;
+	int buf_len = 0;
+	
+	if(NULL == len)
+	{
+		goto error;
+	}
+	else
+	{
+		*len = 0;
+	}
+
+	if(NULL == value)
+	{
+		goto error;
+		
+	}
+	else
+	{
+		*value = NULL;
+	}
+	
+	if(NULL == free_need)
+	{
+		goto error;
+	}
+	else
+	{
+		*free_need = 0;
+	}
+
+	for(i = 0;i < UNI_PORT_MAX;i++)
+	{
+		port = i + CS_UNI_PORT_ID1;
+		if(port_egress_rate_get(port, &enable, &rate) != CS_E_OK)
+		{
+			continue;
+		}
+		else
+		{
+			#if 0
+			cs_printf("port :%d, egress rate :%d\n", port, rate);
+			#endif
+			if((rate >= UNI_EGRESS_RATE_SAVE)&&(rate <UNI_EGRESS_RATE_MAX ))
+			{
+				uni_egress[count].port = port;
+				uni_egress[count].egress_rate = rate;
+				count++;
+			}
+		}
+	}
+	if(0 == count)
+	{
+		ret = 0;
+		goto end;
+	}
+	buf_len = count * sizeof(uni_egress_t);
+	uni_egress_p = (uni_egress_t *)iros_malloc(IROS_MID_APP, buf_len);
+	memset(uni_egress_p, 0, buf_len);
+	memcpy(uni_egress_p, uni_egress, buf_len);
+	*len = buf_len;
+	*value = (char *)uni_egress_p;
+	*free_need = 1;
+	
+	ret = 0;
+	goto end;
+	
+error:
+	ret = -1;
+	
+end:
+	#if 0
+	cs_printf("*len :%d\n", *len);
+	cs_printf("count :%d\n", count);
+	#endif
+	return ret;
+}
+
+extern int uni_egress_rate_tlv_infor_handle(int len, char *data, int opcode)
+{
+	int ret = 0;
+	uni_egress_t uni_egress[UNI_PORT_MAX];
+	uni_egress_t *uni_egress_p = NULL;
+	int port_num = 0;
+	int i = 0;
+	
+	if(0 != len)
+	{
+		//do nothing
+	}
+	else
+	{
+		goto error;
+	}
+	
+	if(NULL != data)
+	{
+		//do nothing
+	}
+	else
+	{
+		goto error;
+	}
+	
+	memcpy(uni_egress, data, len);
+	port_num = len / sizeof(uni_egress_t);
+	#if 1
+	cs_printf("port_num :%d\n", port_num);
+	#endif
+	for(i = 0; i < port_num; i++)
+	{
+		uni_egress_p = &uni_egress[i];
+		if(DATA_RECOVER == opcode)
+		{
+			uni_egress_rate_config_recover(uni_egress_p);
+		}
+		else if(DATA_SHOW == opcode)
+		{
+			uni_egress_rate_show(uni_egress_p);
+		}
+		else
+		{
+			cs_printf("in %s\n", __func__);
+		}
+	}
+	
+	
+	ret = 0;
+	goto end;
+	
+error:
+	ret = -1;
+	
+end:
+	return ret;
+}
+
+extern int uni_egress_rate_running_config_show(void)
+{
+	int ret = 0;
+	int i = 0;
+	int port = 0;
+	cs_uint8 enable = 0;
+	cs_int32 rate = 0;
+	uni_egress_t uni_egress;
+	for(i = 0;i < UNI_PORT_MAX;i++)
+	{
+		port = i + CS_UNI_PORT_ID1;
+		if(port_egress_rate_get(port, &enable, &rate) != CS_E_OK)
+		{
+			continue;
+		}
+		else
+		{
+			uni_egress.port = port;
+			uni_egress.egress_rate = rate;
+			if((rate >= UNI_INGRESS_RATE_SAVE)&&(rate < UNI_INGRESS_RATE_MAX))
+			{
+				uni_egress_rate_show(&uni_egress);
+			}
+		}
+	}
+	return ret;
+}
+
+
+
+extern int uni_ingress_rate_config_recover(uni_ingress_t *uni_ingress_p)
+{
+	int ret = 0;
+	int port = 0;
+	cs_uint32 rate = 0;
+	port = uni_ingress_p->port;
+	rate = uni_ingress_p->ingress_rate;
+
+	uni_ingress_rate_show(uni_ingress_p);
+	ret = port_ingress_rate_set(port, rate);
+	if(CS_E_OK == ret)
+	{
+		cs_printf("port_egress_rate_set success\n");
+	}
+	else
+	{
+		cs_printf("port_egress_rate_set failed\n");
+	}
+	return ret;
+}
+int uni_ingress_rate_show(uni_ingress_t *uni_ingress_p)
+{
+	int ret = 0;
+	int port = 0;
+	cs_uint8 enable = 0;
+	cs_uint32 rate = 0;
+	port = uni_ingress_p->port;
+	enable = uni_ingress_p->enable;
+	rate = uni_ingress_p->ingress_rate;
+	cs_printf("Port %d: ingress rate configuration:\n", port);
+	if(0 == enable)
+	{
+		cs_printf("ingress rate : %s\n", "No limited");
+	}
+	else
+	{
+		cs_printf("ingress rate : %d kbps\n", rate);
+	}
+	return ret;
+}
+
+
+extern int uni_ingress_rate_tlv_infor_get(int *len, char **value, int *free_need)
+{
+	int ret = 0;
+	uni_ingress_t *uni_ingress_p = NULL;
+	int i = 0;
+	int port = 0;
+	cs_uint8 enable = 0;
+	cs_uint32 rate = 0;
+	uni_ingress_t uni_ingress[UNI_PORT_MAX];
+	int count = 0;
+	int buf_len = 0;
+	
+	if(NULL == len)
+	{
+		goto error;
+	}
+	else
+	{
+		*len = 0;
+	}
+
+	if(NULL == value)
+	{
+		goto error;
+		
+	}
+	else
+	{
+		*value = NULL;
+	}
+	
+	if(NULL == free_need)
+	{
+		goto error;
+	}
+	else
+	{
+		*free_need = 0;
+	}
+
+	for(i = 0;i < UNI_PORT_MAX;i++)
+	{
+		port = i + CS_UNI_PORT_ID1;
+		if(port_ingress_rate_get(port, &enable, &rate) != CS_E_OK)
+		{
+			continue;
+		}
+		else
+		{
+			#if 0
+			cs_printf("port :%d, ingress rate :%d\n", port, rate);
+			#endif
+			if((rate >= UNI_INGRESS_RATE_SAVE)&&(rate < UNI_INGRESS_RATE_MAX))
+			{
+				uni_ingress[count].port = port;
+				uni_ingress[count].ingress_rate = rate;
+				count++;
+			}
+		}
+	}
+	if(0 == count)
+	{
+		ret = 0;
+		goto end;
+	}
+	buf_len = count * sizeof(uni_ingress_t);
+	uni_ingress_p = (uni_ingress_t *)iros_malloc(IROS_MID_APP, buf_len);
+	memset(uni_ingress_p, 0, buf_len);
+	memcpy(uni_ingress_p, uni_ingress, buf_len);
+	*len = buf_len;
+	*value = (char *)uni_ingress_p;
+	*free_need = 1;
+	
+	ret = 0;
+	goto end;
+	
+error:
+	ret = -1;
+	
+end:
+	#if 0
+	cs_printf("*len :%d\n", *len);
+	cs_printf("count :%d\n", count);
+	#endif
+	return ret;
+}
+
+extern int uni_ingress_rate_tlv_infor_handle(int len, char *data, int opcode)
+{
+	int ret = 0;
+	uni_ingress_t uni_ingress[UNI_PORT_MAX];
+	uni_ingress_t *uni_ingress_p = NULL;
+	int port_num = 0;
+	int i = 0;
+	
+	if(0 != len)
+	{
+		//do nothing
+	}
+	else
+	{
+		goto error;
+	}
+	
+	if(NULL != data)
+	{
+		//do nothing
+	}
+	else
+	{
+		goto error;
+	}
+	
+	memcpy(uni_ingress, data, len);
+	port_num = len / sizeof(uni_ingress_t);
+	#if 1
+	cs_printf("port_num :%d\n", port_num);
+	#endif
+	for(i = 0; i < port_num; i++)
+	{
+		uni_ingress_p = &uni_ingress[i];
+		if(DATA_RECOVER == opcode)
+		{
+			uni_ingress_rate_config_recover(uni_ingress_p);
+		}
+		else if(DATA_SHOW == opcode)
+		{
+			uni_ingress_rate_show(uni_ingress_p);
+		}
+		else
+		{
+			cs_printf("in %s\n", __func__);
+		}
+	}
+	
+	
+	ret = 0;
+	goto end;
+	
+error:
+	ret = -1;
+	
+end:
+	return ret;
+}
+
+extern int uni_ingress_rate_running_config_show(void)
+{
+	int ret = 0;
+	int i = 0;
+	int port = 0;
+	cs_uint8 enable = 0;
+	cs_int32 rate = 0;
+	uni_ingress_t uni_ingress;
+	for(i = 0;i < UNI_PORT_MAX;i++)
+	{
+		port = i + CS_UNI_PORT_ID1;
+		if(port_ingress_rate_get(port, &enable, &rate) != CS_E_OK)
+		{
+			continue;
+		}
+		else
+		{
+			uni_ingress.port = port;
+			uni_ingress.ingress_rate = rate;
+			if(rate >= UNI_EGRESS_RATE_SAVE)
+			{
+				uni_ingress_rate_show(&uni_ingress);
+			}
+		}
+	}
+	return ret;
+}
+
+#endif
+
+
 #if 0
 extern int cmd_onu_uart_ip_show(struct cli_def *cli, char *command, char *argv[], int argc);
 int cmd_onu_uart_ip_set(struct cli_def *cli, char *command, char *argv[], int argc);
@@ -3730,6 +4577,16 @@ void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 	
     // RCP switch cmds in config mode
 	//cli_reg_rcp_cmd(cmd_root);
+
+	
+	#if (GE_RATE_LIMIT == MODULE_YES)
+	struct cli_command *port;
+	struct cli_command *egress_rate;
+	struct cli_command *ingress_rate;
+	port = cli_register_command(cmd_root, NULL, "port", NULL, PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "Show or config onu FE port information");
+	egress_rate = cli_register_command(cmd_root, port, "egress_rate", cmd_port_egress_rate, PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "Show or config onu FE port egress rate information");
+	ingress_rate = cli_register_command(cmd_root, port, "ingress_rate", cmd_port_ingress_rate, PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "Show or config onu FE port ingress rate information");	
+	#endif
     return;
 }
 static oam_vendor_handlers_t gwd_oam_handlers = {

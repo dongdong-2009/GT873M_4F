@@ -912,6 +912,17 @@ extern int igmp_mode_tlv_infor_get(int *len, char **value, int *free_need);
 extern int igmp_mode_tlv_infor_handle(int len, char *data, int opcode);
 extern int igmp_mode_running_config_show(void);
 
+#if (GE_RATE_LIMIT == MODULE_YES)
+extern int uni_egress_rate_tlv_infor_get(int *len, char **value, int *free_need);
+extern int uni_egress_rate_tlv_infor_handle(int len, char *data, int opcode);
+extern int uni_egress_rate_running_config_show(void);
+
+extern int uni_ingress_rate_tlv_infor_handle(int len, char *data, int opcode);
+extern int uni_ingress_rate_tlv_infor_get(int *len, char **value, int *free_need);
+extern int uni_ingress_rate_running_config_show(void);
+#endif
+
+
 
 //向外提供的接口
 extern int save_user_tlv_data_to_flash(void);
@@ -968,6 +979,14 @@ extern int save_user_tlv_data_to_flash(void)
 			case IGMP_MODE:
 				igmp_mode_tlv_infor_get(&len, &value, &free_need);
 				break;
+		#if (GE_RATE_LIMIT == MODULE_YES)
+			case UNI_EGRESS:
+				uni_egress_rate_tlv_infor_get(&len, &value, &free_need);
+				break;
+			case UNI_INGRESS:
+				uni_ingress_rate_tlv_infor_get(&len, &value, &free_need);
+				break;
+		#endif
 			default:
 				len = 0;
 				value = NULL;
@@ -1217,6 +1236,14 @@ extern int get_user_tlv_data_from_flash(int opcode)
 					case IGMP_MODE:
 						igmp_mode_tlv_infor_handle(len, value, opcode);
 						break;
+				#if (GE_RATE_LIMIT == MODULE_YES)
+					case UNI_EGRESS:
+						uni_egress_rate_tlv_infor_handle(len, value, opcode);
+						break;
+					case UNI_INGRESS:
+						uni_ingress_rate_tlv_infor_handle(len, value, opcode);
+						break;
+				#endif
 					default:
 						break;
 				}
@@ -1361,6 +1388,14 @@ extern int running_config_show(void)
 			case IGMP_MODE:
 				igmp_mode_running_config_show();
 				break;
+		#if (GE_RATE_LIMIT == MODULE_YES)
+			case UNI_EGRESS:
+				uni_egress_rate_running_config_show();
+				break;
+			case UNI_INGRESS:
+				uni_ingress_rate_running_config_show();
+				break;
+		#endif
 			default:
 				break;
 		}

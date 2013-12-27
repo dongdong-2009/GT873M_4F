@@ -225,6 +225,10 @@ enum data_type
 #endif
 	BROADCAST_STORM_THRESHOLD,
 	IGMP_MODE,
+#if (GE_RATE_LIMIT == MODULE_YES)
+	UNI_EGRESS,
+	UNI_INGRESS,
+#endif
 	TYPE_NUM
 };
 #endif

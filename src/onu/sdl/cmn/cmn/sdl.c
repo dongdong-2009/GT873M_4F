@@ -406,4 +406,11 @@ cs_status sdl_init(void)
     return CS_E_OK;
 }
 
+#if 1
+cs_status uni_port_check(cs_port_id_t port)
+{
+	UNI_PORT_CHECK(port);
+	return CS_E_OK;
+}
+#endif
 
