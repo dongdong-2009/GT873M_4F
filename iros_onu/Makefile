@@ -62,6 +62,7 @@ MOD_LDFLAGS= -u imst_cli_start -u netdev_eth0 -u flash_hwr_init \
 -L../libptp	\
 -L../libpppoe  \
 -L../libsdl	\
+-L../gtmrv/lib \
 -lplat \
 -lipintf \
 -lsys \
@@ -81,6 +82,7 @@ MOD_LDFLAGS= -u imst_cli_start -u netdev_eth0 -u flash_hwr_init \
 -lplat \
 -lsys \
 -losal \
+-lgtmrv \
 -Wl,-gc-sections \
 -Ttarget.ld -nostdlib -mcpu=arm9 -mthumb-interwork \
 -Wl,--Map -Wl,iros_onu_asic_ram_lynxd.map
