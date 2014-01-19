@@ -34,7 +34,11 @@ MOD_INCLUDES= \
 -I$(SWHOME)//src/onu/apps/lynx/dbmngt/cmn/ \
 -I$(SWHOME)//src/onu/apps/lynx/web/cmn/cgi/include \
 -I$(SWHOME)/src/onu/apps/lynx/web/cs/cgi/include \
--I$(SWHOME)/src/onu/apps/lynx/gpio/cmn
+-I$(SWHOME)/src/onu/apps/lynx/gpio/cmn \
+-I$(SWHOME)/gtmrv/include \
+-I$(SWHOME)/gtmrv/include/h/driver \
+-I$(SWHOME)/gtmrv/include/h/msApi \
+-I$(SWHOME)/gtmrv/include/h/platform
 
 
 IROS_CONFIG_H=$(shell pwd)/../iros_config.h

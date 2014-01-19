@@ -35,6 +35,9 @@ $(SWHOME)/src/onu/apps/gwd/oam.c \
 $(SWHOME)/src/onu/apps/gwd/gwd_eth_loop_detect.c \
 $(SWHOME)/src/onu/apps/gwd/timer.c \
 $(SWHOME)/src/onu/apps/gwd/gwd_broadstorm.c \
+$(SWHOME)/src/onu/3rd/driver/marvell/msApiInit.c \
+$(SWHOME)/src/onu/3rd/driver/marvell/iros_mii.c \
+$(SWHOME)/src/onu/3rd/driver/marvell/osSem.c \
 #$(SWHOME)/src/onu/apps/gwd/iros_flash_oper.c
 
 
@@ -75,7 +78,11 @@ MOD_INCLUDES=-I$(ECOS_INSTALL_HOME)/include \
 -I$(SWHOME)/src/cmn/plat/peripheral \
 -I$(SWHOME)/src/cmn/apps/mcast/inc \
 -I$(SWHOME)/src/onu/sdl/cmn/cmn \
--I$(SWHOME)/src/onu/sdl/mports/ctc
+-I$(SWHOME)/src/onu/sdl/mports/ctc \
+-I$(SWHOME)/gtmrv/include \
+-I$(SWHOME)/gtmrv/include/h/driver \
+-I$(SWHOME)/gtmrv/include/h/msApi \
+-I$(SWHOME)/gtmrv/include/h/platform
 
 
 

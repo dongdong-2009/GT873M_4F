@@ -24,6 +24,9 @@ OBJ_DIR = $(TOP_DIR)/lib
 
 CFLAGS += -I$(INCLUDE_DIR) -I$(INCLUDE_DIR)/h -I$(INCLUDE_DIR)/h/driver \
 					-I$(INCLUDE_DIR)/h/msApi -I$(INCLUDE_DIR)/h/platform
+					
+CFLAGS += -Werror -nostdlib -Wno-uninitialized \
+-mthumb -mthumb-interwork -mcpu=arm9				
 
 export CROSS_COMPILE AR AS LD CC CXX CPP NM STRIP SSTRIP \
 				OBJCOPY OBJDUMP RANLIB CFLAGS RM OBJS

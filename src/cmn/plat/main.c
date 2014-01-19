@@ -131,6 +131,8 @@ This file contains main process entry point
 #ifdef HAVE_TERMINAL_SERVER
 #include "terminal_server.h"
 #endif
+
+#include "../../onu/3rd/driver/marvell/msSample.h"
 #define UART
 static cs_uint32 g_ctc_vlan_trunk_ds_untag_enable = 1;
 cs_uint32 sdl_thread_id = 0;
@@ -236,6 +238,8 @@ void plat_init(void)
     
     /* register debug command */
     plat_cmd_init();
+
+    qdStart(9, 0, 0);
 }
 void mbox_init()
 {
