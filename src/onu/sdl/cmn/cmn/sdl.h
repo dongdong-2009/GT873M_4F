@@ -116,14 +116,14 @@ typedef enum{
 #define SDL_CRI_LOG(args...)  do { IROS_LOG_CRI(IROS_MID_SAL, args);}while(0)
 
 #ifdef HAVE_MPORTS
-#define L2P_PORT(port) (((port)==CS_UPLINK_PORT) ? 6 : ((port)-1))  /* convert logical port to switch physical port */
+#define L2P_PORT(port) (((port)==CS_UPLINK_PORT) ? CS_UPLINK_PHY_PORT : ((port)-1))  /* convert logical port to switch physical port */
 #define P2L_PORT(port) (((port)==6) ? CS_UPLINK_PORT : ((port)+1))  /* convert switch physical port to logical port */
 
-#define UNI_PORT_MAX            4
+#define UNI_PORT_MAX            CS_UNI_NUMBER
 
 #define UNI_PORT_CHECK(port)                                        \
     do{                                                             \
-    if(((port) > CS_UNI_PORT_ID4) || ((port) < CS_UNI_PORT_ID1))   \
+    if(((port) > CS_UNI_NUMBER) || ((port) < CS_UNI_PORT_ID1))   \
         return CS_E_PARAM;                                          \
     }while(0)
 

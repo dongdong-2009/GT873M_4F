@@ -61,7 +61,6 @@ MOD_LDFLAGS= -u imst_cli_start -u netdev_eth0 -u flash_hwr_init \
 -L../libdb \
 -L../libloopdetect \
 -L../libaal \
--L../libswitch \
 -L../libmc	\
 -L../libptp	\
 -L../libpppoe  \
@@ -80,7 +79,6 @@ MOD_LDFLAGS= -u imst_cli_start -u netdev_eth0 -u flash_hwr_init \
 -lpppoe \
 -lsdl	\
 -laal \
--lswitch \
 -lflash \
 -lcache \
 -lplat \
@@ -101,7 +99,8 @@ IMAGES_DIR=$(MOD_TMPHOME)/../images/
 
 
 include $(SWHOME)/tools/support/build/makefile.mod_start
-$(MOD_TMPHOME)/$(MOD_NAME): ../libosal/libosal.a ../libplat/libplat.a ../libcache/libcache.a ../libmc/libmc.a ../libflash/libflash.a ../libipintf/libipintf.a ../libweb/libweb.a  ../libsys/libsys.a ../liboam/liboam.a  ../libdb/libdb.a  ../libtrmsvr/libtrmsvr.a ../libloopdetect/libloopdetect.a ../libaal/libaal.a ../libswitch/libswitch.a ../libsdl/libsdl.a ../libpppoe/libpppoe.a
+#$(MOD_TMPHOME)/$(MOD_NAME): ../libosal/libosal.a ../libplat/libplat.a ../libcache/libcache.a ../libmc/libmc.a ../libflash/libflash.a ../libipintf/libipintf.a ../libweb/libweb.a  ../libsys/libsys.a ../liboam/liboam.a  ../libdb/libdb.a  ../libtrmsvr/libtrmsvr.a ../libloopdetect/libloopdetect.a ../libaal/libaal.a ../libswitch/libswitch.a ../libsdl/libsdl.a ../libpppoe/libpppoe.a
+$(MOD_TMPHOME)/$(MOD_NAME): ../libosal/libosal.a ../libplat/libplat.a ../libcache/libcache.a ../libmc/libmc.a ../libflash/libflash.a ../libipintf/libipintf.a ../libweb/libweb.a  ../libsys/libsys.a ../liboam/liboam.a  ../libdb/libdb.a  ../libtrmsvr/libtrmsvr.a ../libloopdetect/libloopdetect.a ../libaal/libaal.a ../gtmrv/lib/libgtmrv.a ../libsdl/libsdl.a ../libpppoe/libpppoe.a
 
 WEB_CMN_ROOT=$(SWHOME)/src/onu/apps/lynx/web/cmn/res
 WEB_CTC_ROOT=$(SWHOME)/src/onu/apps/lynx/web/cs/res/
