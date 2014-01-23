@@ -1047,7 +1047,7 @@ cs_status epon_request_onu_fdb_entry_get(
         goto END;
     }
 
-    memcpy(&entry->mac, &l2_data.mac, sizeof(cs_mac_t));
+    memcpy(&entry->mac, &l2_data.macAddr.arEther[0], sizeof(cs_mac_t));
     entry->vlan_id = l2_data.DBNum;
     entry->port = P2L_PORT(getlportfromucportvec(l2_data.portVec));
     entry->type = l2_data.entryState.ucEntryState == GT_UC_DYNAMIC ? SDL_FDB_ENTRY_DYNAMIC : SDL_FDB_ENTRY_STATIC;
@@ -1066,9 +1066,10 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
     CS_OUT cs_uint16                     *next
 )
 {
-    rtk_l2_ucastAddr_t l2_data;
-    GT_U32 address = offset;
+    GT_ATU_ENTRY l2_data;
+    GT_U32 count = 0, i;
     GT_STATUS gt_ret = GT_OK;
+    cs_status ret = CS_E_OK;
 
     if((NULL==next) || (NULL==entry)) {
         SDL_MIN_LOG("null pointer\n");
@@ -1080,31 +1081,42 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
         return CS_E_PARAM;
     }
 
-    while(1){
-        gt_ret = rtk_l2_addr_next_get(READMETHOD_NEXT_L2UC, 0, &address, &l2_data);
-        if(GT_OK != gt_ret){
-            SDL_MIN_LOG("rtk_l2_addr_next_get return %d.\n", gt_ret);
-            return CS_E_NOT_FOUND;
-        }
-        
-        if(((SDL_FDB_ENTRY_GET_MODE_DYNAMIC == mode) && (1 == l2_data.is_static)) ||
-            ((SDL_FDB_ENTRY_GET_MODE_STATIC == mode) && (0 == l2_data.is_static))){
-            address++;
-            continue;
-        }
-        
-        memset(entry, 0, sizeof(cs_sdl_fdb_entry_t)); 
-        memcpy(&entry->mac, &l2_data.mac, sizeof(cs_mac_t));  
-        entry->vlan_id = l2_data.cvid;
-        entry->port = P2L_PORT(l2_data.port);    
-        entry->type = l2_data.is_static ? SDL_FDB_ENTRY_STATIC : SDL_FDB_ENTRY_DYNAMIC;
-        
-        break;
+    if(GT_OK != gfdbGetAtuAllCount(dev, &count))
+    	return CS_E_ERROR;
+
+    if(offset > count)
+    	return CS_E_PARAM;
+
+    for(i=0; i<count; i++)
+    {
+    	if(i == 0)
+    		gt_ret = gfdbGetAtuEntryFirst(dev, &l2_data);
+    	else
+    		gt_ret = gfdbGetAtuEntryNext(dev, &l2_data);
+
+    	if(gt_ret != GT_OK)
+    	{
+    		ret = CS_E_ERROR;
+    		break;
+    	}
+
+    	if(i < offset)
+    		continue;
+
+    	if((l2_data.entryState.ucEntryState != GT_UC_DYNAMIC && mode == SDL_FDB_ENTRY_DYNAMIC) ||
+    			(l2_data.entryState.ucEntryState != GT_UC_STATIC && mode == SDL_FDB_ENTRY_STATIC) )
+    		continue;
+
+    	memset(entry, 0, sizeof(cs_sdl_fdb_entry_t));
+    	memcpy(&entry->mac, &l2_data.macAddr.arEther[0], sizeof(cs_mac_t));
+    	entry->vlan_id = l2_data.DBNum;
+    	entry->port = P2L_PORT(getlportfromucportvec(l2_data.portVec));
+    	entry->type = l2_data.entryState.ucEntryState == GT_UC_DYNAMIC ? SDL_FDB_ENTRY_DYNAMIC : SDL_FDB_ENTRY_STATIC;
+    	*next = i+1;
+    	break;
     }
     
-    *next = address + 1;
-    
-    return CS_E_OK;
+    return ret;
     
 }
 cs_status epon_request_onu_fdb_entry_get_byindex_atu(
@@ -1175,10 +1187,10 @@ cs_status epon_request_onu_fdb_entry_get_byindex_per_port(
     CS_OUT cs_uint16                     *next
 )
 {
-#if 1
-	rtk_l2_ucastAddr_t l2_data;
-    GT_U32 address = offset;
+	GT_ATU_ENTRY l2_data;
+    GT_U32 count = 0, i, hwport = 0;
     GT_STATUS gt_ret = GT_OK;
+    cs_status ret =  CS_E_OK;
     //cs_printf("address:%d\n",address);
     if((NULL==next) || (NULL==entry)) {
         SDL_MIN_LOG("null pointer\n");
@@ -1197,24 +1209,27 @@ cs_status epon_request_onu_fdb_entry_get_byindex_per_port(
     
     UNI_PORT_CHECK(port_id);
     
+    gfdbGetAtuAllCount(dev, &count);
+    hwport = GT_LPORT_2_PORT(port_id-1);
+
     if(mode == SDL_FDB_ENTRY_GET_MODE_STATIC){
 		cs_printf("into statuc\n");
-        for(address=offset; address<__FDB_STATIC_ENTRY_MAC_MAX; address++){
-            if(!(__fdb_static_entry_table[port_id-1].valid_map & (1<<address)))
+        for(i=offset; i<__FDB_STATIC_ENTRY_MAC_MAX; i++){
+            if(!(__fdb_static_entry_table[port_id-1].valid_map & (1<<i)))
                 continue;
                 
             memset(entry, 0, sizeof(cs_sdl_fdb_entry_t)); 
-            memcpy(&entry->mac, &__fdb_static_entry_table[port_id-1].entry[address].mac.addr[0], sizeof(cs_mac_t));
-            entry->vlan_id = __fdb_static_entry_table[port_id-1].entry[address].vlan_id;
+            memcpy(&entry->mac, &__fdb_static_entry_table[port_id-1].entry[i].mac.addr[0], sizeof(cs_mac_t));
+            entry->vlan_id = __fdb_static_entry_table[port_id-1].entry[i].vlan_id;
             entry->port = port_id;                                      
             entry->type = SDL_FDB_ENTRY_STATIC;
             
-            *next = address + 1;
+            *next = i + 1;
             
             return CS_E_OK;
         }  
         
-        if(address == __FDB_STATIC_ENTRY_MAC_MAX){
+        if(i == __FDB_STATIC_ENTRY_MAC_MAX){
             SDL_MIN_LOG("port id: %d, no static entry is found\n", port_id);
             
             *next = __FDB_STATIC_ENTRY_MAC_MAX;
@@ -1224,6 +1239,7 @@ cs_status epon_request_onu_fdb_entry_get_byindex_per_port(
         
     }
     
+#if 0
     while(1){
         gt_ret = rtk_l2_addr_next_get(READMETHOD_NEXT_L2UCSPA, port_id-1, &address, &l2_data);
         if(GT_OK != gt_ret){
@@ -1248,54 +1264,40 @@ cs_status epon_request_onu_fdb_entry_get_byindex_per_port(
     }
     
     *next = address + 1;
+#endif
+
+    for(i=0; i<count; i++)
+    {
+    	if(i == 0)
+    		gt_ret = gfdbGetAtuEntryFirst(dev, &l2_data);
+    	else
+    		gt_ret = gfdbGetAtuEntryNext(dev, &l2_data);
+
+    	if(gt_ret != GT_OK)
+    	{
+    		ret = CS_E_ERROR;
+    		break;
+    	}
+
+    	if(i < offset)
+    		continue;
+
+    	if((l2_data.entryState.ucEntryState != GT_UC_DYNAMIC && mode == SDL_FDB_ENTRY_DYNAMIC) ||
+    			(l2_data.entryState.ucEntryState != GT_UC_STATIC && mode == SDL_FDB_ENTRY_STATIC) ||
+    			(!(l2_data.portVec & (1<<hwport))))
+    		continue;
+
+    	memset(entry, 0, sizeof(cs_sdl_fdb_entry_t));
+    	memcpy(&entry->mac, &l2_data.macAddr.arEther[0], sizeof(cs_mac_t));
+    	entry->vlan_id = l2_data.DBNum;
+    	entry->port = P2L_PORT(getlportfromucportvec(l2_data.portVec));
+    	entry->type = l2_data.entryState.ucEntryState == GT_UC_DYNAMIC ? SDL_FDB_ENTRY_DYNAMIC : SDL_FDB_ENTRY_STATIC;
+    	*next = i+1;
+    	break;
+    }
 	//cs_printf("addess end:%d\n",address);
  	//cs_printf("next:%d",*next);
-    return CS_E_OK;
-#else
-    cs_aal_fdb_entry_t fdb;
-    cs_uint8           index = 0;
-    cs_uint8           zero_mac[6] = {0, 0, 0, 0, 0, 0};
-
-    if(NULL==next || NULL==entry ||(offset>__FDB_ENTRY_MAX)) {
-        SDL_MIN_LOG("error params\n");
-        return CS_E_PARAM;
-    }
-
-    /* Look for the static entry */
-    for(index=offset; index<__FDB_ENTRY_MAX; index++) {
-        memset(&fdb, 0, sizeof(cs_aal_fdb_entry_t));
-        if(aal_fdb_entry_get(index, &fdb)){
-            return CS_E_ERROR;
-        }
-        
-        if ((fdb.aging_status == 0) && (fdb.static_flag == 0)) {
-            continue;
-        }
-
-        if((fdb.vld == 0) 
-        || ((fdb.static_flag != 0) && (mode == SDL_FDB_ENTRY_GET_MODE_DYNAMIC))
-        || ((fdb.static_flag != 1) && (mode == SDL_FDB_ENTRY_GET_MODE_STATIC)) 
-        || (memcmp(fdb.mac.addr, zero_mac, 6) == 0))
-            continue;
-                                
-         memcpy(&entry->mac, &fdb.mac, sizeof(cs_mac_t));
-         
-         if(fdb.vid_vld)
-             entry->vlan_id = fdb.vid;
-         else
-             entry->vlan_id = 0;
-         
-         entry->port = fdb.port_id + 1;
-         entry->type = fdb.static_flag;
-
-         *next = index + 1;
-         
-         return CS_E_OK;
-        
-    }
-    
-    return CS_E_NOT_FOUND;
-#endif
+    return ret;
 }
 
 
@@ -1345,7 +1347,7 @@ cs_status sdl_fdb_init(
 
     
     /*learn over action is drop at init. if want to forward, set limit num > max entry num*/
-    rtk_l2_limitLearningCntAction_set(RTK_WHOLE_SYSTEM, LIMIT_LEARN_CNT_ACTION_FORWARD);
+//    rtk_l2_limitLearningCntAction_set(RTK_WHOLE_SYSTEM, LIMIT_LEARN_CNT_ACTION_FORWARD);
 
     
     /* workaround for bug 24604.

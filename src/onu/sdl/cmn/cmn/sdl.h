@@ -117,7 +117,7 @@ typedef enum{
 
 #ifdef HAVE_MPORTS
 #define L2P_PORT(port) (((port)==CS_UPLINK_PORT) ? CS_UPLINK_PHY_PORT : ((port)-1))  /* convert logical port to switch physical port */
-#define P2L_PORT(port) (((port)==6) ? CS_UPLINK_PORT : ((port)+1))  /* convert switch physical port to logical port */
+#define P2L_PORT(port) (((port)==CS_UPLINK_PHY_PORT) ? CS_UPLINK_PORT : ((port)+1))  /* convert switch physical port to logical port */
 
 #define UNI_PORT_MAX            CS_UNI_NUMBER
 

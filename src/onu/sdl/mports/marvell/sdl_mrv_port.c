@@ -90,7 +90,6 @@ Manufacturer is CORTINA.
 Copyright (c) 2010 by Cortina Systems Incorporated
 ****************************************************************************/
 #include "plat_common.h"
-#include "rtk_api_ext.h"
 #include "sdl_port.h"
 #include "sdl_qos_cmn.h"
 #include "sdl_init.h"
@@ -103,6 +102,10 @@ Copyright (c) 2010 by Cortina Systems Incorporated
 #include "sdl_event_cmn.h"
 #include "make_file.h"
 
+#include "msApiTypes.h"
+#include "msApi.h"
+
+extern GT_QD_DEV * dev;
 
 #define __SDL_PORT_AUTO_NEGO_FAIL              0
 #define __SDL_PORT_AUTO_NEGO_SUCCESS           1
@@ -113,8 +116,8 @@ Copyright (c) 2010 by Cortina Systems Incorporated
 
 #define MIN_BURST_SIZE              10
 #define MAX_BURST_SIZE              500
-#define SWITCH_UPLINK_PORT_ID       6
-#define MIRROR_MAX_PORT_MASK        0x1f
+#define SWITCH_UPLINK_PORT_ID       CS_UPLINK_PHY_PORT
+#define MIRROR_MAX_PORT_MASK        ((1<<(SWITCH_UPLINK_PORT_ID))-1)
 #define PORT_STORM_METER_ID_START   10
 #define PORT_STORM_METER_ID_END     14
 #define MAX_PORT_NUMBER              4
@@ -124,7 +127,6 @@ Copyright (c) 2010 by Cortina Systems Incorporated
 #define BURST_CONTROL_REG 0x1203
 
 extern void cs_polling_handler_reg(void (*handler)());
-extern rtk_api_ret_t rtk_chip_id_get(rtk_chip_id_t *chip);
 
 /*Port mask map from mirror port mask to switch port mask*/
 #define MSK_MIRROR_TO_SWITCH(mirror_msk, switch_msk)  do{           \
@@ -181,7 +183,7 @@ typedef struct {
 
 __sdl_port_config_t __port_cfg[UNI_PORT_MAX];
 
-rtk_port_linkStatus_t __uni_link_ststus[UNI_PORT_MAX] = {PORT_LINKDOWN, PORT_LINKDOWN, PORT_LINKDOWN, PORT_LINKDOWN};
+cs_sdl_port_link_status_t __uni_link_ststus[UNI_PORT_MAX] = {SDL_PORT_LINK_STATUS_DOWN, SDL_PORT_LINK_STATUS_DOWN, SDL_PORT_LINK_STATUS_DOWN, SDL_PORT_LINK_STATUS_DOWN};
 
 extern sdl_init_cfg_t sdl_int_cfg;
 
@@ -195,8 +197,8 @@ static void __sdl_port_auto_neg_polling_handler(void)
     sdl_event_port_auto_nego_t auto_nego_event;
     rtk_port_phy_data_t phy_data;
     static cs_uint8 counter = 20;
-    rtk_port_t port;
-    rtk_api_ret_t rtk_ret = 0;
+    GT_LPORT port;
+    GT_STATUS ret = 0;
     
     if(counter>0){
         counter--;
@@ -204,8 +206,8 @@ static void __sdl_port_auto_neg_polling_handler(void)
     }
 
     for(port=0; port<UNI_PORT_MAX; port++) {
-        rtk_ret = rtk_port_phyReg_get(port, __PHY_REGISTER_19, &phy_data);
-        if(RT_ERR_OK != rtk_ret)
+        ret = rtk_port_phyReg_get(port, __PHY_REGISTER_19, &phy_data);
+        if(GT_OK != ret)
            return;
            
         if (phy_data & (0x1 << 15)){
@@ -224,24 +226,21 @@ static void __sdl_port_auto_neg_polling_handler(void)
 #endif
 void __sdl_port_int_process(void)
 {
-    rtk_int_status_t status;
-    rtk_port_linkStatus_t link_status;
-    rtk_port_t port;
-    rtk_data_t speed;
-    rtk_data_t duplex;
-    rtk_data_t nego;
+//    rtk_int_status_t status;
+    cs_sdl_port_link_status_t link_status;
+    GT_LPORT port;
     sdl_event_port_link_t link_event;
-    rtk_port_phy_data_t phy_data;
+    GT_U32 phy_data;
     
 #ifdef HAVE_SDL_CTC
     sdl_event_port_auto_nego_t auto_nego_event;
 #endif
 
-    rtk_int_control_set(INT_TYPE_LINK_STATUS, 0);
-    rtk_int_status_get(&status);
+//    rtk_int_control_set(INT_TYPE_LINK_STATUS, 0);
+//    rtk_int_status_get(&status);
     if (status.value[INT_TYPE_LINK_STATUS]) {
         for (port=0; port <UNI_PORT_MAX; port++) {
-            if(RT_ERR_OK != rtk_port_phyReg_get(port, __PHY_REGISTER_19, &phy_data))
+            if(GT_OK != rtk_port_phyReg_get(port, __PHY_REGISTER_19, &phy_data))
                return;
             
 #if 0 /*removed: some time link change event's missed*/
@@ -265,7 +264,8 @@ void __sdl_port_int_process(void)
             }
 #endif
 
-            rtk_port_phyStatus_get(port, &link_status, &speed, &duplex, &nego);
+//            rtk_port_phyStatus_get(port, &link_status, &speed, &duplex, &nego);
+            gprtGetLinkState(dev, port, &link_status);
             if (link_status == __uni_link_ststus[port]) {
                 continue;
             }
@@ -279,10 +279,10 @@ void __sdl_port_int_process(void)
         }
     }
 
-    memset(&status, 0, sizeof(status));
-    status.value[INT_TYPE_LINK_STATUS] = 1;
-    rtk_int_status_set(status);
-    rtk_int_control_set(INT_TYPE_LINK_STATUS, 1);
+//    memset(&status, 0, sizeof(status));
+//    status.value[INT_TYPE_LINK_STATUS] = 1;
+//    rtk_int_status_set(status);
+//    rtk_int_control_set(INT_TYPE_LINK_STATUS, 1);
 
     return;
 
@@ -300,14 +300,15 @@ cs_status epon_request_onu_port_mtu_get(
 {
     cs_aal_pon_mac_cfg_t cfg;
     cs_uint32            uni_mtu;
-    rtk_api_ret_t        rtk_ret = 0; 
+    GT_STATUS        ret = 0;
+    GT_BOOL			mode;
 
     if (NULL == mtu) {
         SDL_MIN_LOG("MTU is NULL pointer!\n");
         return CS_E_PARAM;
     }
     
-    if (port_id > CS_UNI_PORT_ID4){
+    if (port_id > UNI_PORT_MAX){
         SDL_MIN_LOG("Port ID is Invalid\n");
         return CS_E_PARAM;
     }
@@ -317,9 +318,10 @@ cs_status epon_request_onu_port_mtu_get(
             *mtu = cfg.mtu;
     }
     else{
-        rtk_ret = rtk_switch_portMaxPktLen_get(port_id-1, &uni_mtu);
-        if(RT_ERR_OK != rtk_ret){
-            SDL_MIN_LOG("rtk_switch_portMaxPktLen_get return %d\n", rtk_ret);
+    	ret = gsysGetMaxFrameSize(dev,&mode);
+        uni_mtu = (mode)?1522:1632;
+        if(GT_OK != ret){
+            SDL_MIN_LOG("gsysGetMaxFrameSize return %d\n", ret);
             return  CS_E_ERROR;
         }
         
@@ -340,8 +342,9 @@ cs_status epon_request_onu_port_mtu_set(
 {
     cs_aal_pon_mac_cfg_t    cfg;
     cs_aal_pon_mac_msk_t    mask;
-    rtk_api_ret_t           rtk_ret = 0; 
+    GT_STATUS           ret = 0;
     cs_status               rt = CS_E_OK;
+    GT_BOOL				mode;
     
     if (mtu > __SDL_PORT_MTU_MAX) {
         SDL_MIN_LOG(" mtu %d is not supported!\n",mtu);
@@ -370,18 +373,15 @@ cs_status epon_request_onu_port_mtu_set(
     }
     else{
         if (mtu <= 1522) {
-            mtu = 1522;
-        } 
-        else if ((mtu > 1522) && (mtu <= 1536)) {
-            mtu = 1536;
+            mode = GT_TRUE;
         } 
         else {
-            mtu = 1552;
+            mode = GT_FALSE;
         }
 
-        rtk_ret = rtk_switch_portMaxPktLen_set(port_id - 1, mtu);
-        if (RT_ERR_OK != rtk_ret) {
-            SDL_MIN_LOG("rtk_switch_portMaxPktLen_set return %dd\n", rtk_ret);
+        ret = gsysSetMaxFrameSize(dev, mode);
+        if (GT_OK != ret) {
+            SDL_MIN_LOG("gsysSetMaxFrameSize return %dd\n", ret);
             return CS_E_ERROR;
         }
     }
@@ -400,14 +400,10 @@ cs_status epon_request_onu_port_speed_get(
 )
 {
     cs_status rc = CS_E_OK;
-    rtk_port_linkStatus_t  uni_link;
-    rtk_data_t             rtk_speed;
-    rtk_data_t             duplex;
-    rtk_data_t             nego;
-    rtk_port_t              port;
-    rtk_api_ret_t          rtk_ret = 0; 
-    rtk_chip_id_t         chip;
-    rtk_port_phy_ability_t phy_abi;
+    GT_BOOL 		status;
+    GT_LPORT              port;
+    GT_STATUS          ret = 0;
+    GT_PORT_SPEED_MODE			lspeed;
     
     if (NULL == speed) {
         SDL_MIN_LOG("Speed is NULL pointer!\n", );
@@ -420,47 +416,36 @@ cs_status epon_request_onu_port_speed_get(
 
 
     /** PHY link status */
-    rtk_ret = rtk_port_phyStatus_get(port, &uni_link, &rtk_speed, &duplex, &nego);
-    if (RT_ERR_OK != rtk_ret) {
-        SDL_MIN_LOG("rtk_port_phyStatus_get return %d\n", rtk_ret);
+    ret = gprtGetLinkState(dev, port, &status);
+    if (GT_OK != ret) {
+        SDL_MIN_LOG("gprtGetLinkState return %d\n", ret);
         rc=CS_E_ERROR;
         goto end; 
     }
 
     /** While the PHY link is down, no meaning of the link speed */
-    if (! uni_link) {
-        rtk_chip_id_get(&chip);
-
-        if(RTK_CHIP_8305 == chip)
-            *speed = SDL_PORT_SPEED_100;
-        else
-            *speed = SDL_PORT_SPEED_1000;
-
+    if (! status) {
+            *speed = SDL_PORT_SPEED_10;
         goto end;
     }
     
-    
-    /* diff to AUTO-NEG and Fixed-speed mode */
-    rc = (cs_status)rtk_port_phyAutoNegoAbility_get(port, &phy_abi);
-    if (rc){
-        goto end;
+    if(GT_OK == gprtGetSpeedMode(dev, port, &lspeed))
+    {
+    	switch(lspeed)
+    	{
+    	case PORT_SPEED_1000_MBPS:
+    		*speed = SDL_PORT_SPEED_1000;
+    		break;
+    	case PORT_SPEED_100_MBPS:
+    		*speed = SDL_PORT_SPEED_100;
+    		break;
+    	default:
+    		*speed = SDL_PORT_SPEED_10;
+    		break;
+    	}
     }
-
-    if (phy_abi.AutoNegotiation) {
-        if(rtk_speed == 0){
-            *speed = SDL_PORT_SPEED_10;
-        }else if(rtk_speed == 1){
-            *speed = SDL_PORT_SPEED_100;
-        }else if(rtk_speed == 2){
-            *speed = SDL_PORT_SPEED_1000;
-        }
-    } else {
-        if(phy_abi.Full_10||phy_abi.Half_10){
-            *speed = SDL_PORT_SPEED_10;
-        }else if(phy_abi.Full_100 ||phy_abi.Half_100){
-            *speed = SDL_PORT_SPEED_100;
-        }
-    }
+    else
+    	rc = CS_E_ERROR;
     
 end:
     
@@ -476,12 +461,9 @@ cs_status epon_request_onu_port_duplex_get(
     CS_OUT cs_sdl_port_ether_duplex_t   *duplex
 )
 {
-    rtk_port_linkStatus_t  uni_link;
-    rtk_data_t             rtk_speed;
-    rtk_data_t             rtk_duplex;
-    rtk_data_t             nego;
-    rtk_port_t             port;
-    rtk_api_ret_t          rtk_ret  = 0;
+    GT_LPORT             port;
+    GT_BOOL				lduplex;
+    GT_STATUS          ret  = 0;
     
     if (NULL == duplex) {
         SDL_MIN_LOG("duplex is NULL pointer\n", );
@@ -493,13 +475,13 @@ cs_status epon_request_onu_port_duplex_get(
     port = L2P_PORT(port_id);
 
     /** PHY link status */
-    rtk_ret = rtk_port_phyStatus_get(port, &uni_link, &rtk_speed, &rtk_duplex, &nego);
-    if (RT_ERR_OK != rtk_ret) {
-        SDL_MIN_LOG("rtk_port_phyStatus_get return %d\n", rtk_ret);
+    ret = gprtGetC_Duplex(dev, port, &lduplex);
+    if (GT_OK != ret) {
+        SDL_MIN_LOG("gprtGetC_Duplex return %d\n", ret);
         return CS_E_ERROR;
     }
 
-    if(rtk_duplex)
+    if(lduplex)
         *duplex = SDL_PORT_DUPLEX_FULL;
     else
         *duplex = SDL_PORT_DUPLEX_HALF;
@@ -547,31 +529,19 @@ cs_status epon_request_onu_port_autoneg_restart(
     CS_IN cs_port_id_t              port_id
 )
 {
-    rtk_port_t      port;
-    rtk_uint32      phyData;
-    rtk_api_ret_t   rtk_ret  = 0;
+    GT_LPORT      port;
+    GT_STATUS   ret  = 0;
     cs_status       rt = CS_E_OK;
     
     UNI_PORT_CHECK(port_id);
 
     port = L2P_PORT(port_id);
     
-    rtk_ret = rtk_port_phyReg_get(port, PHY_CONTROL_REG, &phyData);
-    if(RT_ERR_OK != rtk_ret){
-        SDL_MIN_LOG("rtk_port_phyReg_get return %d\n", rtk_ret);
-        rt = CS_E_ERROR;
-        goto END;
-    }
+    ret = gprtPortRestartAutoNeg(dev, port);
     
-    phyData = phyData | (1 << 9);
-    rtk_ret = rtk_port_phyReg_set(port, PHY_CONTROL_REG, phyData);
-    if(RT_ERR_OK != rtk_ret){
-        SDL_MIN_LOG("rtk_port_phyReg_set return %d\n", rtk_ret);
-        rt = CS_E_ERROR;
-        goto END;
-    }
+    if(ret != GT_OK)
+    	rt = CS_E_ERROR;
 
-END:
     return rt;
 }
 
@@ -606,10 +576,10 @@ cs_status epon_request_onu_port_lpbk_set(
     CS_IN cs_sdl_port_loopback_t            loopback
 )
 {
-    rtk_port_t                     port;
+    GT_LPORT                     port;
     rtk_uint32                     phyData;
     static cs_sdl_port_speed_cfg_t port_cfg[UNI_PORT_MAX];
-    rtk_api_ret_t                  rtk_ret  = 0;
+    GT_STATUS                  ret  = 0;
     cs_status                      rt = CS_E_OK;
     
     if (port_id > CS_UNI_PORT_ID4){
@@ -679,17 +649,17 @@ cs_status epon_request_onu_port_lpbk_set(
                     goto END;
                 }
                 
-                rtk_ret = rtk_port_phyReg_get(port, PHY_CONTROL_REG, &phyData);
-                if(RT_ERR_OK != rtk_ret){
-                    SDL_MIN_LOG("rtk_port_phyReg_get return %d\n", rtk_ret);
+                ret = rtk_port_phyReg_get(port, PHY_CONTROL_REG, &phyData);
+                if(GT_OK != ret){
+                    SDL_MIN_LOG("rtk_port_phyReg_get return %d\n", ret);
                     rt = CS_E_ERROR;
                     goto END;
                 }
                 
                 phyData = phyData & (~(0x1 << 14));
-                rtk_ret = rtk_port_phyReg_set(port, PHY_CONTROL_REG, phyData);
-                if(RT_ERR_OK != rtk_ret){
-                    SDL_MIN_LOG("rtk_port_phyReg_set return %d\n", rtk_ret);
+                ret = rtk_port_phyReg_set(port, PHY_CONTROL_REG, phyData);
+                if(GT_OK != ret){
+                    SDL_MIN_LOG("rtk_port_phyReg_set return %d\n", ret);
                     rt = CS_E_ERROR;
                     goto END;
                 }
@@ -704,18 +674,18 @@ cs_status epon_request_onu_port_lpbk_set(
                     goto END;
                 }
                 
-                rtk_ret = rtk_port_phyReg_get(port, PHY_CONTROL_REG, &phyData);
-                if(RT_ERR_OK != rtk_ret){
-                    SDL_MIN_LOG("rtk_port_phyReg_get return %d\n", rtk_ret);
+                ret = rtk_port_phyReg_get(port, PHY_CONTROL_REG, &phyData);
+                if(GT_OK != ret){
+                    SDL_MIN_LOG("rtk_port_phyReg_get return %d\n", ret);
                     rt = CS_E_ERROR;
                     goto END;
                 }
 
                 phyData = phyData | (0x1 << 14);
                 
-                rtk_ret = rtk_port_phyReg_set(port, PHY_CONTROL_REG, phyData);
-                if(RT_ERR_OK != rtk_ret){
-                    SDL_MIN_LOG("rtk_port_phyReg_set return %d\n", rtk_ret);
+                ret = rtk_port_phyReg_set(port, PHY_CONTROL_REG, phyData);
+                if(GT_OK != ret){
+                    SDL_MIN_LOG("rtk_port_phyReg_set return %d\n", ret);
                     rt = CS_E_ERROR;
                     goto END;
                 }
@@ -775,10 +745,10 @@ cs_status epon_request_onu_port_status_set(
     CS_IN cs_sdl_port_speed_cfg_t   speed_cfg
 )
 {
-    rtk_port_t             port;
+    GT_LPORT             port;
     rtk_port_phy_ability_t phy_abi;
     rtk_chip_id_t          chip_id;
-    rtk_api_ret_t          rtk_ret  = 0;
+    GT_STATUS          ret  = 0;
     cs_status              rt = CS_E_OK;
     rtk_chip_id_t       rtk_chip;
 
@@ -864,17 +834,17 @@ cs_status epon_request_onu_port_status_set(
     rtk_chip_id_get(&chip_id);
     if(chip_id != RTK_CHIP_8305){
         if (phy_abi.AutoNegotiation == 0) {
-            rtk_ret = rtk_port_phyMdx_set(port, PHY_FORCE_MDIX_MODE);
-            if(RT_ERR_OK != rtk_ret){
-                SDL_MIN_LOG("rtk_port_phyMdx_set return %d\n", rtk_ret);
+            ret = rtk_port_phyMdx_set(port, PHY_FORCE_MDIX_MODE);
+            if(GT_OK != ret){
+                SDL_MIN_LOG("rtk_port_phyMdx_set return %d\n", ret);
                 rt = CS_E_ERROR;
                 goto END;
             }
         } 
         else {
-            rtk_ret = rtk_port_phyMdx_set(port, PHY_AUTO_CROSSOVER_MODE);
-            if(RT_ERR_OK != rtk_ret){
-                SDL_MIN_LOG("rtk_port_phyMdx_set return %d\n", rtk_ret);
+            ret = rtk_port_phyMdx_set(port, PHY_AUTO_CROSSOVER_MODE);
+            if(GT_OK != ret){
+                SDL_MIN_LOG("rtk_port_phyMdx_set return %d\n", ret);
                 rt = CS_E_ERROR;
                 goto END;
             }
@@ -884,9 +854,9 @@ cs_status epon_request_onu_port_status_set(
     if (__port_cfg[port].flow_ctrl_en)
         phy_abi.FC = 1;
     
-    rtk_ret = rtk_port_phyAutoNegoAbility_set(port, &phy_abi);
-    if(RT_ERR_OK != rtk_ret){
-        SDL_MIN_LOG("rtk_port_phyAutoNegoAbility_set return %d\n", rtk_ret);
+    ret = rtk_port_phyAutoNegoAbility_set(port, &phy_abi);
+    if(GT_OK != ret){
+        SDL_MIN_LOG("rtk_port_phyAutoNegoAbility_set return %d\n", ret);
         rt = CS_E_ERROR;
         goto END;
     }
@@ -925,9 +895,9 @@ cs_status epon_request_onu_port_admin_set(
     CS_IN cs_sdl_port_admin_t       admin
 )
 {
-    rtk_port_t      port;
+    GT_LPORT      port;
     rtk_enable_t    enable;
-    rtk_api_ret_t   rtk_ret  = 0;
+    GT_STATUS   ret  = 0;
     cs_status       rt = CS_E_OK;
     
     UNI_PORT_CHECK(port_id);
@@ -943,9 +913,9 @@ cs_status epon_request_onu_port_admin_set(
         enable = 1;
     }
     
-    rtk_ret = rtk_port_adminEnable_set(port, enable);
-    if(RT_ERR_OK != rtk_ret){
-        SDL_MIN_LOG("rtk_port_adminEnable_set return %d\n", rtk_ret);
+    ret = rtk_port_adminEnable_set(port, enable);
+    if(GT_OK != ret){
+        SDL_MIN_LOG("rtk_port_adminEnable_set return %d\n", ret);
         rt = CS_E_ERROR;
         goto END;
     }
@@ -987,10 +957,10 @@ cs_status epon_request_onu_port_stats_get(
 )
 {
 
-    rtk_port_t           port;
+    GT_LPORT           port;
     rtk_stat_port_cntr_t port_cnt;
     cs_uint32            val[2] = {0, 0};
-    rtk_api_ret_t        rtk_ret = 0;
+    GT_STATUS        ret = 0;
     cs_status            rt = CS_E_OK;
     
     if (NULL == uni_stats) {
@@ -1010,9 +980,9 @@ cs_status epon_request_onu_port_stats_get(
 
     if (port_id != CS_DOWNLINK_PORT) {
         port = L2P_PORT(port_id);
-        rtk_ret = rtk_stat_port_getAll(port, &port_cnt);
-        if (RT_ERR_OK != rtk_ret) {
-            SDL_MIN_LOG("rtk_stat_port_getAll return %d\n", rtk_ret);
+        ret = rtk_stat_port_getAll(port, &port_cnt);
+        if (GT_OK != ret) {
+            SDL_MIN_LOG("rtk_stat_port_getAll return %d\n", ret);
             rt = CS_E_ERROR;
             goto END;
         }
@@ -1192,8 +1162,8 @@ cs_status epon_request_onu_port_stats_clr(
 )
 {
     cs_status rt = CS_E_OK;
-    rtk_port_t port;
-    rtk_api_ret_t   rtk_ret  = 0;
+    GT_LPORT port;
+    GT_STATUS   ret  = 0;
     cs_aal_uni_cfg_t uni_cfg;
     cs_aal_uni_cfg_mask_t uni_msk;
 
@@ -1215,9 +1185,9 @@ cs_status epon_request_onu_port_stats_clr(
     } 
     else {
         port = L2P_PORT(port_id);
-        rtk_ret = rtk_stat_port_reset(port);
-        if (RT_ERR_OK != rtk_ret) {
-            SDL_MIN_LOG("rtk_stat_port_reset return %d\n", rtk_ret);
+        ret = rtk_stat_port_reset(port);
+        if (GT_OK != ret) {
+            SDL_MIN_LOG("rtk_stat_port_reset return %d\n", ret);
             rt = CS_E_ERROR;
             goto END;
         }
@@ -1281,12 +1251,9 @@ cs_status epon_request_onu_port_link_status_get(
     CS_OUT cs_sdl_port_link_status_t    *link_status
 )
 {
-    rtk_port_t     port;
-    rtk_data_t     uni_link;
-    rtk_data_t     speed;
-    rtk_data_t     duplex;
-    rtk_data_t     nego;
-    rtk_api_ret_t  rtk_ret  = 0;
+    GT_LPORT     port;
+    GT_STATUS  ret  = 0;
+    GT_BOOL		link;
     
     if (NULL == link_status) {
         SDL_MIN_LOG("link_status is NULL pointer\n");
@@ -1296,14 +1263,15 @@ cs_status epon_request_onu_port_link_status_get(
 
     UNI_PORT_CHECK(port_id);
     port = L2P_PORT(port_id);
-    rtk_ret = rtk_port_phyStatus_get(port, &uni_link, &speed, &duplex, &nego);
-    if (RT_ERR_OK != rtk_ret) {
-        SDL_MIN_LOG("rtk_port_phyStatus_get return %d\n", rtk_ret);
+
+    ret = gprtGetLinkState(dev, port, &link);
+    if (GT_OK != ret) {
+        SDL_MIN_LOG("gprtGetLinkState return %d\n", ret);
 		//cs_printf("phy port %d status error\n",port_id);
         return CS_E_ERROR;
     }
     
-    if (uni_link) {
+    if (link) {
 	//	cs_printf("uni port %d link up\n",port_id);
         *link_status = SDL_PORT_LINK_STATUS_UP;
     } 
@@ -1372,7 +1340,7 @@ cs_status epon_request_onu_port_flow_ctrl_set(
     cs_status rc = CS_E_OK;
     rtk_port_mac_ability_t mac_ability;
     rtk_mode_ext_t ext_mode;
-    rtk_port_t port;
+    GT_LPORT port;
     rtk_rate_t us_rate;
     rtk_enable_t pIfg_include;
     rtk_enable_t pFc_enable;
@@ -1505,7 +1473,7 @@ cs_status epon_request_onu_port_flow_ctrl_get(
 )
 {
     cs_status rc = CS_E_OK;
-    rtk_port_t port;
+    GT_LPORT port;
 
     if (NULL == enable) {
         rc = CS_E_PARAM;
@@ -1535,7 +1503,7 @@ cs_status epon_request_onu_port_ds_rate_limit_set(
 )
 {
     cs_status rc = CS_E_OK;
-    rtk_port_t port;
+    GT_LPORT port;
     rtk_rate_t ds_rate;
     rtk_enable_t pIfg_include;
     cs_aal_rate_limit_t shp;
@@ -1553,7 +1521,7 @@ cs_status epon_request_onu_port_ds_rate_limit_set(
             return CS_E_PARAM;
         }   
         
-        port = (rtk_port_t)(port_id - 1);
+        port = (GT_LPORT)(port_id - 1);
 
         rc = rtk_rate_egrBandwidthCtrlRate_get(port, &ds_rate, &pIfg_include);
         if (rc) {
@@ -1614,7 +1582,7 @@ cs_status epon_request_onu_port_ds_rate_limit_get(
     CS_OUT cs_sdl_policy_t           *rate
 )
 {
-    rtk_port_t port;
+    GT_LPORT port;
     cs_aal_rate_limit_t shp;
     if (NULL == rate) {
         SDL_MIN_LOG("In %s, rate is NULL pointer\n", __FUNCTION__);
@@ -1624,7 +1592,7 @@ cs_status epon_request_onu_port_ds_rate_limit_get(
     if (port_id != CS_DOWNLINK_PORT) {
         UNI_PORT_CHECK(port_id);
 
-        port = (rtk_port_t)(port_id - 1);
+        port = (GT_LPORT)(port_id - 1);
 
         rate->enable = __ds_rate_limit[port].enable ;
         rate->rate = __ds_rate_limit[port].rate;
@@ -1649,7 +1617,7 @@ cs_status epon_request_onu_port_policy_set(
 )
 {
     cs_status rc = CS_E_OK;
-    rtk_port_t port;
+    GT_LPORT port;
     rtk_rate_t us_rate;
     rtk_enable_t pIfg_include;
     rtk_enable_t pFc_enable;
@@ -1665,7 +1633,7 @@ cs_status epon_request_onu_port_policy_set(
         SDL_MIN_LOG("In %s, policy->rate is error!\n", __FUNCTION__);
         return CS_E_PARAM;
     }
-    port = (rtk_port_t)(port_id - 1);
+    port = (GT_LPORT)(port_id - 1);
 
     rc = rtk_rate_igrBandwidthCtrlRate_get(port, &us_rate, &pIfg_include, &pFc_enable);
     if (rc) {
@@ -1704,7 +1672,7 @@ cs_status epon_request_onu_port_policy_get(
     CS_OUT cs_sdl_policy_t          *policy
 )
 {
-    rtk_port_t port;
+    GT_LPORT port;
 
     if (NULL == policy) {
         SDL_MIN_LOG("In %s, NULL pointer!\n", __FUNCTION__);
@@ -1713,7 +1681,7 @@ cs_status epon_request_onu_port_policy_get(
 
     UNI_PORT_CHECK(port_id);    
 
-    port = (rtk_port_t)(port_id - 1);
+    port = (GT_LPORT)(port_id - 1);
 
     policy->enable = __us_rate_limit[port].enable;
     policy->rate = __us_rate_limit[port].rate;
@@ -1784,7 +1752,7 @@ void storm_rate_init()
 	#if 1
 	//cs_status status;
 	
-    for(portid = 1; portid <=4; portid++)
+    for(portid = 1; portid <=UNI_PORT_MAX; portid++)
     	{
     		sdl_rt = epon_request_onu_port_storm_ctrl_set(context,  0, 0, portid, mode, type, &rate);
 			if(sdl_rt){
@@ -1820,7 +1788,7 @@ cs_status sdl_port_init(
     rtk_mode_ext_t            mod;
     rtk_port_mac_ability_t    mac_abi;
     rtk_switch_maxPktLen_t    switch_mtu = MAXPKTLEN_1552B;
-    rtk_api_ret_t             rtk_ret = 0; 
+    GT_STATUS             ret = 0;
     cs_status                 rt = CS_E_OK;
     cs_uint8                  index;
     rtk_chip_id_t           rtk_chip;
@@ -1865,8 +1833,8 @@ cs_status sdl_port_init(
     }
     
     /*config switch MTU to __SDL_PORT_MTU_MAX*/
-    rtk_ret = rtk_switch_maxPktLen_set(switch_mtu);
-    if (RT_ERR_OK != rtk_ret) {
+    ret = rtk_switch_maxPktLen_set(switch_mtu);
+    if (GT_OK != ret) {
         SDL_MIN_LOG("rtk_switch_maxPktLen_set return %d\n", rt);
         rt = CS_E_ERROR;
         goto END;
@@ -1909,9 +1877,9 @@ cs_status sdl_port_init(
         __sc_rate_limit[index].ebs = 1000;
 
 
-        rtk_ret = rtk_port_phyAutoNegoAbility_set(index, &phy_abi);
-        if(RT_ERR_OK != rtk_ret){
-            SDL_MIN_LOG("rtk_port_phyAutoNegoAbility_set return %d\n", rtk_ret);
+        ret = rtk_port_phyAutoNegoAbility_set(index, &phy_abi);
+        if(GT_OK != ret){
+            SDL_MIN_LOG("rtk_port_phyAutoNegoAbility_set return %d\n", ret);
             rt =  CS_E_ERROR;
             goto END;
         }
@@ -1950,9 +1918,9 @@ cs_status sdl_port_init(
     }
      /*********if storm control is disable, flooding packet from all 4 UNI ports will be limited by this rate limiter**/
      /*********it should be bigger than 400Mbps************************************************************************/   
-    rtk_ret = rtk_rate_shareMeter_set(PORT_STORM_METER_ID_END, 1000000, DISABLED);
-    if(RT_ERR_OK != rtk_ret){
-        SDL_MIN_LOG("rtk_rate_shareMeter_set return %d\n", rtk_ret);
+    ret = rtk_rate_shareMeter_set(PORT_STORM_METER_ID_END, 1000000, DISABLED);
+    if(GT_OK != ret){
+        SDL_MIN_LOG("rtk_rate_shareMeter_set return %d\n", ret);
         rt =  CS_E_ERROR;
         goto END;
     }
@@ -1995,23 +1963,23 @@ cs_status sdl_port_init(
         mac_abi.txpause = 0;
         mac_abi.rxpause = 0;
         
-        rtk_ret = rtk_port_macForceLinkExt0_set(mod, &mac_abi);
-        if(RT_ERR_OK != rtk_ret){
-            SDL_MIN_LOG("rtk_port_macForceLinkExt0_set return %d\n", rtk_ret);
+        ret = rtk_port_macForceLinkExt0_set(mod, &mac_abi);
+        if(GT_OK != ret){
+            SDL_MIN_LOG("rtk_port_macForceLinkExt0_set return %d\n", ret);
             rt =  CS_E_ERROR;
             goto END;
         }
         if(RTK_CHIP_8305 == rtk_chip && MAKE_UART)
         	{
-        		rtk_ret = rtk_led_mode_set(LED_MODE_2);
-				if(RT_ERR_OK != rtk_ret){
-			            SDL_MIN_LOG("rtk_led_mode_set return %d\n", rtk_ret);
+        		ret = rtk_led_mode_set(LED_MODE_2);
+				if(GT_OK != ret){
+			            SDL_MIN_LOG("rtk_led_mode_set return %d\n", ret);
 			            rt =  CS_E_ERROR;
 			            goto END;
 			        }
-				rtk_ret = rtk_led_groupConfig_set(LED_GROUP_2, LED_CONFIG_LINK_ACT);
-				if(RT_ERR_OK != rtk_ret){
-		            SDL_MIN_LOG("rtk_led_groupConfig_set return %d\n", rtk_ret);
+				ret = rtk_led_groupConfig_set(LED_GROUP_2, LED_CONFIG_LINK_ACT);
+				if(GT_OK != ret){
+		            SDL_MIN_LOG("rtk_led_groupConfig_set return %d\n", ret);
 		            rt =  CS_E_ERROR;
 		            goto END;
 		        }
@@ -2020,15 +1988,15 @@ cs_status sdl_port_init(
 			{
 				if(RTK_CHIP_8305 == rtk_chip)
 					{
-						rtk_ret = rtk_led_mode_set(LED_MODE_1);
-						if(RT_ERR_OK != rtk_ret){
-					            SDL_MIN_LOG("rtk_led_mode_set return %d\n", rtk_ret);
+						ret = rtk_led_mode_set(LED_MODE_1);
+						if(GT_OK != ret){
+					            SDL_MIN_LOG("rtk_led_mode_set return %d\n", ret);
 					            rt =  CS_E_ERROR;
 					            goto END;
 					        }
-						rtk_ret = rtk_led_groupConfig_set(LED_GROUP_1, LED_CONFIG_LINK_ACT);
-						if(RT_ERR_OK != rtk_ret){
-				            SDL_MIN_LOG("rtk_led_groupConfig_set return %d\n", rtk_ret);
+						ret = rtk_led_groupConfig_set(LED_GROUP_1, LED_CONFIG_LINK_ACT);
+						if(GT_OK != ret){
+				            SDL_MIN_LOG("rtk_led_groupConfig_set return %d\n", ret);
 				            rt =  CS_E_ERROR;
 				            goto END;
 				        }
@@ -2036,57 +2004,57 @@ cs_status sdl_port_init(
 			}
 		if(RTK_CHIP_8365 == rtk_chip)
 			{
-				rtk_ret = rtk_led_mode_set(LED_MODE_2);
-				if(RT_ERR_OK != rtk_ret){
-		            SDL_MIN_LOG("rtk_led_mode_set return %d\n", rtk_ret);
+				ret = rtk_led_mode_set(LED_MODE_2);
+				if(GT_OK != ret){
+		            SDL_MIN_LOG("rtk_led_mode_set return %d\n", ret);
 		            rt =  CS_E_ERROR;
 		            goto END;
 		        }
-				rtk_ret = rtk_led_groupConfig_set(LED_GROUP_2, LED_CONFIG_LINK_ACT);
-				if(RT_ERR_OK != rtk_ret){
-		            SDL_MIN_LOG("rtk_led_groupConfig_set return %d\n", rtk_ret);
+				ret = rtk_led_groupConfig_set(LED_GROUP_2, LED_CONFIG_LINK_ACT);
+				if(GT_OK != ret){
+		            SDL_MIN_LOG("rtk_led_groupConfig_set return %d\n", ret);
 		            rt =  CS_E_ERROR;
 		            goto END;
 		        }
 			}
 		#if 0
 		#if 0
-		rtk_ret = rtk_led_mode_set(LED_MODE_1);
+		ret = rtk_led_mode_set(LED_MODE_1);
 		#else
-		rtk_ret = rtk_led_mode_set(LED_MODE_2);
+		ret = rtk_led_mode_set(LED_MODE_2);
 		#endif
-        if(RT_ERR_OK != rtk_ret){
-            SDL_MIN_LOG("rtk_led_mode_set return %d\n", rtk_ret);
+        if(GT_OK != ret){
+            SDL_MIN_LOG("rtk_led_mode_set return %d\n", ret);
             rt =  CS_E_ERROR;
             goto END;
         }
 
         /*bug30336, make led work for both 100M and 10M*/
 		#if 0
-        rtk_ret = rtk_led_groupConfig_set(LED_GROUP_1, LED_CONFIG_LINK_ACT);
+        ret = rtk_led_groupConfig_set(LED_GROUP_1, LED_CONFIG_LINK_ACT);
 		#else
-		rtk_ret = rtk_led_groupConfig_set(LED_GROUP_2, LED_CONFIG_LINK_ACT);
+		ret = rtk_led_groupConfig_set(LED_GROUP_2, LED_CONFIG_LINK_ACT);
 		#endif
      
         
-        if(RT_ERR_OK != rtk_ret){
-            SDL_MIN_LOG("rtk_led_groupConfig_set return %d\n", rtk_ret);
+        if(GT_OK != ret){
+            SDL_MIN_LOG("rtk_led_groupConfig_set return %d\n", ret);
             rt =  CS_E_ERROR;
             goto END;
         }
         #endif
-        rtk_ret = rtk_port_rgmiiDelayExt0_set(0, 5);
-        if(RT_ERR_OK != rtk_ret){
-            SDL_MIN_LOG("rtk_port_rgmiiDelayExt0_set return %d\n", rtk_ret);
+        ret = rtk_port_rgmiiDelayExt0_set(0, 5);
+        if(GT_OK != ret){
+            SDL_MIN_LOG("rtk_port_rgmiiDelayExt0_set return %d\n", ret);
             rt =  CS_E_ERROR;
             goto END;
         }
     }
 
 
-    rtk_ret = rtk_int_control_set(INT_TYPE_LINK_STATUS, 1);
-    if(RT_ERR_OK != rtk_ret){
-        SDL_MIN_LOG("rtk_int_control_set return %d\n", rtk_ret);
+    ret = rtk_int_control_set(INT_TYPE_LINK_STATUS, 1);
+    if(GT_OK != ret){
+        SDL_MIN_LOG("rtk_int_control_set return %d\n", ret);
         rt =  CS_E_ERROR;
         goto END;
     }
@@ -2122,7 +2090,7 @@ cs_status epon_request_onu_port_storm_ctrl_set(
     cs_status rc = CS_E_OK;
     cs_aal_rate_limit_t storm;
     cs_aal_rate_limit_msk_t st_msk;
-    rtk_port_t port;
+    GT_LPORT port;
     rtk_rate_t rtk_rate;
 
     if (NULL == rate) {
@@ -2146,7 +2114,7 @@ cs_status epon_request_onu_port_storm_ctrl_set(
     if (port_id != CS_DOWNLINK_PORT) {
         UNI_PORT_CHECK(port_id); 
         
-        port = (rtk_port_t)(port_id - 1);
+        port = (GT_LPORT)(port_id - 1);
         rtk_rate = ((rtk_rate_t)rate->rate) / STORM_GRANULARITY * STORM_GRANULARITY;
         if(rtk_rate < MIN_STORM_RATE){
             rtk_rate = MIN_STORM_RATE;
@@ -2316,9 +2284,9 @@ cs_status epon_request_onu_port_isolation_set(
     CS_IN cs_boolean                enable
 )
 {
-    rtk_port_t     port;
+    GT_LPORT     port;
     rtk_portmask_t portmask;
-    rtk_api_ret_t  rtk_ret  = 0;
+    GT_STATUS  ret  = 0;
     cs_port_id_t   port_id;
     cs_status      rt = CS_E_OK;
     
@@ -2336,9 +2304,9 @@ cs_status epon_request_onu_port_isolation_set(
             portmask.bits[0] = 0xff;
         }
 
-        rtk_ret = rtk_port_isolation_set(port, portmask);
-        if (RT_ERR_OK != rtk_ret) {
-            SDL_MIN_LOG("rtk_port_isolation_set return %d\n", rtk_ret);
+        ret = rtk_port_isolation_set(port, portmask);
+        if (GT_OK != ret) {
+            SDL_MIN_LOG("rtk_port_isolation_set return %d\n", ret);
             rt = CS_E_ERROR;
             goto END;
         }
@@ -2438,8 +2406,8 @@ cs_status epon_request_onu_dot1p_remark_set(
 )
 
 {
-    rtk_port_t port;
-    rtk_api_ret_t rt;
+    GT_LPORT port;
+    GT_STATUS rt;
     cs_uint8 index, index1;
     cs_uint8 filter_id;
     cs_uint8 port_msk = 0;
@@ -2455,7 +2423,7 @@ cs_status epon_request_onu_dot1p_remark_set(
         SDL_MIN_LOG("In %s, port_id %d is not supported!\n", __FUNCTION__, port_id);
         return CS_E_PARAM;
     }
-    port = (rtk_port_t)(port_id - 1);
+    port = (GT_LPORT)(port_id - 1);
 
     for (index = 0; index < 8; index++) {
         filter_id = __acl_occupy[port][index];
@@ -2554,7 +2522,7 @@ cs_status epon_request_onu_dot1p_remark_get(
 
 {
 
-    rtk_port_t port;
+    GT_LPORT port;
     cs_uint8 index;
     cs_status ret = CS_E_OK;
 
@@ -2568,7 +2536,7 @@ cs_status epon_request_onu_dot1p_remark_get(
         ret = CS_E_PARAM;
         goto end;
     }
-    port = (rtk_port_t)(port_id - 1);
+    port = (GT_LPORT)(port_id - 1);
 
     remark->en = __dot1p_remark[port].en;
 // cs_printf("get remark->en = %d\n",remark->en);
@@ -2590,10 +2558,7 @@ cs_status epon_request_onu_port_mirror_set(
     CS_IN cs_uint32                 tx_port_msk
 )
 {
-    rtk_portmask_t rx_msk;
-    rtk_portmask_t tx_msk;
-    rtk_port_t     port;
-    rtk_api_ret_t  rtk_ret  = 0;
+    GT_LPORT     port, i;
     cs_status      rt = CS_E_OK;
     
     if ((mirror_port < CS_UNI_PORT_ID1) ||
@@ -2628,7 +2593,7 @@ cs_status epon_request_onu_port_mirror_set(
     /*mirror port != source port*/
     port = L2P_PORT(mirror_port);
     if (mirror_port == CS_UPLINK_PORT) {
-        if (((tx_port_msk &(1 << 4)) > 0) || ((rx_port_msk &(1 << 4)) > 0)) {
+        if (((tx_port_msk &(1 << UNI_PORT_MAX)) > 0) || ((rx_port_msk &(1 << UNI_PORT_MAX)) > 0)) {
             SDL_MIN_LOG("mirror_port %d should not be included into source port!\n", mirror_port);
             rt = CS_E_PARAM;
             goto END;
@@ -2642,16 +2607,45 @@ cs_status epon_request_onu_port_mirror_set(
         }
     }
 
-    MSK_MIRROR_TO_SWITCH(tx_port_msk, tx_msk.bits[0]);
-    MSK_MIRROR_TO_SWITCH(rx_port_msk, rx_msk.bits[0]);
-	cs_printf("rx_msk:0x%02x,tx_msk:0x%02x\n",rx_msk.bits[0],tx_msk.bits[0]);
-    rtk_ret = rtk_mirror_portBased_set(port, &rx_msk, &tx_msk);
-    if (RT_ERR_OK != rtk_ret) {
-        SDL_MIN_LOG("rtk_mirror_portBased_set return %d\n", rtk_ret);
-        rt = CS_E_ERROR;
-        goto END;
+    if(gsysSetIngressMonitorDest(dev, port) != GT_OK)
+    {
+    	rt = CS_E_ERROR;
+    	goto END;
     }
 
+    if(gsysSetEgressMonitorDest(dev, port) != GT_OK)
+    {
+    	rt = CS_E_ERROR;
+    	goto END;
+    }
+
+    i=0;
+    while(rx_port_msk)
+    {
+    	if(rx_port_msk & 0x1)
+    	{
+    		if( GT_OK != gprtSetIngressMonitorSource(dev, i, GT_TRUE))
+    		{
+    			rt = CS_E_ERROR;
+    			goto END;
+    		}
+    	}
+    	rx_port_msk >>= 1;
+    }
+
+    i=0;
+    while(tx_port_msk)
+    {
+    	if(tx_port_msk & 0x1)
+    	{
+    		if( GT_OK != gprtSetEgressMonitorSource(dev, i, GT_TRUE))
+    		{
+    			rt = CS_E_ERROR;
+    			goto END;
+    		}
+    	}
+    	tx_port_msk >>= 1;
+    }
 END:
     return rt;
 
@@ -2666,11 +2660,9 @@ cs_status epon_request_onu_port_mirror_get(
     CS_OUT cs_uint32                 *tx_port_msk
 )
 {
-    rtk_portmask_t rx_msk;
-    rtk_portmask_t tx_msk;
-    rtk_port_t     port;
+    GT_LPORT     port;
     cs_status rt = CS_E_OK;
-    rtk_api_ret_t   rtk_ret  = 0;
+    GT_BOOL 	mode;
     
     if ((NULL == mirror_port) || (NULL == rx_port_msk) || (NULL == tx_port_msk)) {
         SDL_MIN_LOG("NULL pointer\n");
@@ -2678,16 +2670,30 @@ cs_status epon_request_onu_port_mirror_get(
         goto END;
     }
 
-    rtk_ret = rtk_mirror_portBased_get(&port, &rx_msk, &tx_msk);
-    if (RT_ERR_OK != rtk_ret) {
-        SDL_MIN_LOG("rtk_mirror_portBased_get return %d\n", rtk_ret);
-        rt = CS_E_ERROR;
-        goto END;
+    *rx_port_msk = 0;
+    *tx_port_msk = 0;
+
+    for(port = 0; port < UNI_PORT_MAX; port++)
+    {
+    	if((GT_OK == gprtGetIngressMonitorSource(dev, port, &mode)) &&
+    			(mode == GT_TRUE))
+    	{
+    		*rx_port_msk |= 1<<port;
+    	}
+
+    	if((GT_OK == gprtGetEgressMonitorSource(dev, port, &mode)) &&
+    			(mode == GT_TRUE))
+    	{
+    		*tx_port_msk |= 1<<port;
+    	}
     }
 
-    *mirror_port = P2L_PORT(port);
-    MSK_SWITCH_TO_MIRROR(tx_msk.bits[0], *tx_port_msk);
-    MSK_SWITCH_TO_MIRROR(rx_msk.bits[0], *rx_port_msk);
+    if(gsysGetIngressMonitorDest(dev, &port) == GT_OK)
+    {
+    	*mirror_port = P2L_PORT(port);
+    }
+    else
+    	rt = CS_E_ERROR;
 
 END:
     return rt;
