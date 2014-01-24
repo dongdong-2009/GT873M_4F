@@ -105,6 +105,8 @@ Copyright (c) 2010 by Cortina Systems Incorporated
 #include "msApiTypes.h"
 #include "msApi.h"
 
+#include "gtDrvSwRegs.h"
+
 extern GT_QD_DEV * dev;
 
 #define __SDL_PORT_AUTO_NEGO_FAIL              0
@@ -195,7 +197,7 @@ extern sdl_init_cfg_t sdl_int_cfg;
 static void __sdl_port_auto_neg_polling_handler(void)
 {
     sdl_event_port_auto_nego_t auto_nego_event;
-    rtk_port_phy_data_t phy_data;
+    GT_U16 phy_data;
     static cs_uint8 counter = 20;
     GT_LPORT port;
     GT_STATUS ret = 0;
@@ -206,11 +208,12 @@ static void __sdl_port_auto_neg_polling_handler(void)
     }
 
     for(port=0; port<UNI_PORT_MAX; port++) {
-        ret = rtk_port_phyReg_get(port, __PHY_REGISTER_19, &phy_data);
+
+    	ret = gprtGetSwitchReg(dev, port, QD_PHY_INT_STATUS_REG, &phy_data);
         if(GT_OK != ret)
            return;
            
-        if (phy_data & (0x1 << 15)){
+        if (phy_data & GT_LINK_STATUS_CHANGED){
             //cs_printf("port %d, auto nego failed! Reg value: 0x%x\n", P2L_PORT(port), phy_data);
             auto_nego_event.port = P2L_PORT(port);
             auto_nego_event.status = __SDL_PORT_AUTO_NEGO_FAIL;
@@ -226,37 +229,41 @@ static void __sdl_port_auto_neg_polling_handler(void)
 #endif
 void __sdl_port_int_process(void)
 {
-//    rtk_int_status_t status;
     cs_sdl_port_link_status_t link_status;
     GT_LPORT port;
     sdl_event_port_link_t link_event;
-    GT_U32 phy_data;
+    GT_U16 phy_data;
+    GT_U16 portvec = 0, inttype;
     
 #ifdef HAVE_SDL_CTC
     sdl_event_port_auto_nego_t auto_nego_event;
 #endif
 
-//    rtk_int_control_set(INT_TYPE_LINK_STATUS, 0);
-//    rtk_int_status_get(&status);
-    if (status.value[INT_TYPE_LINK_STATUS]) {
+    if(gprtGetPhyIntPortSummary(dev,&portvec) == GT_OK &&
+    		portvec )
+    {
         for (port=0; port <UNI_PORT_MAX; port++) {
-            if(GT_OK != rtk_port_phyReg_get(port, __PHY_REGISTER_19, &phy_data))
-               return;
-            
-#if 0 /*removed: some time link change event's missed*/
-            if ((phy_data & (0x1 << 10))==0){
-                continue;
-            }
-#endif
+
+        	if(!(portvec & (1<<port)))
+        		continue;
+
+        	if(GT_OK != gprtGetPhyIntStatus(dev, port, &inttype))
+        		continue;
+
+        	if(!(inttype & GT_LINK_STATUS_CHANGED))
+        		continue;
+
+        	gprtGetSwitchReg(dev, port, QD_PHY_INT_STATUS_REG, &phy_data);
             
 #ifdef HAVE_SDL_CTC
-            if (phy_data & (0x1 << 11)){
+            if (phy_data & GT_LINK_STATUS_CHANGED){
                 //cs_printf("port %d, auto nego success! Reg value: 0x%x\n", P2L_PORT(port), phy_data);
                 auto_nego_event.port = P2L_PORT(port);
                 auto_nego_event.status = __SDL_PORT_AUTO_NEGO_SUCCESS;
                 sdl_event_send(EPON_EVENT_PORT_AUTO_NEGO_STATUS, sizeof(sdl_event_port_auto_nego_t), &auto_nego_event);
             }
-            else if (phy_data & (0x1 << 15)){
+            else
+            {
                 //cs_printf("port %d, auto nego fail! Reg value: 0x%x\n", P2L_PORT(port), phy_data);
                 auto_nego_event.port = P2L_PORT(port);
                 auto_nego_event.status = __SDL_PORT_AUTO_NEGO_FAIL;
@@ -264,8 +271,7 @@ void __sdl_port_int_process(void)
             }
 #endif
 
-//            rtk_port_phyStatus_get(port, &link_status, &speed, &duplex, &nego);
-            gprtGetLinkState(dev, port, &link_status);
+            gprtGetLinkState(dev, port, (GT_BOOL*)&link_status);
             if (link_status == __uni_link_ststus[port]) {
                 continue;
             }
@@ -275,14 +281,8 @@ void __sdl_port_int_process(void)
             link_event.link = link_status;
             link_event.port = P2L_PORT(port);
             sdl_event_send(EPON_EVENT_PORT_LINK_CHANGE, sizeof(sdl_event_port_link_t), &link_event);
-
         }
     }
-
-//    memset(&status, 0, sizeof(status));
-//    status.value[INT_TYPE_LINK_STATUS] = 1;
-//    rtk_int_status_set(status);
-//    rtk_int_control_set(INT_TYPE_LINK_STATUS, 1);
 
     return;
 
@@ -577,9 +577,9 @@ cs_status epon_request_onu_port_lpbk_set(
 )
 {
     GT_LPORT                     port;
-    rtk_uint32                     phyData;
-    static cs_sdl_port_speed_cfg_t port_cfg[UNI_PORT_MAX];
-    GT_STATUS                  ret  = 0;
+//    GT_U32                     phyData;
+//    static cs_sdl_port_speed_cfg_t port_cfg[UNI_PORT_MAX];
+//    GT_STATUS                  ret  = 0;
     cs_status                      rt = CS_E_OK;
     
     if (port_id > CS_UNI_PORT_ID4){
@@ -642,6 +642,7 @@ cs_status epon_request_onu_port_lpbk_set(
         }
 
         switch (loopback) {
+        /* mtodo mrv api
             case SDL_PORT_LOOPBACK_NONE: {
                 rt = epon_request_onu_port_status_set(context, device_id, llidport, port_id, port_cfg[port]);
                 if (rt) {
@@ -692,7 +693,7 @@ cs_status epon_request_onu_port_lpbk_set(
 
             }
             break;
-
+         	*/
             case SDL_PORT_LOOPBACK_RX2TX:
             default: {
                 SDL_MIN_LOG(" loopback %d is not supported\n", , loopback);
@@ -746,13 +747,9 @@ cs_status epon_request_onu_port_status_set(
 )
 {
     GT_LPORT             port;
-    rtk_port_phy_ability_t phy_abi;
-    rtk_chip_id_t          chip_id;
-    GT_STATUS          ret  = 0;
+//    GT_STATUS          ret  = 0;
     cs_status              rt = CS_E_OK;
-    rtk_chip_id_t       rtk_chip;
 
-    rtk_chip_id_get(&rtk_chip);
     
     UNI_PORT_CHECK(port_id);
     
@@ -765,101 +762,6 @@ cs_status epon_request_onu_port_status_set(
         speed_cfg = SDL_PORT_AUTO_10_100;
     }
 
-    memset(&phy_abi, 0 , sizeof(phy_abi));
-
-    switch (speed_cfg) {
-        case SDL_PORT_AUTO_10_100:{
-            phy_abi.AutoNegotiation = 1;
-            phy_abi.Half_10 = 1;
-            phy_abi.Half_100 = 1;
-            phy_abi.Full_10 = 1;
-            phy_abi.Full_100 = 1;
-        }
-        break;
-
-        case SDL_PORT_AUTO_10_100_1000:{
-            phy_abi.AutoNegotiation = 1;
-            phy_abi.Half_10 = 1;
-            phy_abi.Half_100 = 1;
-            phy_abi.Full_10 = 1;
-            phy_abi.Full_100 = 1;
-            if(RTK_CHIP_8365 == rtk_chip){
-                phy_abi.Full_1000 = 1;
-            }
-        }
-        break;
-
-        case SDL_PORT_10_FULL:{
-            phy_abi.Full_10 = 1;
-        }
-        break;
-
-        case SDL_PORT_10_HALF:{
-            phy_abi.Half_10 = 1;
-        }
-        break;
-
-        case SDL_PORT_100_FULL:{
-            phy_abi.Full_100 = 1;
-        }
-        break;
-
-        case SDL_PORT_100_HALF:{
-            phy_abi.Half_100 = 1;
-        }
-        break;
-
-        case SDL_PORT_1000_FULL:
-        /* For 1000M, autoneg is always required */
-        if(RTK_CHIP_8305 == rtk_chip)
-        {
-            phy_abi.Full_100 = 1;
-        }
-        else
-        {
-            phy_abi.Full_1000 = 1;
-            phy_abi.AutoNegotiation = 1;
-        }
-        break;
-        default:{
-            rt = CS_E_PARAM;
-            goto END;
-        }
-    }
-
-    /*Jianguang added: 
-    For chip 8365, if Auto nego is enable, turn on MDX auto mode,else use force mode
-    for fixing link up long time issue.
-    */
-    rtk_chip_id_get(&chip_id);
-    if(chip_id != RTK_CHIP_8305){
-        if (phy_abi.AutoNegotiation == 0) {
-            ret = rtk_port_phyMdx_set(port, PHY_FORCE_MDIX_MODE);
-            if(GT_OK != ret){
-                SDL_MIN_LOG("rtk_port_phyMdx_set return %d\n", ret);
-                rt = CS_E_ERROR;
-                goto END;
-            }
-        } 
-        else {
-            ret = rtk_port_phyMdx_set(port, PHY_AUTO_CROSSOVER_MODE);
-            if(GT_OK != ret){
-                SDL_MIN_LOG("rtk_port_phyMdx_set return %d\n", ret);
-                rt = CS_E_ERROR;
-                goto END;
-            }
-        }
-    }
-    
-    if (__port_cfg[port].flow_ctrl_en)
-        phy_abi.FC = 1;
-    
-    ret = rtk_port_phyAutoNegoAbility_set(port, &phy_abi);
-    if(GT_OK != ret){
-        SDL_MIN_LOG("rtk_port_phyAutoNegoAbility_set return %d\n", ret);
-        rt = CS_E_ERROR;
-        goto END;
-    }
 
     __port_cfg[port].port_cfg = speed_cfg;
 
@@ -896,7 +798,7 @@ cs_status epon_request_onu_port_admin_set(
 )
 {
     GT_LPORT      port;
-    rtk_enable_t    enable;
+    GT_PORT_STP_STATE    state;
     GT_STATUS   ret  = 0;
     cs_status       rt = CS_E_OK;
     
@@ -908,14 +810,14 @@ cs_status epon_request_onu_port_admin_set(
     }
 
     if (admin == SDL_PORT_ADMIN_DOWN) {
-        enable = 0;
+        state = GT_PORT_DISABLE;
     } else {
-        enable = 1;
+        state = GT_PORT_FORWARDING;
     }
     
-    ret = rtk_port_adminEnable_set(port, enable);
+    ret = gstpSetPortState(dev, port, state);
     if(GT_OK != ret){
-        SDL_MIN_LOG("rtk_port_adminEnable_set return %d\n", ret);
+        SDL_MIN_LOG("gstpSetPortState return %d\n", ret);
         rt = CS_E_ERROR;
         goto END;
     }
@@ -958,9 +860,8 @@ cs_status epon_request_onu_port_stats_get(
 {
 
     GT_LPORT           port;
-    rtk_stat_port_cntr_t port_cnt;
     cs_uint32            val[2] = {0, 0};
-    GT_STATUS        ret = 0;
+//    GT_STATUS        ret = 0;
     cs_status            rt = CS_E_OK;
     
     if (NULL == uni_stats) {
@@ -976,10 +877,12 @@ cs_status epon_request_onu_port_stats_get(
     }
 
     memset((cs_uint8 *)uni_stats, 0, sizeof(cs_sdl_port_uni_stats_t));
-    memset((cs_uint8*)&port_cnt, 0, sizeof(port_cnt));
+//    memset((cs_uint8*)&port_cnt, 0, sizeof(port_cnt));
 
     if (port_id != CS_DOWNLINK_PORT) {
         port = L2P_PORT(port_id);
+
+        /* mtodo added port statistic apis
         ret = rtk_stat_port_getAll(port, &port_cnt);
         if (GT_OK != ret) {
             SDL_MIN_LOG("rtk_stat_port_getAll return %d\n", ret);
@@ -1025,7 +928,7 @@ cs_status epon_request_onu_port_stats_get(
 		uni_stats->rxstatsfrm512_1023_cnt = port_cnt.etherStatsPkts512to1023Octets;
 		uni_stats->rxfrm_cnt = uni_stats->rxucfrm_cnt + uni_stats->rxmcfrm_cnt + uni_stats->rxbcfrm_cnt;
 		#endif
-		
+		*/
     } 
     else {
         aal_uni_mib_get(AAL_MIB_RxUCPktCnt, read_clear, &val[1], &val[0]);
@@ -1185,7 +1088,8 @@ cs_status epon_request_onu_port_stats_clr(
     } 
     else {
         port = L2P_PORT(port_id);
-        ret = rtk_stat_port_reset(port);
+//        mtodo added codes for port statistic reset
+//        ret = rtk_stat_port_reset(port);
         if (GT_OK != ret) {
             SDL_MIN_LOG("rtk_stat_port_reset return %d\n", ret);
             rt = CS_E_ERROR;
@@ -1289,8 +1193,7 @@ cs_status epon_request_onu_port_link_status_get(
 cs_status uni_ge_rx_flow_ctrl_set(cs_boolean enable)
 {
     cs_status rc = CS_E_OK;
-    rtk_port_mac_ability_t mac_ability;
-    rtk_mode_ext_t ext_mode;
+    GT_LPORT port;
 
     //set CS8030 UNI rx port flow control
     rc = aal_rx_flow_control_set(enable);
@@ -1300,12 +1203,10 @@ cs_status uni_ge_rx_flow_ctrl_set(cs_boolean enable)
     }
 
     // set uplink port flow control
-    rtk_port_macForceLinkExt0_get(&ext_mode, &mac_ability);
-    mac_ability.forcemode = 1;
-    mac_ability.txpause = enable;
-    rc = rtk_port_macForceLinkExt0_set(ext_mode, &mac_ability);
+    port = L2P_PORT(CS_UPLINK_PORT);
+    rc = gprtSetPause(dev, port, GT_PHY_BOTH_PAUSE);
     if (rc) {
-        SDL_MIN_LOG("In function:%s,line:%d invoke rtk_port_macForceLinkExt0_set fail!\n", __FUNCTION__, __LINE__);
+        SDL_MIN_LOG("In function:%s,line:%d invoke gprtSetPause fail!\n", __FUNCTION__, __LINE__);
         goto end;
     }
 
@@ -1338,13 +1239,7 @@ cs_status epon_request_onu_port_flow_ctrl_set(
 {
     cs_aal_flow_control_t cfg[4];
     cs_status rc = CS_E_OK;
-    rtk_port_mac_ability_t mac_ability;
-    rtk_mode_ext_t ext_mode;
     GT_LPORT port;
-    rtk_rate_t us_rate;
-    rtk_enable_t pIfg_include;
-    rtk_enable_t pFc_enable;
-    rtk_port_phy_ability_t advertisement;
     cs_boolean internal_enable;
 
     if (enable > 1) {
@@ -1368,47 +1263,16 @@ cs_status epon_request_onu_port_flow_ctrl_set(
         SDL_MIN_LOG("set flow control(port: %d): is same( %d) as before\n", port, enable);
         goto end;
     }
-
-    /*turn on port flow control*/
-    rc = rtk_port_macForceLink_get(port, &mac_ability);
-    if (rc) {
-        SDL_MIN_LOG("In function:%s,line:%d invoke rtk_port_macForceLink_get fail!\n", __FUNCTION__, __LINE__);
-
-        goto end;
-    }
-    mac_ability.rxpause = enable;
-    mac_ability.txpause = enable;
-    rc = rtk_port_macForceLink_set(port, &mac_ability);
-    if (rc) {
-        SDL_MIN_LOG("In function:%s,line:%d invoke rtk_port_macForceLink_set fail!\n", __FUNCTION__, __LINE__);
-        goto end;
-    }
-
-    /*turn on/off uplink port flow control*/
-    rc = rtk_port_macForceLinkExt0_get(&ext_mode, &mac_ability);
-    if (rc) {
-        SDL_MIN_LOG("In function:%s,line:%d invoke rtk_port_macForceLinkExt0_get fail!\n", __FUNCTION__, __LINE__);
-        goto end;
-    }
-    mac_ability.forcemode = 1;
     
     __port_cfg[port].flow_ctrl_en = enable;
 
+    /* mtodo cortina cpu的bm模块仅支持5个上行队列进行流控使能，当前先选定前4个端口的使能映射到bm*/
     if (__port_cfg[0].flow_ctrl_en || __port_cfg[1].flow_ctrl_en ||
             __port_cfg[2].flow_ctrl_en || __port_cfg[3].flow_ctrl_en) {
         cfg[0].mem_fc.tx_en = 1;
-        mac_ability.rxpause = 1;
     } else {
         cfg[0].mem_fc.tx_en = 0;
-        mac_ability.rxpause = 0;
     }
-
-    rc = rtk_port_macForceLinkExt0_set(ext_mode, &mac_ability);
-    if (rc) {
-        SDL_MIN_LOG("In function:%s,line:%d invoke rtk_port_macForceLinkExt0_set fail!\n", __FUNCTION__, __LINE__);
-        goto end;
-    }
-
 
     /*set bm flow control threshold, turn on CS8030 UNI port flow control*/
     cfg[0].fc_msk.u = 0;
@@ -1429,7 +1293,9 @@ cs_status epon_request_onu_port_flow_ctrl_set(
         goto end;
     }
 
+    rc = gprtSetPause(dev, port, GT_PHY_BOTH_PAUSE);
 
+#if 0
     rc = rtk_port_phyAutoNegoAbility_get(port, &advertisement);
     if (rc) {
         SDL_MIN_LOG("In function:%s,line:%d invoke rtk_port_macForceLinkExt0_get fail!\n", __FUNCTION__, __LINE__);
@@ -1456,7 +1322,7 @@ cs_status epon_request_onu_port_flow_ctrl_set(
         SDL_MIN_LOG("In function:%s,line:%d invoke rtk_rate_igrBandwidthCtrlRate_set fail!\n", __FUNCTION__, __LINE__);
         goto end;
     }
-
+#endif
 
 end:
     return rc;
@@ -1504,8 +1370,6 @@ cs_status epon_request_onu_port_ds_rate_limit_set(
 {
     cs_status rc = CS_E_OK;
     GT_LPORT port;
-    rtk_rate_t ds_rate;
-    rtk_enable_t pIfg_include;
     cs_aal_rate_limit_t shp;
 
     if (NULL == rate) {
@@ -1523,21 +1387,7 @@ cs_status epon_request_onu_port_ds_rate_limit_set(
         
         port = (GT_LPORT)(port_id - 1);
 
-        rc = rtk_rate_egrBandwidthCtrlRate_get(port, &ds_rate, &pIfg_include);
-        if (rc) {
-            SDL_MIN_LOG("In function:%s,line:%d invoke rtk_rate_egrBandwidthCtrlRate_get fail!\n", __FUNCTION__, __LINE__);
-            goto end;
-        }
-        if (rate->enable) {
-            ds_rate = rate->rate;
-        } else {
-            ds_rate = MAX_PORT_TRAFFIC_RATE;
-        }
-        rc = rtk_rate_egrBandwidthCtrlRate_set(port, ds_rate, pIfg_include);
-        if (rc) {
-            SDL_MIN_LOG("In function:%s,line:%d invoke rtk_rate_egrBandwidthCtrlRate_set fail!\n", __FUNCTION__, __LINE__);
-            goto end;
-        }
+        grcSetEgressRate(dev, port, (GT_ERATE_TYPE*)&rate->rate);
 
         __ds_rate_limit[port].enable = rate->enable;
         __ds_rate_limit[port].rate = rate->rate;
@@ -1618,6 +1468,8 @@ cs_status epon_request_onu_port_policy_set(
 {
     cs_status rc = CS_E_OK;
     GT_LPORT port;
+
+    /* mtodo mrv ingress rate set
     rtk_rate_t us_rate;
     rtk_enable_t pIfg_include;
     rtk_enable_t pFc_enable;
@@ -1647,7 +1499,8 @@ cs_status epon_request_onu_port_policy_set(
         us_rate = MAX_PORT_TRAFFIC_RATE;
     }
     pIfg_include = 1;
-    /*****jianguang changed**********/
+
+
     pFc_enable = __port_cfg[port].flow_ctrl_en;
 
     rc = rtk_rate_igrBandwidthCtrlRate_set(port, us_rate, pIfg_include, pFc_enable);
@@ -1655,14 +1508,14 @@ cs_status epon_request_onu_port_policy_set(
         SDL_MIN_LOG("In function:%s,line:%d invoke rtk_rate_igrBandwidthCtrlRate_set fail!\n", __FUNCTION__, __LINE__);
         return rc;
     }
-
+     */
     __us_rate_limit[port].enable = policy->enable;
     __us_rate_limit[port].rate = policy->rate;
     __us_rate_limit[port].cbs = policy->cbs;
     __us_rate_limit[port].ebs = policy->ebs;
 
 
-    return CS_E_OK;
+    return rc;
 }
 cs_status epon_request_onu_port_policy_get(
     CS_IN cs_callback_context_t     context,
@@ -1759,17 +1612,6 @@ void storm_rate_init()
 		        cs_printf("epon_request_onu_port_storm_ctrl_set failed! \n");          
 		    }
     	}
-	#if 0
-	memset(&rate, 0, sizeof(cs_sdl_policy_t));
-	for(portid = 1;portid <= 4; portid++)
-		{
-	        status = epon_request_onu_port_storm_ctrl_get(context, 0, 0, portid, &mode,&type,&rate);
-	        if(status != CS_E_OK){
-	            cs_printf("epon_request_onu_port_storm_ctrl_get failed \n");    
-	        }
-			cs_printf("portid:%d <--> mode:%D<-->type:%d<-->ra.en:%d<-->rate:%d\n",portid,mode,type,rate.enable,rate.rate);
-		}
-	#endif
 	cs_printf("Broadcase storm enable\n");
 #endif
 }
@@ -1779,41 +1621,15 @@ cs_status sdl_port_init(
 )
 {
     cs_callback_context_t     context;
-    rtk_port_phy_ability_t    phy_abi;
     cs_sdl_port_speed_cfg_t   speed_cfg;
     cs_aal_uni_cfg_t          uni_cfg;
     cs_aal_uni_cfg_mask_t     uni_msk;
     cs_aal_uni_cfg_ext_t      uni_mac_ext;
     cs_aal_uni_cfg_ext_mask_t uni_mac_ext_mask;
-    rtk_mode_ext_t            mod;
-    rtk_port_mac_ability_t    mac_abi;
-    rtk_switch_maxPktLen_t    switch_mtu = MAXPKTLEN_1552B;
+    GT_BOOL						switch_mtu = GT_TRUE; //mtu set to 1522B
     GT_STATUS             ret = 0;
     cs_status                 rt = CS_E_OK;
     cs_uint8                  index;
-    rtk_chip_id_t           rtk_chip;
-	
-	//cs_callback_context_t     context;
-	#if 0
-	cs_sdl_rl_mod_e mode;
-	cs_sdl_storm_ctrl_e type;
-	cs_sdl_policy_t rate;
-	cs_port_id_t portid;
-	cs_status sdl_rt;
-	#endif
-	#if 0
-	mode = SDL_RL_MOD_BPS;
-	type = SDL_STORM_TYPE_BC;
-	rate.enable = 1;
-	rate.rate = 8;
-	#endif
-    rtk_chip_id_get(&rtk_chip);
-    if (rtk_chip==RTK_CHIP_8365 ){
-        sdl_int_cfg.max_uni_rate = 1000000;
-        cs_printf ("RTL 8365 chip!\r\n ");
-    }else {
-        cs_printf ("RTL 8305 chip!\r\n ");
-    }
 
     
     if (NULL == cfg) {
@@ -1833,31 +1649,14 @@ cs_status sdl_port_init(
     }
     
     /*config switch MTU to __SDL_PORT_MTU_MAX*/
-    ret = rtk_switch_maxPktLen_set(switch_mtu);
+    ret = gsysSetMaxFrameSize(dev, switch_mtu);
     if (GT_OK != ret) {
-        SDL_MIN_LOG("rtk_switch_maxPktLen_set return %d\n", rt);
+        SDL_MIN_LOG("gsysSetMaxFrameSize return %d\n", rt);
         rt = CS_E_ERROR;
         goto END;
     }
 
-    memset (&phy_abi, 0 , sizeof (rtk_port_phy_ability_t));
-    phy_abi.AutoNegotiation = 1;
-    phy_abi.Half_10 = 1;
-    phy_abi.Half_100 = 1;
-    phy_abi.Full_10 = 1;
-    phy_abi.Full_100 = 1;
-
-    if(RTK_CHIP_8365 == rtk_chip) {
-        phy_abi.Full_1000 = 1;
-        speed_cfg = SDL_PORT_AUTO_10_100_1000;
-    } else {
-        phy_abi.Full_1000 = 0;
-        speed_cfg = SDL_PORT_AUTO_10_100;
-    }
-    
-    phy_abi.FC = 0;
-    phy_abi.AsyFC = 0;
-
+    speed_cfg = SDL_PORT_AUTO_10_100;
 
     for (index=0; index<UNI_PORT_MAX; index++) {
         __port_cfg[index].port_cfg = speed_cfg;
@@ -1877,9 +1676,9 @@ cs_status sdl_port_init(
         __sc_rate_limit[index].ebs = 1000;
 
 
-        ret = rtk_port_phyAutoNegoAbility_set(index, &phy_abi);
+        ret = gprtSetPortAutoMode(dev, index, SPEED_AUTO_DUPLEX_AUTO);
         if(GT_OK != ret){
-            SDL_MIN_LOG("rtk_port_phyAutoNegoAbility_set return %d\n", ret);
+            SDL_MIN_LOG("gprtSetPortAutoMode return %d\n", ret);
             rt =  CS_E_ERROR;
             goto END;
         }
@@ -1918,22 +1717,14 @@ cs_status sdl_port_init(
     }
      /*********if storm control is disable, flooding packet from all 4 UNI ports will be limited by this rate limiter**/
      /*********it should be bigger than 400Mbps************************************************************************/   
+    /* mtodo add storm control api calls
     ret = rtk_rate_shareMeter_set(PORT_STORM_METER_ID_END, 1000000, DISABLED);
     if(GT_OK != ret){
         SDL_MIN_LOG("rtk_rate_shareMeter_set return %d\n", ret);
         rt =  CS_E_ERROR;
         goto END;
     }
-#if 0
-    for(portid = 1; portid <=4; portid++)
-    	{
-    		sdl_rt = epon_request_onu_port_storm_ctrl_set(context,  0, 0, portid, mode, type, &rate);
-			if(sdl_rt){
-		        cs_printf("epon_request_onu_port_storm_ctrl_set failed! \n");          
-		    }
-    	}
-	cs_printf("Broadcase storm enable\n");
-#endif
+	*/
     uni_mac_ext_mask.u32 = 0;
     uni_mac_ext.txfifo_thrshld = sdl_int_cfg.uni_tx_fifo_threshould;
     uni_mac_ext.fifo_thrshld_low = sdl_int_cfg.uni_tx_fifo_ready_low;
@@ -1954,6 +1745,8 @@ cs_status sdl_port_init(
     }
     
     if (sdl_int_cfg.uni_phy_mod) {
+    	/*mtodo added process for UNI as master*/
+#if 0
         mod = MODE_EXT_RGMII;
         mac_abi.forcemode = 1;
         mac_abi.speed = 2;
@@ -2017,42 +1810,21 @@ cs_status sdl_port_init(
 		            goto END;
 		        }
 			}
-		#if 0
-		#if 0
-		ret = rtk_led_mode_set(LED_MODE_1);
-		#else
-		ret = rtk_led_mode_set(LED_MODE_2);
-		#endif
-        if(GT_OK != ret){
-            SDL_MIN_LOG("rtk_led_mode_set return %d\n", ret);
-            rt =  CS_E_ERROR;
-            goto END;
-        }
 
-        /*bug30336, make led work for both 100M and 10M*/
-		#if 0
-        ret = rtk_led_groupConfig_set(LED_GROUP_1, LED_CONFIG_LINK_ACT);
-		#else
-		ret = rtk_led_groupConfig_set(LED_GROUP_2, LED_CONFIG_LINK_ACT);
-		#endif
-     
-        
-        if(GT_OK != ret){
-            SDL_MIN_LOG("rtk_led_groupConfig_set return %d\n", ret);
-            rt =  CS_E_ERROR;
-            goto END;
-        }
-        #endif
         ret = rtk_port_rgmiiDelayExt0_set(0, 5);
         if(GT_OK != ret){
             SDL_MIN_LOG("rtk_port_rgmiiDelayExt0_set return %d\n", ret);
             rt =  CS_E_ERROR;
             goto END;
         }
+#endif
     }
 
-
+#if 0
     ret = rtk_int_control_set(INT_TYPE_LINK_STATUS, 1);
+#else
+    /*mtodo add link status change handler register*/
+#endif
     if(GT_OK != ret){
         SDL_MIN_LOG("rtk_int_control_set return %d\n", ret);
         rt =  CS_E_ERROR;
@@ -2091,7 +1863,7 @@ cs_status epon_request_onu_port_storm_ctrl_set(
     cs_aal_rate_limit_t storm;
     cs_aal_rate_limit_msk_t st_msk;
     GT_LPORT port;
-    rtk_rate_t rtk_rate;
+//    rtk_rate_t rtk_rate;
 
     if (NULL == rate) {
         SDL_MIN_LOG("In %s, rate is NULL pointer\n", __FUNCTION__);
@@ -2115,6 +1887,7 @@ cs_status epon_request_onu_port_storm_ctrl_set(
         UNI_PORT_CHECK(port_id); 
         
         port = (GT_LPORT)(port_id - 1);
+        /* mtodo replace rtk api by mrv api
         rtk_rate = ((rtk_rate_t)rate->rate) / STORM_GRANULARITY * STORM_GRANULARITY;
         if(rtk_rate < MIN_STORM_RATE){
             rtk_rate = MIN_STORM_RATE;
@@ -2186,6 +1959,7 @@ cs_status epon_request_onu_port_storm_ctrl_set(
         default:
             break;
         }
+        */
         __storm_type[port] = storm_type;
         __sc_rate_limit[port].rate = rate->rate;
     } else {
@@ -2285,7 +2059,7 @@ cs_status epon_request_onu_port_isolation_set(
 )
 {
     GT_LPORT     port;
-    rtk_portmask_t portmask;
+//    rtk_portmask_t portmask;
     GT_STATUS  ret  = 0;
     cs_port_id_t   port_id;
     cs_status      rt = CS_E_OK;
@@ -2298,6 +2072,7 @@ cs_status epon_request_onu_port_isolation_set(
 
     for (port_id = CS_UNI_PORT_ID1; port_id <= CS_UNI_PORT_ID4; port_id++) {
         port = L2P_PORT(port_id);
+        /*
         if (enable) {
             portmask.bits[0] = 0xf0;
         } else {
@@ -2305,6 +2080,7 @@ cs_status epon_request_onu_port_isolation_set(
         }
 
         ret = rtk_port_isolation_set(port, portmask);
+        mtodo: call port isolate api*/
         if (GT_OK != ret) {
             SDL_MIN_LOG("rtk_port_isolation_set return %d\n", ret);
             rt = CS_E_ERROR;
