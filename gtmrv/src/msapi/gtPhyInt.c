@@ -47,6 +47,7 @@
 *			GT_POLARITY_CHANGED, and ( Copper only )
 *			GT_JABBER				(Copper only )
 *
+* enable    1:enable,0:disable
 *
 * OUTPUTS:
 * None.
@@ -65,11 +66,13 @@ GT_STATUS gprtPhyIntEnable
 (
 IN GT_QD_DEV    *dev,
 IN GT_LPORT	port,
-IN GT_U16	intType
+IN GT_U16	intType,
+IN GT_BOOL	enable
 )
 {
     GT_STATUS       retVal;      
     GT_U8           hwPort;         /* the physical port number     */
+    GT_U16			ints;
 
     DBG_INFO(("gprtPhyIntEnable Called.\n"));
     
@@ -90,6 +93,13 @@ IN GT_U16	intType
 			return GT_NOT_SUPPORTED;
 		}
 	}
+
+	hwReadPhyReg(dev, hwPort, QD_PHY_INT_ENABLE_REG, &ints);
+
+	if(enable)
+		ints |= intType;
+	else
+		ints &= ~intType;
 
 	retVal = hwWritePhyReg(dev,hwPort, QD_PHY_INT_ENABLE_REG, intType);
 

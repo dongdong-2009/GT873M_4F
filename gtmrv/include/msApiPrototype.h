@@ -2174,6 +2174,7 @@ GT_STATUS gprtSetPhyReg
 *			GT_CROSSOVER_CHANGED,
 *			GT_POLARITY_CHANGED, and
 *			GT_JABBER
+* enable    1:enable,0:disable
 *
 * OUTPUTS:
 * None.
@@ -2191,7 +2192,8 @@ GT_STATUS gprtPhyIntEnable
 (
 IN GT_QD_DEV *dev,
 IN GT_LPORT   port,
-IN GT_U16	intType
+IN GT_U16	intType,
+IN GT_BOOL	enable
 );
 
 
