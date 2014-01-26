@@ -577,9 +577,9 @@ cs_status epon_request_onu_port_lpbk_set(
 )
 {
     GT_LPORT                     port;
-//    GT_U32                     phyData;
-//    static cs_sdl_port_speed_cfg_t port_cfg[UNI_PORT_MAX];
-//    GT_STATUS                  ret  = 0;
+    GT_U16                     phyData;
+    static cs_sdl_port_speed_cfg_t port_cfg[UNI_PORT_MAX];
+    GT_STATUS                  ret  = 0;
     cs_status                      rt = CS_E_OK;
     
     if (port_id > CS_UNI_PORT_ID4){
@@ -642,7 +642,6 @@ cs_status epon_request_onu_port_lpbk_set(
         }
 
         switch (loopback) {
-        /* mtodo mrv api
             case SDL_PORT_LOOPBACK_NONE: {
                 rt = epon_request_onu_port_status_set(context, device_id, llidport, port_id, port_cfg[port]);
                 if (rt) {
@@ -650,17 +649,17 @@ cs_status epon_request_onu_port_lpbk_set(
                     goto END;
                 }
                 
-                ret = rtk_port_phyReg_get(port, PHY_CONTROL_REG, &phyData);
+                ret = gprtGetSwitchReg(dev, port, QD_PHY_CONTROL_REG, &phyData);
                 if(GT_OK != ret){
-                    SDL_MIN_LOG("rtk_port_phyReg_get return %d\n", ret);
+                    SDL_MIN_LOG("gprtGetSwitchReg return %d\n", ret);
                     rt = CS_E_ERROR;
                     goto END;
                 }
                 
-                phyData = phyData & (~(0x1 << 14));
-                ret = rtk_port_phyReg_set(port, PHY_CONTROL_REG, phyData);
+                phyData = phyData & (~QD_PHY_LOOPBACK);
+                ret = gprtSetSwitchReg(dev, port, QD_PHY_CONTROL_REG, phyData);
                 if(GT_OK != ret){
-                    SDL_MIN_LOG("rtk_port_phyReg_set return %d\n", ret);
+                    SDL_MIN_LOG("gprtSetSwitchReg return %d\n", ret);
                     rt = CS_E_ERROR;
                     goto END;
                 }
@@ -675,25 +674,25 @@ cs_status epon_request_onu_port_lpbk_set(
                     goto END;
                 }
                 
-                ret = rtk_port_phyReg_get(port, PHY_CONTROL_REG, &phyData);
+                ret = gprtGetSwitchReg(dev, port, QD_PHY_CONTROL_REG, &phyData);
                 if(GT_OK != ret){
-                    SDL_MIN_LOG("rtk_port_phyReg_get return %d\n", ret);
+                    SDL_MIN_LOG("gprtGetSwitchReg return %d\n", ret);
                     rt = CS_E_ERROR;
                     goto END;
                 }
 
-                phyData = phyData | (0x1 << 14);
+                phyData = phyData | QD_PHY_LOOPBACK;
                 
-                ret = rtk_port_phyReg_set(port, PHY_CONTROL_REG, phyData);
+                ret = gprtSetSwitchReg(dev, port, QD_PHY_CONTROL_REG, phyData);
                 if(GT_OK != ret){
-                    SDL_MIN_LOG("rtk_port_phyReg_set return %d\n", ret);
+                    SDL_MIN_LOG("gprtSetSwitchReg return %d\n", ret);
                     rt = CS_E_ERROR;
                     goto END;
                 }
 
             }
             break;
-         	*/
+
             case SDL_PORT_LOOPBACK_RX2TX:
             default: {
                 SDL_MIN_LOG(" loopback %d is not supported\n", , loopback);
@@ -1100,52 +1099,7 @@ cs_status epon_request_onu_port_stats_clr(
 END:
     return rt;
 }
-#if 0
-cs_status epon_request_onu_port_link_status_get(
-    CS_IN cs_callback_context_t         context,
-    CS_IN cs_int32                      device_id,
-    CS_IN cs_int32                      llidport,
-    CS_IN cs_port_id_t                  port_id,
-    CS_OUT cs_sdl_port_link_status_t    *link_status
-)
-{    
-    cs_boolean status;
-    
-    if (NULL==link_status) {
-        SDL_MIN_LOG("link_status is NULL pointer\n");
-        return CS_E_PARAM;
-    }
 
-    cs_aal_uni_cfg_ext_t cfg;
-
-    aal_uni_mac_cfg_ext_get(&cfg);
-    if (cfg.phy_mode)
-    {
-        *link_status = SDL_PORT_LINK_STATUS_UP;
-        return CS_E_OK;
-    }
-    
-    UNI_PORT_CHECK(port_id);
-
-    /* currently, MAC doesn't indicate the status correctly
-     * Leave it for future development */
-#if 0
-    rt = aal_uni_mac_status_get(&mac_status);
-    if (rt)
-        goto END;   
-#endif
-    aal_phy_link_status_get(AAL_PHY_ID_GE, &status);
-
-    if(status){
-        *link_status = SDL_PORT_LINK_STATUS_UP;
-    }
-    else{
-        *link_status = SDL_PORT_LINK_STATUS_DOWN;
-    }
-    
-    return CS_E_OK;
-}
-#endif
 #if 1
 cs_status epon_request_onu_port_link_status_get(
     CS_IN cs_callback_context_t         context,
