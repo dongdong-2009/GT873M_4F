@@ -28,46 +28,19 @@
 #define BSP_VER_MINOR       4
 #define BSP_BUILD           3
 
-#if (PRODUCT_CLASS == GT815)
-#define MULTI_ADDR_MODE
-#ifdef _FOR_GT861_TMP_
-#define N_OF_QD_DEVICES		3	/* number of 88E6095 devices connected */
-#else
-#define N_OF_QD_DEVICES		2	/* number of 88E6095 devices connected */
-#endif
-#elif (PRODUCT_CLASS == GT861_ONU)
-#define MULTI_ADDR_MODE
-#define N_OF_QD_DEVICES		5	/* number of 88E6095 devices connected */
-#elif (PRODUCT_CLASS == GIS2109)
-#define N_OF_QD_DEVICES		1	/* number of 88E6083 devices connected */
-#elif (PRODUCT_CLASS == GIS2109G)
-#define N_OF_QD_DEVICES		1	/* number of 88E6097 devices connected */
-#else
-#define N_OF_QD_DEVICES		1	/* number of 88E6095 devices connected */
-#endif
+// qd_device is MRV 88E6096
+#if( FOR_ONU_PON	)
+#define N_OF_QD_DEVICES 1
 
 
 #define DEVICE0_PHY_ADDR	1
-#if (PRODUCT_CLASS == GT861_ONU)
-#define PHY_ADDR_BASE		3
-#define DEVICE1_PHY_ADDR	PHY_ADDR_BASE + 1
-#define DEVICE2_PHY_ADDR	PHY_ADDR_BASE + 2
-#define DEVICE3_PHY_ADDR	PHY_ADDR_BASE + 3
-#define DEVICE4_PHY_ADDR	PHY_ADDR_BASE + 4
-#else
-#ifdef _FOR_GT861_TMP_
-#define PHY_ADDR_BASE		3
-#define DEVICE1_PHY_ADDR	PHY_ADDR_BASE + 1
-#define DEVICE2_PHY_ADDR	PHY_ADDR_BASE + 2
-#define DEVICE3_PHY_ADDR	PHY_ADDR_BASE + 3
-#define DEVICE4_PHY_ADDR	PHY_ADDR_BASE + 4
-#else
+#define DEVICE0_CPU_PORT    9
+#define DEVICE0_WAN_PORT	9
+
 #define DEVICE1_PHY_ADDR	DEVICE0_PHY_ADDR + 1
 #define DEVICE2_PHY_ADDR	DEVICE0_PHY_ADDR + 2
 #define DEVICE3_PHY_ADDR	DEVICE0_PHY_ADDR + 3
 #define DEVICE4_PHY_ADDR	DEVICE0_PHY_ADDR + 4
-#endif
-#endif
 
 #define DEVICE0_ID		DEVICE0_PHY_ADDR
 #define DEVICE1_ID		DEVICE1_PHY_ADDR
@@ -75,89 +48,32 @@
 #define DEVICE3_ID		DEVICE3_PHY_ADDR
 #define DEVICE4_ID		DEVICE4_PHY_ADDR
 
-#define S_CPU_DEVICE		DEVICE0_ID
-#if(FOR_MRV_INDUSTRY_SW)
-#define DEVICE0_WAN_PORT		12   /*invalid phy port num ,usless for industry switch*/
-#else	
-#define DEVICE0_WAN_PORT		10
-#endif
-#if (PRODUCT_CLASS == GT815)
-#if (defined(_FOR_GT861_TMP_)) && (!defined(_FOR_NEW_GT861_))
-#define DEVICE0_CPU_PORT		10
-#else
-#define DEVICE0_CPU_PORT		9
-#endif
-#elif (PRODUCT_CLASS == GT861_ONU)
-#define DEVICE0_CPU_PORT		9	/* There is independent CPU port on new version PON board */
-#elif (PRODUCT_CLASS == GIS2109)
-#define DEVICE0_CPU_PORT		8
-#elif (PRODUCT_CLASS == GIS2109G)
-#define DEVICE0_CPU_PORT		10
-#else
-#if ((defined _GT831_V1_1_ON_GT811_) && (defined _CPU_CHANNEL_USE_HMII_))
-#define DEVICE0_CPU_PORT		9
-#else
-#define DEVICE0_CPU_PORT		10
-#endif
-#endif
-#if (PRODUCT_CLASS == GT815)
-#ifdef _FOR_GT861_TMP_
-#define DEVICE0_CASCADE_PORT	5
-#define DEVICE0_CASCADE_PORT0	5
-#define DEVICE0_CASCADE_PORT1	4
-#define DEVICE0_CASCADE_PORT2	3
-#define DEVICE0_CASCADE_PORT3	2
-#define DEVICE0_CASCADE_PORT4	6
-#else
-#define DEVICE0_CASCADE_PORT	8
-#define DEVICE0_CASCADE_PORT0	DEVICE0_CASCADE_PORT
-#define DEVICE0_CASCADE_PORT1	0xF
-#define DEVICE0_CASCADE_PORT2	0xF
-#define DEVICE0_CASCADE_PORT3	0xF
-#define DEVICE0_CASCADE_PORT4	0xF
-#endif
-#elif (PRODUCT_CLASS == GT861_ONU)
-#define DEVICE0_CASCADE_PORT	0xF
-#define DEVICE0_CASCADE_PORT0	5
-#define DEVICE0_CASCADE_PORT1	4
-#define DEVICE0_CASCADE_PORT2	3
-#define DEVICE0_CASCADE_PORT3	2
-#define DEVICE0_CASCADE_PORT4	6
-#else
 #define DEVICE0_CASCADE_PORT	0xF
 #define DEVICE0_CASCADE_PORT0	0xF
 #define DEVICE0_CASCADE_PORT1	0xF
 #define DEVICE0_CASCADE_PORT2	0xF
 #define DEVICE0_CASCADE_PORT3	0xF
 #define DEVICE0_CASCADE_PORT4	0xF
-#endif
 
-#if (PRODUCT_CLASS == GT815)
-#ifdef _FOR_GT861_TMP_
 #define DEVICE1_WAN_PORT		9
 #define DEVICE1_CPU_PORT		9
 #define DEVICE1_CASCADE_PORT	9
-#else
-#define DEVICE1_WAN_PORT		9
-#define DEVICE1_CPU_PORT		9
-#define DEVICE1_CASCADE_PORT	9
-#endif
-#else
-#define DEVICE1_WAN_PORT		9
-#define DEVICE1_CPU_PORT		9
-#define DEVICE1_CASCADE_PORT	9
-#endif
+
 #define DEVICE2_WAN_PORT		9
 #define DEVICE2_CPU_PORT		9
 #define DEVICE2_CASCADE_PORT	9
+
 #define DEVICE3_WAN_PORT		9
 #define DEVICE3_CPU_PORT		9
 #define DEVICE3_CASCADE_PORT	9
+
 #define DEVICE4_WAN_PORT		9
 #define DEVICE4_CPU_PORT		9
 #define DEVICE4_CASCADE_PORT	9
 
 #define DEVICE0_FPGA_PORT		6
+
+#endif
 
 extern GT_QD_DEV       *qdMultiDev[N_OF_QD_DEVICES];
 extern GT_QD_DEV       *qdDev0;

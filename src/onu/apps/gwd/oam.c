@@ -21,7 +21,7 @@
 #endif
 
 
-#if (PRODUCTS == PRODUCTS_GT811D)
+#if (PRODUCT_CLASS == PRODUCTS_GT811D)
 	const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
 	const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
 	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 8;
@@ -33,7 +33,7 @@
 	const unsigned char SYS_HARDWARE_DEBUG_VERSION_NO = 1;
 #endif
 
-#if (PRODUCTS == PRODUCTS_GT811G)
+#if (PRODUCT_CLASS == PRODUCTS_GT811G)
 	const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
 	const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
 	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 8;
@@ -45,13 +45,25 @@
 	const unsigned char SYS_HARDWARE_DEBUG_VERSION_NO = 1;
 #endif
 
-#if (PRODUCTS == PRODUCTS_GT873_M_4F4S)
+#if (PRODUCT_CLASS == PRODUCTS_GT873_M_4F4S)
 	const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
 	const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
 	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 12;
 	const unsigned char SYS_SOFTWARE_DEBUG_VERSION_NO = 1;
 
 	const unsigned char SYS_HARDWARE_MAJOR_VERSION_NO = 2;
+	const unsigned char SYS_HARDWARE_RELEASE_VERSION_NO = 1;
+	const unsigned char SYS_HARDWARE_BRANCH_VERSION_NO = 1;
+	const unsigned char SYS_HARDWARE_DEBUG_VERSION_NO = 1;
+#endif
+
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+	const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
+	const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
+	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 1;
+	const unsigned char SYS_SOFTWARE_DEBUG_VERSION_NO = 1;
+
+	const unsigned char SYS_HARDWARE_MAJOR_VERSION_NO = 1;
 	const unsigned char SYS_HARDWARE_RELEASE_VERSION_NO = 1;
 	const unsigned char SYS_HARDWARE_BRANCH_VERSION_NO = 1;
 	const unsigned char SYS_HARDWARE_DEBUG_VERSION_NO = 1;
@@ -2651,16 +2663,20 @@ int cmd_onu_mgt_config_device_name(struct cli_def *cli, char *command, char *arg
 
 int cmd_show_system_information(struct cli_def *cli, char *command, char *argv[], int argc)
 {
-#if (PRODUCTS == PRODUCTS_GT811D)
+#if (PRODUCT_CLASS == PRODUCTS_GT811D)
 	char onu_type[] = "GT811D";
 #endif
 
-#if (PRODUCTS == PRODUCTS_GT811G)
+#if (PRODUCT_CLASS == PRODUCTS_GT811G)
 	char onu_type[] = "GT811G";
 #endif
 
-#if (PRODUCTS == PRODUCTS_GT873_M_4F4S)
+#if (PRODUCT_CLASS == PRODUCTS_GT873_M_4F4S)
 	char onu_type[] = "GT873M_4F4S";
+#endif
+
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+	char onu_type[] = "GT812C";
 #endif
 
 	long lRet = GWD_RETURN_OK;

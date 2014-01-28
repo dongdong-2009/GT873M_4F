@@ -2017,11 +2017,7 @@ int Marvell_switch_reset
     IN GT_QD_DEV    *dev
 )
 {
-#if (FOR_ONU_PON)
-    PAS_STATUS result = S_OK;
-#else
     int result;
-#endif
     GT_STATUS status;
 
     /* flush all ATU entries */

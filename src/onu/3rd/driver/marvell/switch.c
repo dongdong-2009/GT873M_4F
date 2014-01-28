@@ -14,6 +14,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "iros_config.h"
+
 /* Marvell driver API protetype files */
 #include <msApi.h>
 #include <gtHwCntl.h>
@@ -89,6 +91,7 @@ GT_BOOL master_interswitch_port[MAXPortOnSlotNum];
 unsigned int guiPhyBoardSmiAddr = 0;
 
 extern char * malloc(int);
+extern void free(void *);
 
 int RevPkt_Marvel_Handler(char *org, char *out, int *len )
 {
@@ -263,18 +266,11 @@ void allocate_bridge_mac(GT_ETHERADDR * mac)
 ********************************************************************************************/
 void switch_init()
 {
-#if (PRODUCT_CLASS != GT861_ONU)
+#if (FOR_ONU_PON)
 	GT_STATUS          l_ret_val = GT_OK;
-	GT_STATUS          result = GT_OK;
-    GT_LPORT        i, phyPort, unit;
-    GT_VTU_ENTRY    vtuEntry;
+    GT_LPORT        i;
  	extern char * creationDate;
  	GT_ERATE_TYPE   gtEgressRateType;
- 	GT_U8			pri;
-	GT_ATU_ENTRY gtAtuEntryBc;
-	GT_ATU_ENTRY gtAtuEntryMcLn;
-	GT_U8 Mc_LocalNetwork[6] = {0x01, 0x00, 0x5E, 0x00, 0x00, 0x01};
-	GT_U8 ports [ NUM_UNI_PORTS_PER_SWITCH ];
 	int j;
 	GT_STATUS status;
 
@@ -293,18 +289,6 @@ void switch_init()
 		memset((char*)qdMultiDev[i],0,sizeof(GT_QD_DEV));
 	}
 
-#if 0
-	/* init the marvell switch driver on phy addr 0 , auto scan mode */
-	memset(&(sg_switch_bsp_config.lan_ports), 0, sizeof (sg_switch_bsp_config.lan_ports));
-	sg_switch_bsp_config.lan_ports[0] = GT_TRUE;
-	sg_switch_bsp_config.lan_ports[1] = GT_TRUE;
-	sg_switch_bsp_config.lan_ports[2] = GT_TRUE;
-	sg_switch_bsp_config.lan_ports[3] = GT_TRUE;
-	sg_switch_bsp_config.lan_ports[4] = GT_TRUE;
-	sg_switch_bsp_config.lan_ports[5] = GT_TRUE;
-	sg_switch_bsp_config.lan_ports[6] = GT_TRUE;
-	sg_switch_bsp_config.lan_ports[7] = GT_TRUE;
-#endif
 	allocate_bridge_mac(&(sg_switch_bsp_config.switch_mac));
 
 	memset((char*)&sg_switch_cfg,0,sizeof(GT_SYS_CONFIG));
@@ -408,7 +392,7 @@ void switch_init()
 					MSG_OUT(("Config master device HostMII port failed(%d).\r\n", status));
 					l_ret_val = status;
 				}
-#endif				
+#endif
 			}
 			else
 			{
@@ -1449,8 +1433,8 @@ GT_STATUS switch_default_config(GT_QD_DEV * dev)
  	GT_ERATE_TYPE   gtEgressRateType;
  	GT_U8			pri;
 	GT_ATU_ENTRY gtAtuEntryBc;
-//	GT_ATU_ENTRY gtAtuEntryMcLn;
-//	GT_U8 Mc_LocalNetwork[6] = {0x01, 0x00, 0x5E, 0x00, 0x00, 0x01};
+	GT_ATU_ENTRY gtAtuEntryMcLn;
+	GT_U8 Mc_LocalNetwork[6] = {0x01, 0x00, 0x5E, 0x00, 0x00, 0x01};
 /*#define  _SIMPLEST_*/
 
 #if 1
