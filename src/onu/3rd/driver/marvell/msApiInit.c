@@ -11,6 +11,9 @@
 *
 *******************************************************************************/
 #include "msSample.h"
+
+#include "MARVELL_BSP_expo.h"
+
 /*
 #define MULTI_ADDR_MODE
 #define MANUAL_MODE
@@ -111,6 +114,90 @@ GT_STATUS status;
 	}
 
 	MSG_PRINT(("QuarterDeck has been started.\n"));
+
+	return GT_OK;
+}
+
+/*******************************************************************************************
+  Description   : init the Marvell switch driver for Passave ONU boards
+  In params     : cfg       -   pointer to Marvell switch driver configuration structure
+                                the following structure variables are mandatory:
+                                - cpuPortNum
+                                - mode.scanMode
+                  ext_conf  -   pointer to Marvell extended configuration structure.
+                                (all structure variables are mandatory)
+                  dev - pointer to Marvell switch driver info structure
+  Out params    : dev - pointer to Marvell switch driver info structure
+  Return value  : standard PAS6201 API error codes
+********************************************************************************************/
+GT_STATUS Marvell_driver_initialize(GT_SYS_CONFIG * cfg, GT_QD_DEV * dev,
+	Marvell_ext_switch_conf_t * ext_conf)
+{
+
+    GT_STATUS status;
+    int i;
+
+	/*
+	 *  Register all the required functions to QuarterDeck Driver.
+	 */
+    cfg->BSPFunctions.readMii   = gtBspReadMii;
+	cfg->BSPFunctions.writeMii  = gtBspWriteMii;
+#ifdef USE_SEMAPHORE
+	cfg->BSPFunctions.semCreate = osSemCreate;
+	cfg->BSPFunctions.semDelete = osSemDelete;
+	cfg->BSPFunctions.semTake   = osSemWait;
+	cfg->BSPFunctions.semGive   = osSemSignal;
+#else
+	cfg->BSPFunctions.semCreate = NULL;
+	cfg->BSPFunctions.semDelete = NULL;
+	cfg->BSPFunctions.semTake   = NULL;
+	cfg->BSPFunctions.semGive   = NULL;
+#endif
+	gtBspMiiInit(dev);
+
+	if((status=qdLoadDriver(cfg, dev)) != GT_OK)
+	{
+        MSG_OUT(("qdLoadDriver return Failed(%d)\r\n",status));
+		return status;
+	}
+
+    MSG_OUT(("\r\nSWITCH: ********************************\r\n"));
+    switch(cfg->mode.scanMode)
+    {
+        case SMI_AUTO_SCAN_MODE :
+            MSG_OUT(("SWITCH: * Scan mode     : Auto         *\r\n"));
+            break;
+        case SMI_MANUAL_MODE :
+            MSG_OUT(("SWITCH: * Scan mode     : Manual       *\r\n"));
+            break;
+        case SMI_MULTI_ADDR_MODE :
+            MSG_OUT(("SWITCH: * Scan mode     : MultiAddress *\r\n"));
+            break;
+		default:
+			MSG_OUT(("SWITCH: * Scan mode     : Unknown      *\r\n"));
+			break;
+    }
+	MSG_OUT(("SWITCH: * Device ID     : 0x%x         *\r\n", dev->deviceId));
+	MSG_OUT(("SWITCH: * Phy Addr      : 0x%x          *\r\n", dev->phyAddr));
+	MSG_OUT(("SWITCH: * Base Reg Addr : 0x%x          *\r\n", dev->baseRegAddr));
+	MSG_OUT(("SWITCH: * Num of Ports  : %d           *\r\n", dev->numOfPorts));
+	MSG_OUT(("SWITCH: * CPU Port      : %02lu           *\r\n", dev->cpuPortNum));
+	for(i=0; i<ext_conf->numOfCasPorts; i++)
+		MSG_OUT(("SWITCH: * Cascade Port  : %02lu           *\r\n", ext_conf->cas_ports[i].port));
+	MSG_OUT(("SWITCH: * Uplink Port   : %02lu           *\r\n", ext_conf->upLinkPort));
+
+    MSG_OUT(("SWITCH: ********************************\r\n\r\n"));
+
+	/*
+	 *  start the QuarterDeck
+	*/
+	if((status=sysEnable(dev)) != GT_OK)
+	{
+		MSG_OUT(("sysConfig return Failed\r\n"));
+		return status;
+	}
+
+	MSG_OUT(("SWITCH: QuarterDeck has been started.\r\n"));
 
 	return GT_OK;
 }

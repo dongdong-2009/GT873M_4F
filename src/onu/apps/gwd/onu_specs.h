@@ -87,7 +87,6 @@ extern "C"
 #ifndef DEF_CTRL_CHAN_VLANID
 	#define DEF_CTRL_CHAN_VLANID 			2
 #endif
-	unsigned long g_ulMAXPortOnSlotNum              = MAXPortOnSlotNum;
 	//#define MAX_ROTER_PORT (pRcpDev->numOfPorts)
 	#define SysBeginOfPortOnSlot   1
 	#define SysEndOfPortOnSlot     g_ulMAXPortOnSlotNum

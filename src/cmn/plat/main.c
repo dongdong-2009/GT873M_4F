@@ -187,6 +187,8 @@ extern void cs_gpio_init(void);
 extern cs_status cs_i2c_init(void);
 extern cs_status cs_mdio_init(void);
 extern void ssp_init(void);
+extern void switch_init(void);
+
 cs_uint32 ctc_trunk_vlan_ds_untag_enable_get()
 {
 	return g_ctc_vlan_trunk_ds_untag_enable;
@@ -239,7 +241,7 @@ void plat_init(void)
     /* register debug command */
     plat_cmd_init();
 
-    qdStart(9, 0, 0);
+    switch_init();
 }
 void mbox_init()
 {

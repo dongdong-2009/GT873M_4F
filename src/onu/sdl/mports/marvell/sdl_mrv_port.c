@@ -106,6 +106,7 @@ Copyright (c) 2010 by Cortina Systems Incorporated
 #include "msApi.h"
 
 #include "gtDrvSwRegs.h"
+#include "switch_drv.h"
 
 extern GT_QD_DEV * dev;
 
@@ -213,7 +214,7 @@ static void __sdl_port_auto_neg_polling_handler(void)
         if(GT_OK != ret)
            return;
            
-        if (phy_data & GT_LINK_STATUS_CHANGED){
+        if (phy_data & GT_AUTO_NEG_COMPLETED){
             //cs_printf("port %d, auto nego failed! Reg value: 0x%x\n", P2L_PORT(port), phy_data);
             auto_nego_event.port = P2L_PORT(port);
             auto_nego_event.status = __SDL_PORT_AUTO_NEGO_FAIL;
@@ -1585,6 +1586,8 @@ cs_status sdl_port_init(
     cs_status                 rt = CS_E_OK;
     cs_uint8                  index;
 
+    GT_LPORT 				port;
+
     
     if (NULL == cfg) {
         SDL_MIN_LOG(" NULL pointer!\n", );
@@ -1774,17 +1777,15 @@ cs_status sdl_port_init(
 #endif
     }
 
-#if 0
-    ret = rtk_int_control_set(INT_TYPE_LINK_STATUS, 1);
-#else
-    /*mtodo add link status change handler register*/
-#endif
-    if(GT_OK != ret){
-        SDL_MIN_LOG("rtk_int_control_set return %d\n", ret);
-        rt =  CS_E_ERROR;
-        goto END;
-    }
+    for(port=0; port<UNI_PORT_MAX; port++)
+    {
+    	if(GT_OK != gprtPhyIntEnable(dev, port, GT_LINK_STATUS_CHANGED, GT_TRUE))
+    	{
 
+			SDL_MIN_LOG("gprtPhyIntEnable type 0x%x, code %d return %d\n", GT_LINK_STATUS_CHANGED, GT_TRUE, ret);
+			goto END;
+		}
+    }
     
     sdl_int_handler_reg(SDL_INT_UNI_LINK_CHANGE, __sdl_port_int_process);
     
@@ -2026,17 +2027,10 @@ cs_status epon_request_onu_port_isolation_set(
 
     for (port_id = CS_UNI_PORT_ID1; port_id <= CS_UNI_PORT_ID4; port_id++) {
         port = L2P_PORT(port_id);
-        /*
-        if (enable) {
-            portmask.bits[0] = 0xf0;
-        } else {
-            portmask.bits[0] = 0xff;
-        }
 
-        ret = rtk_port_isolation_set(port, portmask);
-        mtodo: call port isolate api*/
+        ret = gvlnSetPortIsolate(dev, enable);
         if (GT_OK != ret) {
-            SDL_MIN_LOG("rtk_port_isolation_set return %d\n", ret);
+            SDL_MIN_LOG("gvlnSetPortIsolate return %d\n", ret);
             rt = CS_E_ERROR;
             goto END;
         }
