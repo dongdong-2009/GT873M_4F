@@ -97,10 +97,10 @@ Copyright (c) 2010 by Cortina Systems Incorporated
 #include "sdl_init.h"
 #include "sdl.h"
 
+#include "MARVELL_BSP_expo.h"
+#include "switch_expo.h"
 #include "msApiTypes.h"
 #include "msApi.h"
-
-extern GT_QD_DEV *dev;
 
 /*Private Macro Definition*/
 #define __FDB_ENTRY_MAX                                           (sdl_int_cfg.max_fdb_entry)
@@ -166,6 +166,7 @@ static cs_status __fdb_8021x_static_mac(void)
 {
     GT_STATUS gt_ret;
     GT_ATU_ENTRY entry;
+    GT_LPORT port;
 
     entry.macAddr.arEther[0]= 0x01;
     entry.macAddr.arEther[1]= 0x80;
@@ -179,12 +180,18 @@ static cs_status __fdb_8021x_static_mac(void)
     entry.portVec = 0x100;
   
            /* set to HW */
-    gt_ret = gfdbAddMacEntry(dev, &entry);
-    if(GT_OK != gt_ret)
-    {
-        SDL_MIN_LOG("gfdbAddMacEntry return %d. FILE: %s, LINE: %d", gt_ret, __FILE__, __LINE__);
-        return CS_E_ERROR;
-    }
+    FOR_UNIT_START(GT_U32, unit)
+		if(get_switch_wan_port_info(unit, &port) == GT_OK)
+			entry.portVec = 1<<port;
+		else
+			continue;
+		gt_ret = gfdbAddMacEntry(QD_DEV_PTR, &entry);
+		if(GT_OK != gt_ret)
+		{
+			SDL_MIN_LOG("gfdbAddMacEntry return %d. FILE: %s, LINE: %d", gt_ret, __FILE__, __LINE__);
+			return CS_E_ERROR;
+		}
+    FOR_UNIT_END
 
     return CS_E_OK;
 }
@@ -207,7 +214,8 @@ static void __onu_fdb_entry_clr_uplink_port (
         return;
     }
     
-    ret = gfdbGetAtuEntryFirst(dev, &entry);
+    FOR_UNIT_START(GT_32, unit)
+    ret = gfdbGetAtuEntryFirst(QD_DEV_PTR, &entry);
     while(ret == GT_OK){
 
     	if(entry.entryState.ucEntryState == GT_UC_DYNAMIC &&
@@ -215,11 +223,11 @@ static void __onu_fdb_entry_clr_uplink_port (
     	{
     		flag = 1;
     		e1 = entry;
-    		ret = gfdbGetAtuEntryNext(dev,&e1);
+    		ret = gfdbGetAtuEntryNext(QD_DEV_PTR,&e1);
 
     		if(ret == GT_OK)
     		{
-    			ret = gfdbDelAtuEntry(dev, &entry);
+    			ret = gfdbDelAtuEntry(QD_DEV_PTR, &entry);
     			if(ret != GT_OK)
     			SDL_MIN_LOG("gfdbDelAtuEntry return %d.\n", ret);
     		}
@@ -231,11 +239,12 @@ static void __onu_fdb_entry_clr_uplink_port (
     		entry = e1;
     	else
     	{
-    		ret = gfdbGetAtuEntryNext(dev, &entry);
+    		ret = gfdbGetAtuEntryNext(QD_DEV_PTR, &entry);
     		if(ret != GT_OK)
     			SDL_MIN_LOG("pord: %d, address: %d.\n", portid, address);
     	}
     }
+    FOR_UNIT_END
     
     return;    
 }
@@ -404,6 +413,7 @@ cs_status epon_request_onu_fdb_mac_limit_set (
     cs_uint32               dynamic_limit = 0;
     GT_STATUS           	gt_ret = 0;
     cs_status               rt = CS_E_OK;
+    GT_32 					unit, port;
 
     UNI_PORT_CHECK(port_id);
     
@@ -420,12 +430,15 @@ cs_status epon_request_onu_fdb_mac_limit_set (
         /*Set limit number > lookup table number(eg,2113),
           learn over action is meanless, ie,action is forward.                                                               作用的, 意即action是forward.   
         */
-    	gt_ret = gfdbSetPortAtuLearnLimit(dev, port_id-1, 0xff);
-        if(GT_OK != gt_ret){
-            diag_printf("gfdbSetPortAtuLearnLimit return %d\n", gt_ret);
-            rt = CS_E_ERROR;
-            goto END;
-        }
+    	if(GT_OK == gt_getswitchunitbylport(port_id-1, &unit, &port))
+    	{
+			gt_ret = gfdbSetPortAtuLearnLimit(QD_DEV_PTR, port, 0xff);
+			if(GT_OK != gt_ret){
+				diag_printf("gfdbSetPortAtuLearnLimit return %d\n", gt_ret);
+				rt = CS_E_ERROR;
+				goto END;
+			}
+    	}
     }
     else{ /*mac_num = (0-0xff)*/
         if (sdl_int_cfg.fdb_limit_include_static) {
@@ -447,7 +460,7 @@ cs_status epon_request_onu_fdb_mac_limit_set (
             goto END;
         }
     
-        gt_ret = gfdbSetPortAtuLearnLimit(dev, port_id-1, dynamic_limit);
+        gt_ret = gfdbSetPortAtuLearnLimit(QD_DEV_PTR, port_id-1, dynamic_limit);
         if(GT_OK != gt_ret) {
             diag_printf("gfdbSetPortAtuLearnLimit return %d\n", gt_ret);
             rt = CS_E_ERROR;
@@ -513,13 +526,16 @@ cs_status epon_request_onu_fdb_age_set (
     }
 
     /*set aging time*/
-    ret = gfdbSetAgingTimeout(dev, aging_time);
+    FOR_UNIT_START(GT_32, unit)
+    ret = gfdbSetAgingTimeout(QD_DEV_PTR, aging_time);
     if (GT_OK != ret) {
         SDL_MIN_LOG("gfdbSetAgingTimeout return %d!\n", ret);
         rt = CS_E_ERROR;
         goto END;
     }
     
+    FOR_UNIT_END
+
     g_fdb_aging_time = aging_time;
      
 END:
@@ -568,12 +584,16 @@ cs_status epon_request_onu_mac_learn_set(
     
     if (status == SDL_FDB_MAC_LEARN_DISABLE) {
         /*MAC limit counter is set to 0*/
-        gt_ret = gfdbSetPortAtuLearnLimit(dev, port_id-1, 0);
-        if(GT_OK != gt_ret){
-            SDL_MIN_LOG("In function:%s,line:%d invoke gfdbSetPortAtuLearnLimit fail!\n",__FUNCTION__, __LINE__);
-            rt = CS_E_ERROR;
-            goto END;
-        }
+    	GT_32 unit, port;
+    	if(GT_OK == gt_getswitchunitbylport(port_id-1, &unit, &port))
+    	{
+    		gt_ret = gfdbSetPortAtuLearnLimit(QD_DEV_PTR, port_id-1, 0);
+    		if(GT_OK != gt_ret){
+    			SDL_MIN_LOG("In function:%s,line:%d invoke gfdbSetPortAtuLearnLimit fail!\n",__FUNCTION__, __LINE__);
+    			rt = CS_E_ERROR;
+    			goto END;
+    		}
+    	}
         
         /*when disable mac-learn,should clear all dynamic entires */
         rt = epon_request_onu_fdb_entry_clr_per_port(context, device_id, llidport, port_id,SDL_FDB_CLR_DYNAMIC);
@@ -587,12 +607,17 @@ cs_status epon_request_onu_mac_learn_set(
     }
     else{
         /*learn over action is droping*/
-		gt_ret = gfdbLearnEnable(dev,1);
-        if(GT_OK != gt_ret){
-            SDL_MIN_LOG("In function:%s,line:%d invoke gfdbLearnEnable fail!\n",__FUNCTION__, __LINE__);
-            rt = CS_E_ERROR;
-            goto END;
-        }
+    	GT_32 unit, port;
+
+    	if(GT_OK == gt_getswitchunitbylport(port_id-1, &unit, &port))
+    	{
+			gt_ret = gfdbLearnEnable(QD_DEV_PTR,1);
+			if(GT_OK != gt_ret){
+				SDL_MIN_LOG("In function:%s,line:%d invoke gfdbLearnEnable fail!\n",__FUNCTION__, __LINE__);
+				rt = CS_E_ERROR;
+				goto END;
+			}
+    	}
 
         g_fdb_port_cfg[port_id-1].lrn_en = SDL_FDB_MAC_LEARN_ENABLE;
         
@@ -665,6 +690,8 @@ cs_status epon_request_onu_fdb_entry_clr_per_port (
     GT_STATUS rtn  = GT_OK;
     cs_boolean rt = FALSE;
     cs_uint8 index, fdel = 0;
+
+    GT_32 	unit,port;
          
     UNI_PORT_CHECK(portid);
 
@@ -673,14 +700,17 @@ cs_status epon_request_onu_fdb_entry_clr_per_port (
         return CS_E_ERROR;
     }
     
-    rtn = gfdbGetAtuEntryFirst(dev, &l2_data);
+    if(GT_OK != gt_getswitchunitbylport(portid-1, &unit, &port))
+    	return CS_ERROR;
+
+    rtn = gfdbGetAtuEntryFirst(QD_DEV_PTR, &l2_data);
     while(rtn == GT_OK){
 
         switch(clr_mode)
         {
             case SDL_FDB_CLR_DYNAMIC:
                  if( l2_data.entryState.ucEntryState == GT_UC_DYNAMIC &&
-                		 (l2_data.portVec &(L2P_PORT(portid-1))))
+                		 (l2_data.portVec &(L2P_PORT(port))))
                  {
                 	 fdel = 1;
                  }
@@ -688,7 +718,7 @@ cs_status epon_request_onu_fdb_entry_clr_per_port (
 
              case SDL_FDB_CLR_STATIC:
                 if(l2_data.entryState.ucEntryState == GT_UC_STATIC &&
-                		(l2_data.portVec &(L2P_PORT(portid-1))) )
+                		(l2_data.portVec &(L2P_PORT(port))) )
                 {
                     /* do not delete the MAC address that is not in software static MAC list */
                     rt = fdb_static_entry_find(portid-1, (cs_mac_t*)&l2_data.macAddr.arEther[0], &index);
@@ -705,7 +735,7 @@ cs_status epon_request_onu_fdb_entry_clr_per_port (
                 
                 case SDL_FDB_CLR_BOTH:
                     if(l2_data.entryState.ucEntryState == GT_UC_STATIC &&
-                    		(l2_data.portVec &(L2P_PORT(portid-1))))
+                    		(l2_data.portVec &(L2P_PORT(port))))
                     {
                         /* do not delete the MAC address that is not in software static MAC list */
                         rt = fdb_static_entry_find(portid -1, (cs_mac_t*)&l2_data.macAddr.arEther[0], &index);
@@ -719,7 +749,7 @@ cs_status epon_request_onu_fdb_entry_clr_per_port (
                         }
                     }
                     else if( l2_data.entryState.ucEntryState == GT_UC_DYNAMIC &&
-                   		 (l2_data.portVec &(L2P_PORT(portid-1))))
+                   		 (l2_data.portVec &(L2P_PORT(port))))
                     {
                     	fdel = 1;
                     }
@@ -731,12 +761,12 @@ cs_status epon_request_onu_fdb_entry_clr_per_port (
           }
 
     	l2_t = l2_data;
-    	rtn = gfdbGetAtuEntryNext(dev, &l2_t);
+    	rtn = gfdbGetAtuEntryNext(QD_DEV_PTR, &l2_t);
 
         if(fdel)
         {
         	fdel = 0;
-        	gfdbDelAtuEntry(dev, &l2_data);
+        	gfdbDelAtuEntry(QD_DEV_PTR, &l2_data);
         }
 
     	l2_data = l2_t;
@@ -786,6 +816,8 @@ cs_status epon_request_onu_fdb_entry_add(
     cs_uint8           index;
     GT_STATUS      gt_ret = 0;
     cs_status          rt = CS_E_OK;
+
+    GT_32	unit, port;
 
     if(NULL==entry){
         diag_printf("param is NULL pointer\n");
@@ -839,13 +871,16 @@ cs_status epon_request_onu_fdb_entry_add(
         return CS_E_PARAM;
     }
     
+    if(GT_OK != gt_getswitchunitbylport(portid, &unit, &port ))
+    	return CS_E_ERROR;
+
     memset(&l2_data, 0, sizeof(GT_ATU_ENTRY));
     memcpy(&l2_data.macAddr.arEther[0], &entry->mac, sizeof(cs_mac_t));
     l2_data.entryState.ucEntryState = (entry->type == SDL_FDB_ENTRY_STATIC)?GT_UC_STATIC:GT_UC_DYNAMIC;
     l2_data.DBNum = entry->vlan_id;
-    l2_data.portVec |= 1<<(L2P_PORT(entry->port - 1));
+    l2_data.portVec |= 1<<(L2P_PORT(port));
     
-    gt_ret = gfdbAddMacEntry(dev, &l2_data);
+    gt_ret = gfdbAddMacEntry(QD_DEV_PTR, &l2_data);
     if(GT_OK != gt_ret){
         diag_printf("gfdbAddMacEntry return %d!\n", gt_ret);
         rt = CS_E_ERROR;
@@ -955,7 +990,7 @@ cs_status epon_request_onu_fdb_entry_del(
     l2_data.DBNum = vlan;
 
     /*Firstly get the portid*/
-    gt_ret = gfdbFindAtuMacEntry(dev, &l2_data, &found);
+    gt_ret = gfdbFindAtuMacEntry(QD_DEV_PTR, &l2_data, &found);
     if(GT_OK != gt_ret){
         SDL_MIN_LOG("gfdbFindAtuMacEntry return %d\n", gt_ret);
         rt = CS_E_ERROR;
@@ -992,7 +1027,7 @@ cs_status epon_request_onu_fdb_entry_del(
     
     }
 
-	gt_ret = gfdbDelAtuEntry(dev, &l2_data);
+	gt_ret = gfdbDelAtuEntry(QD_DEV_PTR, &l2_data);
 	if(GT_OK != gt_ret){
 		SDL_MIN_LOG("gfdbDelAtuEntry return %d\n", gt_ret);
 		rt = CS_E_ERROR;
@@ -1033,7 +1068,7 @@ cs_status epon_request_onu_fdb_entry_get(
     memcpy(&l2_data.macAddr.arEther[0], mac, sizeof(cs_mac_t));
     l2_data.DBNum = vlan;
 
-    gt_ret = gfdbFindAtuMacEntry(dev, &l2_data, &found);
+    gt_ret = gfdbFindAtuMacEntry(QD_DEV_PTR, &l2_data, &found);
     if(GT_OK != gt_ret){
        SDL_MIN_LOG("gfdbFindAtuMacEntry return %d\n", gt_ret);
        rt = CS_E_ERROR;
@@ -1081,7 +1116,7 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
         return CS_E_PARAM;
     }
 
-    if(GT_OK != gfdbGetAtuAllCount(dev, &count))
+    if(GT_OK != gfdbGetAtuAllCount(QD_DEV_PTR, &count))
     	return CS_E_ERROR;
 
     if(offset > count)
@@ -1090,9 +1125,9 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
     for(i=0; i<count; i++)
     {
     	if(i == 0)
-    		gt_ret = gfdbGetAtuEntryFirst(dev, &l2_data);
+    		gt_ret = gfdbGetAtuEntryFirst(QD_DEV_PTR, &l2_data);
     	else
-    		gt_ret = gfdbGetAtuEntryNext(dev, &l2_data);
+    		gt_ret = gfdbGetAtuEntryNext(QD_DEV_PTR, &l2_data);
 
     	if(gt_ret != GT_OK)
     	{
@@ -1209,7 +1244,7 @@ cs_status epon_request_onu_fdb_entry_get_byindex_per_port(
     
     UNI_PORT_CHECK(port_id);
     
-    gfdbGetAtuAllCount(dev, &count);
+    gfdbGetAtuAllCount(QD_DEV_PTR, &count);
     hwport = GT_LPORT_2_PORT(port_id-1);
 
     if(mode == SDL_FDB_ENTRY_GET_MODE_STATIC){
@@ -1269,9 +1304,9 @@ cs_status epon_request_onu_fdb_entry_get_byindex_per_port(
     for(i=0; i<count; i++)
     {
     	if(i == 0)
-    		gt_ret = gfdbGetAtuEntryFirst(dev, &l2_data);
+    		gt_ret = gfdbGetAtuEntryFirst(QD_DEV_PTR, &l2_data);
     	else
-    		gt_ret = gfdbGetAtuEntryNext(dev, &l2_data);
+    		gt_ret = gfdbGetAtuEntryNext(QD_DEV_PTR, &l2_data);
 
     	if(gt_ret != GT_OK)
     	{

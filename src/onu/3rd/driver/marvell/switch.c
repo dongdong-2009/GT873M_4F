@@ -3016,4 +3016,10 @@ GT_STATUS cpu_rate_fast(int enable)
     return 0;
 }
 
-
+GT_STATUS gt_getswitchunitbylport(GT_LPORT port, GT_32 *unit, GT_32 *lport )
+{
+//	todo 添加对多switch的支持
+	*unit = MASTER_UNIT;
+	*lport = port%CS_UNI_NUMBER;
+	return GT_OK;
+}

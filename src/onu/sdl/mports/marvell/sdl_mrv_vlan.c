@@ -103,6 +103,9 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "msApi.h"
 
 #include "gtDrvSwRegs.h"
+
+#include "MARVELL_BSP_expo.h"
+#include "switch_expo.h"
 #include "switch_drv.h"
 
 #define __MC_VLAN_PER_PORT_MAX          8

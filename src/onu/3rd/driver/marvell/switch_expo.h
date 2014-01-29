@@ -29,6 +29,15 @@
 #define UNIT_IS_MASTER(unit) 	( unit == MASTER_UNIT )
 #define UNIT_IS_VALID(unit)  	( unit <= N_OF_QD_DEVICES )
 
+#define FOR_UNIT_START(type, x)	{ \
+	type x; \
+	for(x=0; x<N_OF_QD_DEVICES; x++) \
+{
+
+#define FOR_UNIT_END	\
+} \
+}
+
 #define NUM_UNI_PORTS_PER_SWITCH	11  //mtdo 修改为可配置的端口数
 
 /**************************************************************************************
@@ -122,6 +131,8 @@ GT_STATUS InternalVlanLeave(GT_QD_DEV * dev, GT_U32 vid, GT_LPORT phyPort);
 GT_STATUS IsolateTwoPorts(GT_QD_DEV * dev, GT_BOOL mode, GT_LPORT phyPortA, GT_LPORT phyPortB);
 GT_STATUS switch_fe_port_pause_ctrl(GT_QD_DEV * dev, GT_LPORT phyPort, GT_BOOL mode);
 GT_STATUS switch_fpga_port_enable(GT_BOOL mode);
+
+GT_STATUS gt_getswitchunitbylport(GT_LPORT, GT_32*, GT_32*);
 
 #endif /* _switch_expo_h */
 
