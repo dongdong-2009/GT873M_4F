@@ -989,36 +989,42 @@ cs_status epon_request_onu_fdb_entry_del(
     memcpy(&l2_data.macAddr.arEther[0], mac, sizeof(cs_mac_t));
     l2_data.DBNum = vlan;
 
+    FOR_UNIT_START(GT_U32, unit)
+
     /*Firstly get the portid*/
     gt_ret = gfdbFindAtuMacEntry(QD_DEV_PTR, &l2_data, &found);
-    if(GT_OK != gt_ret){
+    if(GT_OK != gt_ret || found == GT_FALSE){
         SDL_MIN_LOG("gfdbFindAtuMacEntry return %d\n", gt_ret);
-        rt = CS_E_ERROR;
-        goto END;
+        continue;
     }
     
     for(port = 0; port < UNI_PORT_MAX; port++)
     {
+    	GT_U32 lunit = 0, lport=0;
+    	gt_getswitchunitbylport(port, &lunit, &lport );
 
-    	portid = lport2port(l2_data.portVec, port);
+    	if(lunit != unit)
+    		continue;
+
+    	portid = lport2port(l2_data.portVec, lport);
 
     	if(portid == GT_INVALID_PORT)
     		continue;
 
-		if(!fdb_static_entry_find(portid, mac, &index)){
+		if(!fdb_static_entry_find(port, mac, &index)){
 			SDL_MIN_LOG("ERROR: Static mac entry is not found!\n");
 			return CS_E_OK;
 		}
 
-		memset(&__fdb_static_entry_table[portid].entry[index], 0, sizeof(cs_sdl_fdb_entry_t));
-		__fdb_static_entry_table[portid].valid_map &= ~((0x1)<<index);
+		memset(&__fdb_static_entry_table[port].entry[index], 0, sizeof(cs_sdl_fdb_entry_t));
+		__fdb_static_entry_table[port].valid_map &= ~((0x1)<<index);
 
-		g_fdb_port_cfg[portid].static_mac_num = g_fdb_port_cfg[portid].static_mac_num - 1;
+		g_fdb_port_cfg[port].static_mac_num = g_fdb_port_cfg[port].static_mac_num - 1;
 
 		/* after setting, re-config the mac limit Dynamic entries will be cleared there */
 		if(sdl_int_cfg.fdb_limit_include_static){
 			rt = epon_request_onu_fdb_mac_limit_set(context,
-				device_id, llidport, portid+1, g_fdb_port_cfg[portid].mac_limit);
+				device_id, llidport, port+1, g_fdb_port_cfg[port].mac_limit);
 			if(rt){
 				SDL_MIN_LOG("In function:%s,line:%d invoke epon_request_onu_fdb_mac_limit_set fail!\n",__FUNCTION__, __LINE__);
 				goto END;
@@ -1033,6 +1039,8 @@ cs_status epon_request_onu_fdb_entry_del(
 		rt = CS_E_ERROR;
 		goto END;
 	}
+
+	FOR_UNIT_END
 
 END:
     return rt;
@@ -1049,7 +1057,7 @@ cs_status epon_request_onu_fdb_entry_get(
 {
     GT_ATU_ENTRY l2_data;
     GT_STATUS      gt_ret = 0;
-    cs_status          rt = CS_E_OK;
+    cs_status          rt = CS_E_ERROR;
     GT_BOOL        found = GT_FALSE;
 
     if((NULL==mac) || (NULL==entry) || (vlan>4095)) {
@@ -1068,18 +1076,18 @@ cs_status epon_request_onu_fdb_entry_get(
     memcpy(&l2_data.macAddr.arEther[0], mac, sizeof(cs_mac_t));
     l2_data.DBNum = vlan;
 
+    FOR_UNIT_START(GT_U32, unit)
+
     gt_ret = gfdbFindAtuMacEntry(QD_DEV_PTR, &l2_data, &found);
-    if(GT_OK != gt_ret){
+    if(GT_OK != gt_ret ){
        SDL_MIN_LOG("gfdbFindAtuMacEntry return %d\n", gt_ret);
-       rt = CS_E_ERROR;
-       goto END;
+       continue;
     }
     
     if(found == GT_FALSE)
     {
         SDL_MIN_LOG("gfdbFindAtuMacEntry not found entry");
-        rt = CS_E_ERROR;
-        goto END;
+        continue;
     }
 
     memcpy(&entry->mac, &l2_data.macAddr.arEther[0], sizeof(cs_mac_t));
@@ -1087,6 +1095,12 @@ cs_status epon_request_onu_fdb_entry_get(
     entry->port = P2L_PORT(getlportfromucportvec(l2_data.portVec));
     entry->type = l2_data.entryState.ucEntryState == GT_UC_DYNAMIC ? SDL_FDB_ENTRY_DYNAMIC : SDL_FDB_ENTRY_STATIC;
     
+    rt = CS_E_OK;
+    break;
+
+    FOR_UNIT_END
+
+
  END:   
     return rt;
 }
@@ -1223,7 +1237,7 @@ cs_status epon_request_onu_fdb_entry_get_byindex_per_port(
 )
 {
 	GT_ATU_ENTRY l2_data;
-    GT_U32 count = 0, i, hwport = 0;
+    GT_U32 count = 0, i, hwport = 0, lunit, lport;
     GT_STATUS gt_ret = GT_OK;
     cs_status ret =  CS_E_OK;
     //cs_printf("address:%d\n",address);
@@ -1244,8 +1258,15 @@ cs_status epon_request_onu_fdb_entry_get_byindex_per_port(
     
     UNI_PORT_CHECK(port_id);
     
+    if(gt_getswitchunitbylport(port_id, &lunit, &lport) != GT_OK)
+    	return CS_E_PARAM;
+
+    FOR_UNIT_START(GT_U32, unit)
+
+    GT_QD_DEV *dev = QD_DEV_PTR;
+
     gfdbGetAtuAllCount(QD_DEV_PTR, &count);
-    hwport = GT_LPORT_2_PORT(port_id-1);
+    hwport = GT_LPORT_2_PORT(lport);
 
     if(mode == SDL_FDB_ENTRY_GET_MODE_STATIC){
 		cs_printf("into statuc\n");
@@ -1330,6 +1351,9 @@ cs_status epon_request_onu_fdb_entry_get_byindex_per_port(
     	*next = i+1;
     	break;
     }
+
+    FOR_UNIT_END
+
 	//cs_printf("addess end:%d\n",address);
  	//cs_printf("next:%d",*next);
     return ret;
