@@ -92,13 +92,15 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 
 #include "plat_common.h" 
 #include "sdl_classify.h"
-#include "rtk_api_ext.h"
-#include "rtk_error.h"
 #include "sdl_classify_util.h"
 #include "sdl_util.h"
 #include "sdl.h"
 
+#include "msApiTypes.h"
+#include "msApi.h"
 
+#include "gtDrvSwRegs.h"
+#include "switch_drv.h"
 
 // port(1-4),index(0-11)
 #define  __RTK_ACL_IDX(port,index)    (((port-1)*RTK_ACL_CLS_MAC_PORT_LENGTH)+RTK_ACL_CLS_MAC_START+index)
@@ -113,18 +115,9 @@ static cs_status __sw_acl_add (
     CS_IN cs_sdl_classification_t      *prule
 )
 {
-    cs_int32            i;
+    cs_int32            i = 0;
     cs_sdl_cls_rule_t   *ptemp =NULL;
-    cs_uint32           ruleNum;
-    rtk_filter_cfg_t    cfg;
-    rtk_filter_action_t act;
-    rtk_filter_field_t  field;
-    rtk_api_ret_t       rt;
 
-
-    memset(&cfg, 0, sizeof(rtk_filter_cfg_t));
-    memset(&act, 0, sizeof(rtk_filter_action_t));
-    memset(&field, 0, sizeof(rtk_filter_field_t));
     
     ptemp = &prule->fselect[0];
     
@@ -132,228 +125,84 @@ static cs_status __sw_acl_add (
     {
         case CLASS_RULES_FSELECT_DA_MAC:  
         {
-            field.fieldType = FILTER_FIELD_DMAC;
-            field.filter_pattern_union.mac.dataType = FILTER_FIELD_DATA_MASK;
-            for(i = 0; i < CS_MACADDR_LEN; i++){
-                field.filter_pattern_union.mac.value.octet[i] = ptemp->matchValue[CLASS_MATCH_VAL_LEN-6+i];
-                field.filter_pattern_union.mac.mask.octet[i]  = 0xff;
-            }
             break;
         }
         case CLASS_RULES_FSELECT_SA_MAC:   
         {
-            field.fieldType = FILTER_FIELD_SMAC;
-            field.filter_pattern_union.mac.dataType = FILTER_FIELD_DATA_MASK;
-            for(i = 0; i < CS_MACADDR_LEN; i++){
-                field.filter_pattern_union.mac.value.octet[i] = ptemp->matchValue[CLASS_MATCH_VAL_LEN-6+i];
-                field.filter_pattern_union.mac.mask.octet[i]  = 0xff;
-            }
             break;
         }
         case CLASS_RULES_FSELECT_802_1P:     
         {
-            field.fieldType = FILTER_FIELD_CTAG;
-            field.filter_pattern_union.ctag.pri.dataType = FILTER_FIELD_DATA_MASK;
-            field.filter_pattern_union.ctag.pri.value = ptemp->matchValue[CLASS_MATCH_VAL_LEN-1];
-            field.filter_pattern_union.ctag.pri.mask = 0x7;
-              
             break;
         }
         case CLASS_RULES_FSELECT_VLAN_ID:    
         {
-            field.fieldType = FILTER_FIELD_CTAG;
-            field.filter_pattern_union.ctag.vid.dataType = FILTER_FIELD_DATA_MASK;
-            field.filter_pattern_union.ctag.vid.value = (((ptemp->matchValue[CLASS_MATCH_VAL_LEN - 2]&0xf)<<8)|ptemp->matchValue[CLASS_MATCH_VAL_LEN - 1]);
-            field.filter_pattern_union.ctag.vid.mask = 0xfff;
-              
             break;
         }
         case CLASS_RULES_FSELECT_ETH_TYPE:
         {
-            field.fieldType = FILTER_FIELD_ETHERTYPE;
-            field.filter_pattern_union.etherType.dataType = FILTER_FIELD_DATA_MASK;
-            field.filter_pattern_union.etherType.value = ((ptemp->matchValue[CLASS_MATCH_VAL_LEN - 2]<<8)|ptemp->matchValue[CLASS_MATCH_VAL_LEN - 1]);
-            field.filter_pattern_union.etherType.mask = 0xffff;
-              
             break;
         }
         case CLASS_RULES_FSELECT_DA_IPV4:
         {     
-            field.fieldType = FILTER_FIELD_IPV4_DIP;
-            field.filter_pattern_union.dip.dataType = FILTER_FIELD_DATA_MASK;
-            field.filter_pattern_union.dip.value = ((ptemp->matchValue[CLASS_MATCH_VAL_LEN - 4]<<24)|(ptemp->matchValue[CLASS_MATCH_VAL_LEN - 3]<<16)|
-                                                    (ptemp->matchValue[CLASS_MATCH_VAL_LEN - 2]<<8)|ptemp->matchValue[CLASS_MATCH_VAL_LEN - 1]);
-            field.filter_pattern_union.dip.mask = 0xffffffff;
-               
             break;
         }
         case CLASS_RULES_FSELECT_SA_IPV4:
         {     
-            field.fieldType = FILTER_FIELD_IPV4_SIP;
-            field.filter_pattern_union.sip.dataType = FILTER_FIELD_DATA_MASK;
-            field.filter_pattern_union.sip.value = ((ptemp->matchValue[CLASS_MATCH_VAL_LEN - 4]<<24)|(ptemp->matchValue[CLASS_MATCH_VAL_LEN - 3]<<16)|
-                                                    (ptemp->matchValue[CLASS_MATCH_VAL_LEN - 2]<<8)|ptemp->matchValue[CLASS_MATCH_VAL_LEN - 1]);
-            field.filter_pattern_union.sip.mask = 0xffffffff;
-               
             break;
         }
         case CLASS_RULES_FSELECT_IPPRTO:
         {     
-            field.fieldType = FILTER_FIELD_IPV4_PROTOCOL;
-            field.filter_pattern_union.protocol.dataType = FILTER_FIELD_DATA_MASK;
-            field.filter_pattern_union.protocol.value = ptemp->matchValue[CLASS_MATCH_VAL_LEN-1];
-            field.filter_pattern_union.protocol.mask  = 0xff;
-               
             break;
         }
         case CLASS_RULES_FSELECT_TOS_DSCP:
         {     
-            field.fieldType = FILTER_FIELD_IPV4_TOS;
-            field.filter_pattern_union.ipTos.dataType = FILTER_FIELD_DATA_MASK;
-            field.filter_pattern_union.ipTos.value = ptemp->matchValue[CLASS_MATCH_VAL_LEN-1]<<2;
-            field.filter_pattern_union.ipTos.mask  = 0xfc;
-               
             break;
         }
         case CLASS_RULES_FSELECT_IPV6_TC:
         {     
-            field.fieldType = FILTER_FIELD_IPV6_TRAFFIC_CLASS;
-            field.filter_pattern_union.ipv6TrafficClass.dataType = FILTER_FIELD_DATA_MASK;
-            field.filter_pattern_union.ipv6TrafficClass.value = ptemp->matchValue[CLASS_MATCH_VAL_LEN-1];
-            field.filter_pattern_union.ipv6TrafficClass.mask  = 0xff;
-               
             break;
         }
         case CLASS_RULES_FSELECT_L4_SRC_PORT:
         {     
-            field.fieldType = FILTER_FIELD_TCP_SPORT;
-            field.filter_pattern_union.tcpSrcPort.dataType = FILTER_FIELD_DATA_MASK;
-            field.filter_pattern_union.tcpSrcPort.value = ((ptemp->matchValue[CLASS_MATCH_VAL_LEN - 2]<<8)|ptemp->matchValue[CLASS_MATCH_VAL_LEN - 1]);
-            field.filter_pattern_union.tcpSrcPort.mask  = 0xffff;
-               
             break;
         }
         case CLASS_RULES_FSELECT_L4_DST_PORT:  
         {     
-            field.fieldType = FILTER_FIELD_TCP_DPORT;
-            field.filter_pattern_union.tcpDstPort.dataType = FILTER_FIELD_DATA_MASK;
-            field.filter_pattern_union.tcpDstPort.value = ((ptemp->matchValue[CLASS_MATCH_VAL_LEN - 2]<<8)|ptemp->matchValue[CLASS_MATCH_VAL_LEN - 1]);
-            field.filter_pattern_union.tcpDstPort.mask  = 0xffff;
-               
             break;
         }   
         case CLASS_RULES_FSELECT_IPVER:  
         {   
-            field.fieldType = FILTER_FIELD_DMAC;
-            field.filter_pattern_union.dmac.dataType = FILTER_FIELD_DATA_MASK;
-            if(ptemp->matchValue[CLASS_MATCH_VAL_LEN - 1] == 4)
-            {
-                cfg.careTag.tagType[CARE_TAG_IPV4].value = TRUE;
-                cfg.careTag.tagType[CARE_TAG_IPV4].mask  = TRUE;           
-            }
-            else
-            {
-                cfg.careTag.tagType[CARE_TAG_IPV6].value = TRUE;
-                cfg.careTag.tagType[CARE_TAG_IPV6].mask  = TRUE;           
-            }            
             break;        
         }
         case CLASS_RULES_FSELECT_IPV6_FLOWLABEL:  
         {   
-            field.fieldType = FILTER_FIELD_IPV6_FLOW_LABEL;
-            field.filter_pattern_union.flowLabel.dataType = FILTER_FIELD_DATA_MASK;
-            
-            field.filter_pattern_union.flowLabel.value= (((ptemp->matchValue[CLASS_MATCH_VAL_LEN - 3]&0xf)<<16)|
-                                                          (ptemp->matchValue[CLASS_MATCH_VAL_LEN - 2]<<8)|
-                                                           ptemp->matchValue[CLASS_MATCH_VAL_LEN - 1]);
-            field.filter_pattern_union.flowLabel.mask = 0xfffff;
-         
             break;        
         }   
         case CLASS_RULES_FSELECT_DA_IPV6:  
         {   
-            field.fieldType = FILTER_FIELD_IPV6_DIPV6;
-            field.filter_pattern_union.dipv6.dataType = FILTER_FIELD_DATA_MASK;
-            for(i = 0; i < RTK_IPV6_ADDR_WORD_LENGTH; i++){
-                field.filter_pattern_union.dipv6.value.addr[i]= ((ptemp->matchValue[4*i]<<24)|(ptemp->matchValue[4*i+1]<<16)|
-                                                                 (ptemp->matchValue[4*i+2]<<8)|ptemp->matchValue[4*i+3]);             
-                field.filter_pattern_union.dipv6.mask.addr[i] = 0xffffffff;
-            }
-            field.filter_pattern_union.dipv6.mask.addr[2] = 0; // not care this 32bits
             break;        
         }
         case CLASS_RULES_FSELECT_SA_IPV6:  
         {   
-            field.fieldType = FILTER_FIELD_IPV6_SIPV6;
-            field.filter_pattern_union.dipv6.dataType = FILTER_FIELD_DATA_MASK;
-            for(i = 0; i < RTK_IPV6_ADDR_WORD_LENGTH; i++){
-                field.filter_pattern_union.sipv6.value.addr[i]= ((ptemp->matchValue[4*i]<<24)|(ptemp->matchValue[4*i+1]<<16)|
-                                                                 (ptemp->matchValue[4*i+2]<<8)|ptemp->matchValue[4*i+3]);             
-                field.filter_pattern_union.sipv6.mask.addr[i] = 0xffffffff;
-            }
-            field.filter_pattern_union.sipv6.mask.addr[2] = 0; // not care this 32bits
             break;        
         }
         case CLASS_RULES_FSELECT_DA_IPV6_PREFIX:  
         {   
-            field.fieldType = FILTER_FIELD_IPV6_DIPV6;
-            field.filter_pattern_union.dipv6.dataType = FILTER_FIELD_DATA_MASK;
-            
-            for(i = 0; i < 2; i++){
-                field.filter_pattern_union.dipv6.value.addr[i]= ((ptemp->matchValue[4*i]<<24)|(ptemp->matchValue[4*i+1]<<16)|
-                                                                 (ptemp->matchValue[4*i+2]<<8)|ptemp->matchValue[4*i+3]);             
-            }
-            if(ptemp->matchValue[CLASS_MATCH_VAL_LEN - 1]>32)
-            {
-                field.filter_pattern_union.dipv6.mask.addr[0] = 0xffffffff;
-                field.filter_pattern_union.dipv6.mask.addr[1] = 0xffffffff<<(64-ptemp->matchValue[CLASS_MATCH_VAL_LEN - 1]);
-            }
-            else
-                field.filter_pattern_union.dipv6.mask.addr[0] = 0xffffffff<<(32-ptemp->matchValue[CLASS_MATCH_VAL_LEN - 1]);                 
-              
             break;        
         }
         case CLASS_RULES_FSELECT_SA_IPV6_PREFIX: 
         {   
-            field.fieldType = FILTER_FIELD_IPV6_SIPV6;
-            field.filter_pattern_union.sipv6.dataType = FILTER_FIELD_DATA_MASK;
-            
-            for(i = 0; i < 2; i++){
-                field.filter_pattern_union.sipv6.value.addr[i]= ((ptemp->matchValue[4*i]<<24)|(ptemp->matchValue[4*i+1]<<16)|
-                                                                 (ptemp->matchValue[4*i+2]<<8)|ptemp->matchValue[4*i+3]);             
-            }
-            if(ptemp->matchValue[CLASS_MATCH_VAL_LEN - 1]>32)
-            {
-                field.filter_pattern_union.sipv6.mask.addr[0] = 0xffffffff;
-                field.filter_pattern_union.sipv6.mask.addr[1] = 0xffffffff<<(64-ptemp->matchValue[CLASS_MATCH_VAL_LEN - 1]);
-            }
-            else
-                field.filter_pattern_union.sipv6.mask.addr[0] = 0xffffffff<<(32-ptemp->matchValue[CLASS_MATCH_VAL_LEN - 1]);                 
-              
             break;        
         }
         case CLASS_RULES_FSELECT_IPV6_NEXT_HEADER:  
         {     
-            field.fieldType = FILTER_FIELD_IPV6_NEXT_HEADER;
-            field.filter_pattern_union.ipv6NextHeader.dataType = FILTER_FIELD_DATA_MASK;
-            field.filter_pattern_union.ipv6NextHeader.value = ptemp->matchValue[CLASS_MATCH_VAL_LEN-1];
-            field.filter_pattern_union.ipv6NextHeader.mask  = 0xff;
-               
             break;
         }    
         default:       
             return CS_E_PARAM;
     }
 
-    field.next = NULL; 
-    rt = rtk_filter_igrAcl_field_add(&cfg, &field);       
-    if(rt){
-      return CS_E_ERROR;
-    }
-    cfg.invert = FALSE;    
-    cfg.activeport.dataType = FILTER_FIELD_DATA_MASK;
-    cfg.activeport.value = 0x1<<(port_id-1);
-    cfg.activeport.mask = 0xFF;  
     
     /*Set QOS Action */
     if(prule->priMark== 0xff) /* 0xff means that don't perform priority marking */
@@ -367,17 +216,8 @@ static cs_status __sw_acl_add (
     else
     {
        // act.actEnable[FILTER_ENACT_1P_REMARK] = TRUE;
-        act.actEnable[FILTER_ENACT_PRIORITY] = TRUE;
-        act.filterPriority = prule->priMark;
     }
       
-    rt = rtk_filter_igrAcl_cfg_del(__RTK_ACL_IDX(port_id,index));
-        
-    rt += rtk_filter_igrAcl_cfg_add(__RTK_ACL_IDX(port_id,index), &cfg, &act, &ruleNum); 
-    if(rt){
-        return CS_E_ERROR;
-    }
-    
     return CS_E_OK;
 }
 
@@ -386,9 +226,9 @@ static cs_status __sw_acl_del (
     CS_IN cs_uint8                     index
 )
 {   
-    rtk_api_ret_t  retVal;
+    GT_STATUS  retVal;
           
-    retVal = rtk_filter_igrAcl_cfg_del(__RTK_ACL_IDX(port_id,index)); 
+//    retVal = rtk_filter_igrAcl_cfg_del(__RTK_ACL_IDX(port_id,index));
     if(retVal){
         return CS_E_ERROR;
     }
@@ -399,69 +239,26 @@ static cs_status __sw_acl_del (
 static cs_status __sw_acl_def ( CS_IN cs_boolean  enable)
 {    
     cs_uint32      i;
-    rtk_api_ret_t rt;
-#if 0    
-    rtk_filter_field_t  field;
-    rtk_filter_cfg_t     cfg;
-    rtk_filter_action_t  act; 
-    rtk_filter_number_t  ruleNum;
-#endif
+    GT_STATUS rt;
 
     if(enable == g_def_rule_en)
         return CS_E_OK;
    
     if(enable)
     {
-        rt = rtk_qos_1pRemarkEnable_set(SWITCH_UPLINK_PORT, EPON_TRUE);  
+//        rt = rtk_qos_1pRemarkEnable_set(SWITCH_UPLINK_PORT, EPON_TRUE);
         if(rt)
             return CS_E_ERROR;
- #if 0       
-        memset(&cfg, 0, sizeof(rtk_filter_cfg_t));
-        memset(&act, 0, sizeof(rtk_filter_action_t));
-        memset(&field, 0, sizeof(rtk_filter_field_t));
-
-        field.fieldType = FILTER_FIELD_DMAC;       
-        field.filter_pattern_union.dmac.dataType = FILTER_FIELD_DATA_MASK;
-        field.filter_pattern_union.dmac.value.octet[0] = 0x00;
-        field.filter_pattern_union.dmac.value.octet[1] = 0x00;
-        field.filter_pattern_union.dmac.value.octet[2] = 0x00;
-        field.filter_pattern_union.dmac.value.octet[3] = 0x00;
-        field.filter_pattern_union.dmac.value.octet[4] = 0x00;
-        field.filter_pattern_union.dmac.value.octet[5] = 0x00;
-        field.filter_pattern_union.dmac.mask.octet[0]  = 0x00;
-        field.filter_pattern_union.dmac.mask.octet[1]  = 0x00;
-        field.filter_pattern_union.dmac.mask.octet[2]  = 0x00;
-        field.filter_pattern_union.dmac.mask.octet[3]  = 0x00;
-        field.filter_pattern_union.dmac.mask.octet[4]  = 0x00;
-        field.filter_pattern_union.dmac.mask.octet[5]  = 0x00;
-        field.next = NULL;
-
-        rt = rtk_filter_igrAcl_field_add(&cfg, &field);       
-        if(rt)
-            return CS_E_ERROR;
-        
-        cfg.invert = FALSE;    
-        cfg.activeport.dataType = FILTER_FIELD_DATA_MASK;
-        cfg.activeport.value = 0xf;
-        cfg.activeport.mask = 0xFF;  
-
-        act.actEnable[FILTER_ENACT_PRIORITY] = TRUE;
-        act.filterPriority = 0;
-
-        rt = rtk_filter_igrAcl_cfg_add(RTK_ACL_CLS_DEF, &cfg, &act, &ruleNum); 
-        if(rt)
-            return CS_E_ERROR;        
-#endif       
     }
     else
     {
-        for(i=0; i<4; i++)
+        for(i=0; i<UNI_PORT_MAX; i++)
         {   
             if(g_sw_tbl[i].g_cls_cnt)
                 return CS_E_OK;
         }
 
-        rt = rtk_qos_1pRemarkEnable_set(SWITCH_UPLINK_PORT, EPON_FALSE);  
+//        rt = rtk_qos_1pRemarkEnable_set(SWITCH_UPLINK_PORT, EPON_FALSE);
      //   rt += rtk_filter_igrAcl_cfg_del(RTK_ACL_CLS_DEF); 
         if(rt)
             return CS_E_ERROR;      
