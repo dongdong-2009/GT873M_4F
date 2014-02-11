@@ -180,7 +180,13 @@ typedef enum
     __RULE_LOOKUP_SVLAN = 2
 }__rule_mode_t;
 
-
+typedef enum
+{
+ACCEPT_FRAME_TYPE_ALL = 0,             /* untagged, priority-tagged and tagged */
+ACCEPT_FRAME_TYPE_TAG_ONLY,         /* tagged */
+ACCEPT_FRAME_TYPE_UNTAG_ONLY,     /* untagged and priority-tagged */
+ACCEPT_FRAME_TYPE_END
+}__rule_tag_filter_t;
 
 
 static __port_vlan_info_t __port_vlan_table[UNI_PORT_MAX + 1];
@@ -411,6 +417,7 @@ static cs_status __mc_table_del(__mc_vlan_t *mc_vlan_table, cs_uint16 vid)
     return CS_E_OK;
 }
 
+#if 0
 /* Transparent port should add all others port's vlan */
 static cs_uint16 __get_transparent_mbp(void)
 {
@@ -427,6 +434,7 @@ static cs_uint16 __get_transparent_mbp(void)
 
     return mbp;
 }
+
 
 /* get the bitmap of ports that still use current MC VLAN */
 static cs_uint16 __get_mc_vlan_port_mbp(cs_uint16 s_vid)
@@ -450,10 +458,14 @@ static cs_uint16 __get_mc_vlan_port_mbp(cs_uint16 s_vid)
     
     return mbp;
 }
+#endif
 
 static void __transparent_us_set(GT_LPORT lport, cs_boolean en)
 {
-	gvlnSetPortVlanDot1qMode(dev, lport, GT_DISABLE);
+	GT_U32 unit, port;
+
+	gt_getswitchunitbylport(lport, &unit, &port);
+	gvlnSetPortVlanDot1qMode(QD_DEV_PTR, port, en?GT_DISABLE:GT_SECURE);
 }
 
 #if 0
@@ -507,120 +519,80 @@ static void __transparent_hw_set(GT_LPORT lport, cs_boolean tran_en, rtk_vlan_ac
 
 #define __SVID_RSVD_UNTAG	1
 
-static void __transparent_hw_set(GT_LPORT lport, cs_boolean tran_en, rtk_vlan_acceptFrameType_t accept_frame_type)
+static void __transparent_hw_set(GT_LPORT lport, cs_boolean tran_en, __rule_tag_filter_t accept_frame_type)
 {
-	rtl8367b_svlan_memconf_t unmatch_svlan_memconf;
-	rtl8367b_svlan_memconf_t untag_svlan_memconf;
-	
-	memset(&unmatch_svlan_memconf, 0, sizeof(rtl8367b_svlan_memconf_t));
-	memset(&untag_svlan_memconf, 0, sizeof(rtl8367b_svlan_memconf_t));
+	GT_U32 unit, port;
 
-	/*vlan 标签0，用于透传*/
-	rtk_svlan_unmatch_action_set(UNMATCH_ASSIGN, __SVID_RSVD_TRANSPARENT);	//将vlan 不匹配的包都打上vlan 标签0
-	
-	/*vlan 标签1，用于untag 包*/
-	rtk_svlan_untag_action_set(UNTAG_ASSIGN, __SVID_RSVD_UNTAG);	//将untag 包打上vlan 标签1
+	gt_getswitchunitbylport(lport, &unit, &port);
 
-	/*vlan 0 的配置*/
-	rtl8367b_getAsicSvlanMemberConfiguration(__DS_TRANSPARENT_SVID_INDEX, &unmatch_svlan_memconf);
-	unmatch_svlan_memconf.vs_svid = __SVID_RSVD_TRANSPARENT;
-	unmatch_svlan_memconf.vs_member |= (1<<SWITCH_UPLINK_PORT);
-	unmatch_svlan_memconf.vs_untag  &= ~(1<<lport);
-	unmatch_svlan_memconf.vs_untag  |= (1<<SWITCH_UPLINK_PORT);
-
-	/*vlan 1 的配置*/
-	rtl8367b_getAsicSvlanMemberConfiguration(__SVID_RSVD_UNTAG, &untag_svlan_memconf);	//untag vlan 1 的配置
-	untag_svlan_memconf.vs_svid = __SVID_RSVD_UNTAG;
-	untag_svlan_memconf.vs_member |= (1<<SWITCH_UPLINK_PORT);
-	untag_svlan_memconf.vs_untag  &= ~(1<<lport);
-	untag_svlan_memconf.vs_untag  |= (1<<SWITCH_UPLINK_PORT);
 	if(tran_en)		//透传端口的配置
 	{
 		
-		rtk_vlan_portIgrFilterEnable_set(lport, EPON_FALSE);				//关闭进入端口的包进行vlan 检查的功能
-		rtk_vlan_portAcceptFrameType_set(lport, ACCEPT_FRAME_TYPE_ALL);	//端口接收所有的包
+//		rtk_vlan_portIgrFilterEnable_set(lport, EPON_FALSE);				//关闭进入端口的包进行vlan 检查的功能
+//		rtk_vlan_portAcceptFrameType_set(lport, ACCEPT_FRAME_TYPE_ALL);	//端口接收所有的包
 		__transparent_us_set(lport, EPON_TRUE);							//可能是将指定的端口加入到透传端口列表
 
 		/*vlan 0 的配置*/
-		unmatch_svlan_memconf.vs_member |= (1<<lport);
+//		unmatch_svlan_memconf.vs_member |= (1<<lport);
 	
 		/*vlan 1 的配置*/
-		untag_svlan_memconf.vs_member |= (1<<lport);
+//		untag_svlan_memconf.vs_member |= (1<<lport);
 	}
 	else			//非透传端口的配置
 	{
-		rtk_vlan_portIgrFilterEnable_set(lport, EPON_TRUE);			//打开进入端口的包进行vlan 检查的功能
-		rtk_vlan_portAcceptFrameType_set(lport, accept_frame_type);	//端口接收指定的包
+//		rtk_vlan_portIgrFilterEnable_set(lport, EPON_TRUE);			//打开进入端口的包进行vlan 检查的功能
+//		rtk_vlan_portAcceptFrameType_set(lport, accept_frame_type);	//端口接收指定的包
 		__transparent_us_set(lport, EPON_FALSE);						//可能是将指定的端口从透传端口列表中移除
 
 		/*vlan 0 的配置*/	
-		unmatch_svlan_memconf.vs_member &= ~(1<<lport);
+//		unmatch_svlan_memconf.vs_member &= ~(1<<lport);
 
 		/*vlan 1 的配置*/
-		GT_LPORT new_port = P2L_PORT(lport);
-		__port_vlan_info_t *port_vlan = &__port_vlan_table[new_port];
-		if(1 == port_vlan->def_vlan.vid)
-		{
-			untag_svlan_memconf.vs_member |= (1<<lport);
-		}
-		else
-		{
-			untag_svlan_memconf.vs_member &= ~(1<<lport);
-		}	
+//		GT_LPORT new_port = P2L_PORT(lport);
+//		__port_vlan_info_t *port_vlan = &__port_vlan_table[new_port];
+//		if(1 == port_vlan->def_vlan.vid)
+//		{
+//			untag_svlan_memconf.vs_member |= (1<<lport);
+//		}
+//		else
+//		{
+//			untag_svlan_memconf.vs_member &= ~(1<<lport);
+//		}
 	}	
-	rtl8367b_setAsicSvlanMemberConfiguration(__DS_TRANSPARENT_SVID_INDEX, &unmatch_svlan_memconf);
-	rtl8367b_setAsicSvlanMemberConfiguration(__SVID_RSVD_UNTAG, &untag_svlan_memconf);
-	#if 0
-	cs_printf("tran_en :0x%x\n", tran_en);
-	cs_printf("lport :0x%x\n", lport);
-	cs_printf("unmatch_svlan_memconf.vs_svid :0x%x\n", unmatch_svlan_memconf.vs_svid);
-	cs_printf("unmatch_svlan_memconf.vs_member :0x%x\n", unmatch_svlan_memconf.vs_member);
-	cs_printf("unmatch_svlan_memconf.vs_untag :0x%x\n", unmatch_svlan_memconf.vs_untag);
-	cs_printf("untag_svlan_memconf.vs_svid :0x%x\n", untag_svlan_memconf.vs_svid);
-	cs_printf("untag_svlan_memconf.vs_member :0x%x\n", untag_svlan_memconf.vs_member);
-	cs_printf("untag_svlan_memconf.vs_untag :0x%x\n", untag_svlan_memconf.vs_untag);
-	#endif	
+
+	if(accept_frame_type == ACCEPT_FRAME_TYPE_ALL)
+	{
+		gprtSetDiscardTagged(QD_DEV_PTR, port, GT_FALSE);
+		gprtSetDiscardUntagged(QD_DEV_PTR, port, GT_FALSE);
+	}
+
+	if(accept_frame_type == ACCEPT_FRAME_TYPE_TAG_ONLY)
+		gprtSetDiscardUntagged(QD_DEV_PTR, port, GT_TRUE);
+
+	if(accept_frame_type == ACCEPT_FRAME_TYPE_UNTAG_ONLY)
+		gprtSetDiscardTagged(QD_DEV_PTR, port, GT_TRUE);
+
+//	rtl8367b_setAsicSvlanMemberConfiguration(__DS_TRANSPARENT_SVID_INDEX, &unmatch_svlan_memconf);
+//	rtl8367b_setAsicSvlanMemberConfiguration(__SVID_RSVD_UNTAG, &untag_svlan_memconf);
 }
 
 #endif
 
 static void __remove_port_from_svlan(cs_uint16 s_vid, GT_LPORT lport)
 {
-    rtk_svlan_memberCfg_t rtk_svlan_cfg;
-    rtl8367b_svlan_memconf_t svlan_memconf;
-    cs_uint16 transparent_mbp = __get_transparent_mbp();
-    cs_uint16 mcvlan_mbp = __get_mc_vlan_port_mbp(s_vid);
-
-    rtk_svlan_memberPortEntry_get(s_vid, &rtk_svlan_cfg);
-    
-    rtk_svlan_cfg.memberport &= ~(1<<lport);
-    rtk_svlan_cfg.untagport &= ~(1<<lport);
-    rtk_svlan_cfg.svid = s_vid;
-    /* bug 30963: only clear this SVLAN entry if both UC and MC don't use it */
-    if((0 == (0xf & (rtk_svlan_cfg.memberport & (~transparent_mbp))))  /* Clean entry, if no non-transparent port in this vlan */
-       && (0 == (rtk_svlan_cfg.memberport & mcvlan_mbp)))
-    {
-        memset(&svlan_memconf, 0, sizeof(rtl8367b_svlan_memconf_t));
-        rtl8367b_setAsicSvlanMemberConfiguration(rtk_svlan_cfg.index, &svlan_memconf);
-        return;
-    }
-    rtk_svlan_memberPortEntry_set(s_vid, &rtk_svlan_cfg);
+	return;
 }
 
 static void __remove_port_from_cvlan(cs_uint16 c_vid, GT_LPORT lport)
 {    
-    rtk_portmask_t rtk_mbr,rtk_utg;
-    rtk_fid_t rtk_fid;
 
-    rtk_vlan_get(c_vid, &rtk_mbr, &rtk_utg, &rtk_fid);
-    rtk_mbr.bits[0] &= ~(1<<lport);
-    rtk_utg.bits[0] &= ~(1<<lport);
-    if(0 == (rtk_mbr.bits[0] & 0xf))  /* no UNI port in this vlan */
-    {
-        rtk_mbr.bits[0] = 0;
-        rtk_utg.bits[0] = 0;
-    }
-    rtk_vlan_set(c_vid, rtk_mbr, rtk_utg, rtk_fid);
+	GT_U32 unit, port;
+
+	if(gt_getswitchunitbylport(lport, &unit, &port) != GT_OK)
+		return;
+
+	InternalVlanLeave(QD_DEV_PTR, c_vid, port);
+
 }
 
 static void __clear_hw_mc_swap(cs_port_id_t port_id)
@@ -635,7 +607,7 @@ static void __clear_hw_mc_swap(cs_port_id_t port_id)
         if(port_vlan->mc_swap[i].valid)
         {
             //rtk_svlan_c2s_del(port_vlan->mc_swap[i].rule.c_vlan.vid, lport);
-            rtk_svlan_sp2c_del(port_vlan->mc_swap[i].rule.s_vlan.vid, lport);
+//            rtk_svlan_sp2c_del(port_vlan->mc_swap[i].rule.s_vlan.vid, lport);
             __remove_port_from_svlan(port_vlan->mc_swap[i].rule.s_vlan.vid, lport);
             __remove_port_from_cvlan(port_vlan->mc_swap[i].rule.c_vlan.vid, lport);
         }
@@ -678,12 +650,12 @@ static void __clear_uc(cs_port_id_t port_id)
     {
         if(port_vlan->vlan_rule[i].valid)
         {        	
-            rtk_svlan_c2s_del(port_vlan->vlan_rule[i].rule.c_vlan.vid, lport);
+//            rtk_svlan_c2s_del(port_vlan->vlan_rule[i].rule.c_vlan.vid, lport);
 
-            rtk_svlan_sp2c_del(port_vlan->vlan_rule[i].rule.s_vlan.vid, lport);
+//            rtk_svlan_sp2c_del(port_vlan->vlan_rule[i].rule.s_vlan.vid, lport);
         }
     }
-	rtk_svlan_c2s_del(0, lport);
+//	rtk_svlan_c2s_del(0, lport);
 	#if 0
 	if(rtk_svlan_c2s_del(0, lport) == RT_ERR_OK)
 		cs_printf("delete vlan 0 flag ok!\r\n");
@@ -717,13 +689,8 @@ static void __update_hw_mc(cs_port_id_t port_id)
 {
     int i;
     __port_vlan_info_t *port_vlan = &__port_vlan_table[port_id];
-    GT_LPORT lport = L2P_PORT(port_id);
-    rtk_svlan_memberCfg_t rtk_svlan_cfg;
-    rtk_portmask_t rtk_mbr, rtk_utg;
-    rtk_fid_t rtk_fid;
     cs_sdl_vlan_cfg_t vlan_rule;
     cs_uint16 index;
-    cs_uint16 transparent_mbp = __get_transparent_mbp();
 
     /* delete overlap vlan rule */
     if(port_vlan->mc_vlan_en)
@@ -738,7 +705,8 @@ static void __update_hw_mc(cs_port_id_t port_id)
                     vlan_rule.s_vlan.vid = port_vlan->mc_vlan[i].vid; /* key */
                     if(__rule_table_lookup(port_vlan->vlan_rule, __RULE_LOOKUP_SVLAN, &vlan_rule, &index))
                     {
-                        rtk_svlan_sp2c_del(port_vlan->mc_vlan[i].vid, L2P_PORT(port_id));
+//                        rtk_svlan_sp2c_del(port_vlan->mc_vlan[i].vid, L2P_PORT(port_id));
+//                    	mtodo: 添加vlan转换表项更新
                     }
                 }
             }
@@ -753,7 +721,8 @@ static void __update_hw_mc(cs_port_id_t port_id)
                     vlan_rule.s_vlan.vid = port_vlan->mc_vlan[i].vid; /* key */
                     if(__rule_table_lookup(port_vlan->vlan_rule, __RULE_LOOKUP_SVLAN, &vlan_rule, &index))
                     {
-                        rtk_svlan_dmac_vidsel_set(lport, EPON_FALSE);  /* disable d/s 1:N */
+//                        rtk_svlan_dmac_vidsel_set(lport, EPON_FALSE);  /* disable d/s 1:N */
+//                    	mtodo: vlan aggegation暂不支持
                         break;
                     }
                 }
@@ -766,7 +735,8 @@ static void __update_hw_mc(cs_port_id_t port_id)
                     vlan_rule.s_vlan.vid = port_vlan->mc_swap[i].rule.s_vlan.vid; /* key */
                     if(__rule_table_lookup(port_vlan->vlan_rule, __RULE_LOOKUP_SVLAN, &vlan_rule, &index))
                     {
-                        rtk_svlan_dmac_vidsel_set(lport, EPON_FALSE);  /* disable d/s 1:N */
+//                        rtk_svlan_dmac_vidsel_set(lport, EPON_FALSE);  /* disable d/s 1:N */
+//                    	mtodo: vlan aggegation暂不支持
                         break;
                     }
                 }
@@ -782,15 +752,7 @@ static void __update_hw_mc(cs_port_id_t port_id)
             if(port_vlan->mc_vlan[i].valid)
             {
                 /* svlan member */
-                memset(&rtk_svlan_cfg, 0, sizeof(rtk_svlan_memberCfg_t));
-
-                rtk_svlan_memberPortEntry_get(port_vlan->mc_vlan[i].vid, &rtk_svlan_cfg);
-                rtk_svlan_cfg.memberport |= (1<<lport);
-                rtk_svlan_cfg.memberport |= (1<<SWITCH_UPLINK_PORT);
-                rtk_svlan_cfg.memberport |= transparent_mbp;
-                rtk_svlan_cfg.untagport &= ~(1<<lport);
-                rtk_svlan_cfg.svid = port_vlan->mc_vlan[i].vid;
-                rtk_svlan_memberPortEntry_set(port_vlan->mc_vlan[i].vid, &rtk_svlan_cfg);
+//            	mtodo: 多播保留vlan标签
             }
         }
     }
@@ -801,15 +763,7 @@ static void __update_hw_mc(cs_port_id_t port_id)
             if(port_vlan->mc_vlan[i].valid)
             {
                 /* svlan member */
-                memset(&rtk_svlan_cfg, 0, sizeof(rtk_svlan_memberCfg_t));
-
-                rtk_svlan_memberPortEntry_get(port_vlan->mc_vlan[i].vid, &rtk_svlan_cfg);
-                rtk_svlan_cfg.memberport |= (1<<lport);
-                rtk_svlan_cfg.memberport |= (1<<SWITCH_UPLINK_PORT);
-                rtk_svlan_cfg.memberport |= transparent_mbp;
-                rtk_svlan_cfg.untagport |=(1<<lport);
-                rtk_svlan_cfg.svid = port_vlan->mc_vlan[i].vid;
-                rtk_svlan_memberPortEntry_set(port_vlan->mc_vlan[i].vid, &rtk_svlan_cfg);
+//				mtodo:多播剥离vlan标签
             }
         }
     }
@@ -821,15 +775,7 @@ static void __update_hw_mc(cs_port_id_t port_id)
             if(port_vlan->mc_vlan[i].valid)
             {
                 /* svlan member */
-                memset(&rtk_svlan_cfg, 0, sizeof(rtk_svlan_memberCfg_t));
-
-                rtk_svlan_memberPortEntry_get(port_vlan->mc_vlan[i].vid, &rtk_svlan_cfg);
-                rtk_svlan_cfg.memberport |= (1<<lport);
-                rtk_svlan_cfg.memberport |= (1<<SWITCH_UPLINK_PORT);
-                rtk_svlan_cfg.memberport |= transparent_mbp;
-                rtk_svlan_cfg.untagport |= (1<<lport);
-                rtk_svlan_cfg.svid = port_vlan->mc_vlan[i].vid;
-                rtk_svlan_memberPortEntry_set(port_vlan->mc_vlan[i].vid, &rtk_svlan_cfg);
+//            	mtodo: 跨vlan组播
             }
         }
 
@@ -838,43 +784,7 @@ static void __update_hw_mc(cs_port_id_t port_id)
             if(port_vlan->mc_swap[i].valid)
             {
                 /* svlan member */
-                memset(&rtk_svlan_cfg, 0, sizeof(rtk_svlan_memberCfg_t));
-
-                rtk_svlan_memberPortEntry_get(port_vlan->mc_swap[i].rule.s_vlan.vid, &rtk_svlan_cfg);
-                rtk_svlan_cfg.memberport |= (1<<lport);
-                rtk_svlan_cfg.memberport |= (1<<SWITCH_UPLINK_PORT);
-                rtk_svlan_cfg.memberport |= transparent_mbp;
-                rtk_svlan_cfg.untagport |= (1<<lport);
-                rtk_svlan_cfg.svid = port_vlan->mc_swap[i].rule.s_vlan.vid;
-                rtk_svlan_memberPortEntry_set(port_vlan->mc_swap[i].rule.s_vlan.vid, &rtk_svlan_cfg);
-    
-                /* cvlan member */
-                rtk_mbr.bits[0] = 0;
-                rtk_utg.bits[0] = 0;
-
-                rtk_vlan_get(port_vlan->mc_swap[i].rule.c_vlan.vid, &rtk_mbr, &rtk_utg, &rtk_fid);
-                rtk_mbr.bits[0] |= (1<<lport);
-                rtk_mbr.bits[0] |= (1<<SWITCH_UPLINK_PORT);
-                rtk_utg.bits[0] |= (1<<SWITCH_UPLINK_PORT);
-                rtk_vlan_set(port_vlan->mc_swap[i].rule.c_vlan.vid, rtk_mbr, rtk_utg, 0);
-                
-                /* s2c */
-                rtk_svlan_sp2c_add(port_vlan->mc_swap[i].rule.s_vlan.vid, lport, port_vlan->mc_swap[i].rule.c_vlan.vid);
-
-                #if 0
-                /* for u/s: c-vlan to vlan==4095, then drop, if there is no translation rule matched */
-                if(!__rule_table_lookup(port_vlan->vlan_rule, __RULE_LOOKUP_CVLAN, &port_vlan->mc_swap[i].rule, &index))
-                {
-                    if(rtk_svlan_memberPortEntry_get(4095, &rtk_svlan_cfg))
-                    {
-                        memset(&rtk_svlan_cfg, 0, sizeof(rtk_svlan_memberCfg_t));
-                    }
-                    rtk_svlan_cfg.memberport |= (1<<lport);
-                    rtk_svlan_cfg.svid = 4095;
-                    rtk_svlan_memberPortEntry_set(4095, &rtk_svlan_cfg);
-                    rtk_svlan_c2s_add(port_vlan->mc_swap[i].rule.c_vlan.vid, lport, 4095);
-                }
-                #endif
+            	//            	mtodo: 跨vlan组播
             }
         }
     }
@@ -903,22 +813,15 @@ static void __update_hw_mc(cs_port_id_t port_id)
 static void __update_hw_uc(cs_port_id_t port_id)
 {
     int i;
-    rtk_portmask_t rtk_mbr, rtk_utg;
-    rtk_svlan_memberCfg_t rtk_svlan_cfg;
     GT_LPORT lport = L2P_PORT(port_id);
     __port_vlan_info_t *port_vlan = &__port_vlan_table[port_id];
     cs_uint16 index;
-	rtl8367b_user_vlan4kentry     vlan4K;
-	memset(&vlan4K, 0, sizeof(rtl8367b_user_vlan4kentry));
-#if 0
-    rtk_l2_ucastAddr_t l2_data;
-    rtk_uint32 address = 0;
-#endif
-    cs_uint16 transparent_mbp = __get_transparent_mbp();
     cs_callback_context_t   context;
 
-    memset(&rtk_svlan_cfg, 0, sizeof(rtk_svlan_memberCfg_t));
-    rtk_svlan_dmac_vidsel_set(lport, EPON_FALSE);  /* disable d/s 1:N */
+    GT_U32 unit, port;
+
+    gt_getswitchunitbylport(lport, &unit, &port);
+
 
     /* delete mc-swap rule if it overlap with uc-svlan */
     if(!port_vlan->mc_vlan_en)
@@ -931,7 +834,8 @@ static void __update_hw_uc(cs_port_id_t port_id)
                 {
                     if(__s_vlan_table[index].vlan.mbr & (1<<lport))
                     {
-                        rtk_svlan_sp2c_del(port_vlan->mc_swap[i].rule.s_vlan.vid, lport);
+//                        rtk_svlan_sp2c_del(port_vlan->mc_swap[i].rule.s_vlan.vid, lport);
+//                    	mtodo:删除多播转换与单播vlan重合的配置
                     }
                 }
             }
@@ -944,28 +848,7 @@ static void __update_hw_uc(cs_port_id_t port_id)
     {
         if(__s_vlan_table[i].valid)
         {
-            memset(&rtk_svlan_cfg, 0, sizeof(rtk_svlan_memberCfg_t));
-            
-            /* bug #30714: only add current port into SVLAN */
-            rtk_svlan_memberPortEntry_get(__s_vlan_table[i].vlan.vid, &rtk_svlan_cfg);
-            rtk_svlan_cfg.svid = __s_vlan_table[i].vlan.vid;
-            rtk_svlan_cfg.memberport |= ((1 << lport) & __s_vlan_table[i].vlan.mbr);
-            /* don't forget to add Uplink port */
-            rtk_svlan_cfg.memberport |= ((1 << SWITCH_UPLINK_PORT) & __s_vlan_table[i].vlan.mbr);
-            rtk_svlan_cfg.memberport |= transparent_mbp;
-            if((1 << lport) & __s_vlan_table[i].vlan.utg)
-            {
-            #if 0
-                rtk_svlan_cfg.untagport |= (1 << lport);
-			#else
-				rtk_svlan_cfg.untagport = __s_vlan_table[i].vlan.utg;
-			#endif
-            }
-            else
-            {
-                rtk_svlan_cfg.untagport &= ~(1 << lport);
-            }
-            rtk_svlan_memberPortEntry_set(__s_vlan_table[i].vlan.vid, &rtk_svlan_cfg);
+//        	mtodo: 同步s-vlan表项到switch
         }
     }
 
@@ -974,18 +857,27 @@ static void __update_hw_uc(cs_port_id_t port_id)
         /* sync sw C-vlan table to HW (including default vlan) */
         for(i = 0; i < __VLAN_MAX; ++i)
         {
-            rtk_mbr.bits[0] = 0;
-            rtk_utg.bits[0] = 0;
             if( __c_vlan_table[i].valid )
             {
-                rtk_mbr.bits[0] = __c_vlan_table[i].vlan.mbr;
-				//vlan4K.mbr = __c_vlan_table[i].vlan.mbr;
-                rtk_utg.bits[0] = __c_vlan_table[i].vlan.utg;
-				//vlan4K.untag = __c_vlan_table[i].vlan.utg;
-				rtk_vlan_set(__c_vlan_table[i].vlan.vid, rtk_mbr, rtk_utg, 0);				
-				#if 0
-				cs_printf("rtk_vlan_set, __c_vlan_table[%d].vlan.vid :0x%x, rtk_mbr :0x%x,rtk_utg :0x%x\n", i, __c_vlan_table[i].vlan.vid, rtk_mbr.bits[0], rtk_utg.bits[0]);
-				#endif            
+            	GT_U32 j = 0;
+
+            	FOR_UNIT_START(GT_U32, unit)
+            	InternalVlanInit(QD_DEV_PTR, __c_vlan_table[i].vlan.vid);
+            	FOR_UNIT_END
+
+            	for(j=0; j<sizeof(__c_vlan_table[i].vlan.mbr)*8;j++)
+            	{
+            		GT_U32 unit, port;
+            		gt_getswitchunitbylport(j, &unit, &port);
+
+            		if(__c_vlan_table[i].vlan.mbr&(1<<j))
+            		{
+            			InternalVlanJoin(QD_DEV_PTR, __c_vlan_table[i].vlan.vid, port);
+
+            			if(__c_vlan_table[i].vlan.utg&(1<<j))
+            				gprtSetEgressMode(QD_DEV_PTR, port, GT_UNTAGGED_EGRESS);
+            		}
+            	}
             }
         }
     }
@@ -1007,23 +899,25 @@ static void __update_hw_uc(cs_port_id_t port_id)
                 if(port_vlan->vlan_rule[i].valid)
                 {
                     /* s2c */
-                    rtk_svlan_sp2c_add(port_vlan->vlan_rule[i].rule.s_vlan.vid, lport, port_vlan->vlan_rule[i].rule.c_vlan.vid);
+//                    rtk_svlan_sp2c_add(port_vlan->vlan_rule[i].rule.s_vlan.vid, lport, port_vlan->vlan_rule[i].rule.c_vlan.vid);
                     /* c2s */
-                    rtk_svlan_c2s_add(port_vlan->vlan_rule[i].rule.c_vlan.vid, lport, port_vlan->vlan_rule[i].rule.s_vlan.vid);
+//                    rtk_svlan_c2s_add(port_vlan->vlan_rule[i].rule.c_vlan.vid, lport, port_vlan->vlan_rule[i].rule.s_vlan.vid);
+//                	mtodo: vlan转换的更新
                 }
             }
             break;
 
         case SDL_VLAN_MODE_AGGREGATION:
             __transparent_hw_set(lport, EPON_FALSE, ACCEPT_FRAME_TYPE_ALL);
-            rtk_svlan_dmac_vidsel_set(lport, EPON_TRUE); /* enable d/s 1:N */
+//            rtk_svlan_dmac_vidsel_set(lport, EPON_TRUE); /* enable d/s 1:N */
             
             for(i = 0; i < __VLAN_RULE_PER_PORT_MAX; ++i)
             {
                 if(port_vlan->vlan_rule[i].valid)
                 {
                     /* c2s */
-                    rtk_svlan_c2s_add(port_vlan->vlan_rule[i].rule.c_vlan.vid, lport, port_vlan->vlan_rule[i].rule.s_vlan.vid);
+//                    rtk_svlan_c2s_add(port_vlan->vlan_rule[i].rule.c_vlan.vid, lport, port_vlan->vlan_rule[i].rule.s_vlan.vid);
+//                	mtodo:vlan汇聚的更新
                 }
             }
             /* clear dynamic entry from FDB */
@@ -1038,102 +932,32 @@ static void __update_hw_uc(cs_port_id_t port_id)
                 if(port_vlan->vlan_rule[i].valid)
                 {
                     /* c2s */
-                    rtk_svlan_c2s_add(port_vlan->vlan_rule[i].rule.c_vlan.vid, lport, port_vlan->vlan_rule[i].rule.c_vlan.vid);
+//                    rtk_svlan_c2s_add(port_vlan->vlan_rule[i].rule.c_vlan.vid, lport, port_vlan->vlan_rule[i].rule.c_vlan.vid);
 					
 					#if 0
-					rtk_svlan_c2s_add(0, lport, 0);
+//					rtk_svlan_c2s_add(0, lport, 0);
 					#else
-					rtk_svlan_c2s_add(1, lport, 0);
+//					rtk_svlan_c2s_add(1, lport, 0);
 					#endif
                 }
             }
-			memset(&vlan4K, 0, sizeof(rtl8367b_user_vlan4kentry));
-			vlan4K.vid = port_vlan->def_vlan.vid;
-		    vlan4K.fid_msti = 0;
-			cs_uint16 index = 0;
-			if(__vlan_table_lookup(__c_vlan_table, vlan4K.vid, &index))
-			{
-				vlan4K.mbr = __c_vlan_table[index].vlan.mbr;
-				vlan4K.untag = __c_vlan_table[index].vlan.utg;
-			}
-			else
-			{
-				vlan4K.mbr = 0x4f;
-				vlan4K.untag = 0x4f;
-			}
-			//cs_printf("vlan4K.mbr :0x%x, vlan4K.untag :0x%x\n", vlan4K.mbr, vlan4K.untag);
-		    rtl8367b_setAsicVlan4kEntry(&vlan4K);
-		#if 0
-			if(port_vlan->def_vlan.vid == 1)
-				{
-					rtk_svlan_c2s_add(0, lport, 0);
-					#if 0
-					if(rtk_svlan_c2s_add(0, lport, 0) == RT_ERR_OK)
-						cs_printf("added untag us ok!\r\n");
-					else
-						cs_printf("added untag us FAIL!\r\n");
-					#endif
-				}
-		#else
-		#if 0
-			if(port_vlan->def_vlan.vid == 1 && FALG_DORB == 0)
-		#else
-			if(1 == port_vlan->def_vlan.vid)
-		#endif
-				{
-					#if 0
-				    vlan4K.vid = port_vlan->def_vlan.vid;
-				    vlan4K.fid_msti = 0;
-					vlan4K.mbr = __c_vlan_table[0].vlan.mbr;
-					vlan4K.untag = __c_vlan_table[0].vlan.utg;
-				    rtl8367b_setAsicVlan4kEntry(&vlan4K);
-					#endif
-					#if 0
-					diag_printf("into FALG\n");
-					#endif
-					#if 0
-					rtk_svlan_c2s_add(0, lport, 0);
-					#else
-					rtk_svlan_c2s_add(1, lport, 0);
-					#endif
-					//__vlan_table_del_port(__s_vlan_table, port_id);
-					//__rule_table_clr(__port_vlan_table[port_id].vlan_rule);
-					FALG_DORB = 1;
-				}
-			#endif
-			if(port_vlan->def_vlan.vid != 1)
-				{
-					#if 0
-				    vlan4K.vid = port_vlan->def_vlan.vid;
-				    vlan4K.fid_msti = 0;
-					vlan4K.mbr = __c_vlan_table[0].vlan.mbr;
-					vlan4K.untag = __c_vlan_table[0].vlan.utg;
-				    rtl8367b_setAsicVlan4kEntry(&vlan4K);
-					#endif
-					#if 1
-				    rtk_svlan_c2s_add(port_vlan->def_vlan.vid, lport, port_vlan->def_vlan.vid);
-					#else
-					rtk_svlan_c2s_add(port_vlan->def_vlan.vid, lport, 0);
-					#endif
-				}
+
             break;
 
         case SDL_VLAN_MODE_STACKING:
             __transparent_hw_set(lport, EPON_FALSE, ACCEPT_FRAME_TYPE_ALL);   /* ingress accept type */
             /* no vlan check and always add s-tag for upstream */
-            rtk_vlan_portIgrFilterEnable_set(lport, EPON_FALSE);
+//            rtk_vlan_portIgrFilterEnable_set(lport, EPON_FALSE);
+//            mtodo:vlan stack更新
             __transparent_us_set(lport, EPON_TRUE);
             break;
 
         default: break;
     }
-    rtk_svlan_defaultSvlan_set(lport, port_vlan->def_vlan.vid); /* default vlan should be set after member set */
+//    rtk_svlan_defaultSvlan_set(lport, port_vlan->def_vlan.vid); /* default vlan should be set after member set */
     
-#if 0
-	rtk_vlan_portPvid_set(lport, 0, port_vlan->def_vlan.pri);
-#else
-	rtk_vlan_portPvid_set(lport, port_vlan->def_vlan.vid, port_vlan->def_vlan.pri);
-#endif
+
+	gvlnSetPortVid(QD_DEV_PTR, port, port_vlan->def_vlan.vid);
 
 }
 
@@ -1236,99 +1060,6 @@ static void __update_hw(cs_port_id_t port_id)
 
 void sdl_sw_vlan_dump(void)
 {
-    int i,j;
-    rtl8367b_svlan_memconf_t svlanMemConf;
-    rtl8367b_user_vlan4kentry vlan4K;
-    rtl8367b_svlan_s2c_t svlanSP2CConf;
-    rtk_uint32 evid, portmask, svidx;
-
-    cs_printf("\nsw c-vlan table: \n");
-    for(i = 0; i < __VLAN_MAX; ++i)
-    {
-        if(__c_vlan_table[i].valid)
-        {
-            cs_printf("vid = %d, mbr = %x, utg = %x\n", __c_vlan_table[i].vlan.vid, __c_vlan_table[i].vlan.mbr, __c_vlan_table[i].vlan.utg);
-        }
-    }
-    
-    cs_printf("\nsw s-vlan table: \n");
-    for(i = 0; i < __VLAN_MAX; ++i)
-    {
-        if(__s_vlan_table[i].valid)
-        {
-            cs_printf("vid = %d, mbr = %x, utg = %x\n", __s_vlan_table[i].vlan.vid, __s_vlan_table[i].vlan.mbr, __s_vlan_table[i].vlan.utg);
-        }
-    }
-    
-    cs_printf("\nsw port vlan table: \n");
-    for(i = 1; i <= UNI_PORT_MAX; ++i)
-    {
-        cs_printf("\nport %d:\n", i);
-        cs_printf("def_vlan: %d, pri: %d\n", __port_vlan_table[i].def_vlan.vid, __port_vlan_table[i].def_vlan.pri);
-        cs_printf("vlan_mode: %d\n", __port_vlan_table[i].vlan_mode);
-        cs_printf("mc_vlan_en: %d\n", __port_vlan_table[i].mc_vlan_en);
-        cs_printf("mc_act: %d\n", __port_vlan_table[i].mc_act);
-        cs_printf("vlan_rule: \n");
-        for(j = 0; j < __VLAN_RULE_PER_PORT_MAX; ++j)
-        {
-            if(__port_vlan_table[i].vlan_rule[j].valid)
-            {
-                cs_printf("s-vlan(%d)<==>(%d)c-vlan\n", __port_vlan_table[i].vlan_rule[j].rule.s_vlan.vid, __port_vlan_table[i].vlan_rule[j].rule.c_vlan.vid);
-            }
-        }
-        cs_printf("mc_vlan: ");
-        for(j = 0; j < __MC_VLAN_PER_PORT_MAX; ++j)
-        {
-            if(__port_vlan_table[i].mc_vlan[j].valid)
-            {
-                cs_printf("%d, ", __port_vlan_table[i].mc_vlan[j].vid);
-            }
-        }
-        cs_printf("\n");
-        cs_printf("mc_swap: \n");
-        for(j = 0; j < __VLAN_RULE_PER_PORT_MAX; ++j)
-        {
-            if(__port_vlan_table[i].mc_swap[j].valid)
-            {
-                cs_printf("s-vlan(%d)<==>(%d)c-vlan\n", __port_vlan_table[i].mc_swap[j].rule.s_vlan.vid, __port_vlan_table[i].mc_swap[j].rule.c_vlan.vid);
-            }
-        }
-    }
-
-    cs_printf("\nhw svlan table:\n");
-    for (i = 0; i<= RTL8367B_SVIDXMAX; i++) 
-    {
-        rtl8367b_getAsicSvlanMemberConfiguration(i, &svlanMemConf);
-        if((svlanMemConf.vs_member!=0) || (svlanMemConf.vs_svid!=0))
-            cs_printf("svid = %4d, mbp = 0x%02x, utg = 0x%02x\n", svlanMemConf.vs_svid, svlanMemConf.vs_member, svlanMemConf.vs_untag);
-    }
-
-    cs_printf("\nhw cvlan table:\n");
-    for (i = 0; i<= 4095; i++) 
-    {
-        vlan4K.vid = i;
-        rtl8367b_getAsicVlan4kEntry(&vlan4K);
-        if(vlan4K.mbr!=0)
-            cs_printf("cvid = %4d, mbp = 0x%02x, utg = 0x%02x\n", vlan4K.vid, vlan4K.mbr, vlan4K.untag);
-    }
-
-    cs_printf("\nhw s2c rule:\n");
-    for (i = 0; i<= RTL8367B_SP2CMAX; i++) 
-    {
-        rtl8367b_getAsicSvlanSP2CConf(i, &svlanSP2CConf);
-        rtl8367b_getAsicSvlanMemberConfiguration(svlanSP2CConf.svidx, &svlanMemConf);
-        if(svlanSP2CConf.valid)
-            cs_printf("svid(%4d) => port(%d) => (%4d)cvid\n", svlanMemConf.vs_svid, svlanSP2CConf.dstport, svlanSP2CConf.vid);
-    }
-
-    cs_printf("\nhw c2s rule:\n");
-    for (i = 0; i<= RTL8367B_C2SIDXMAX; i++) 
-    {
-        rtl8367b_getAsicSvlanC2SConf(i, &evid, &portmask, &svidx);
-        rtl8367b_getAsicSvlanMemberConfiguration(svidx, &svlanMemConf);
-        if(portmask)
-            cs_printf("cvid(%4d) => portmask(0x%02x) => (%4d)svid\n", evid, portmask, svlanMemConf.vs_svid);
-    }
 }
 
 cs_status epon_request_onu_vlan_set
@@ -1343,20 +1074,6 @@ cs_status epon_request_onu_vlan_set
     CS_IN cs_uint16                     cfg_nums    /* can be zero for modes */
 )
 {
-#if 0
-	cs_printf("***********************************************************\n");
-	cs_printf("in %s\n", __func__);
-	cs_printf("port_id :0x%x\n", port_id);
-	cs_printf("def_vlan.vid :0x%x\n", def_vlan.vid);
-	cs_printf("vlan_mode :0x%x\n", vlan_mode);
-	cs_printf("cfg_nums :0x%x\n", cfg_nums);
-	int count = 0;
-	for(count=0;count<cfg_nums;count++)
-	{
-		cs_printf("vlan_cfg[%d].c_vlan.vid :0x%x, vlan_cfg[%d].s_vlan.vid :0x%x\n", count, vlan_cfg[count].c_vlan.vid, count, vlan_cfg[count].s_vlan.vid);
-	}
-	cs_printf("***********************************************************\n");
-#endif
     int i;
     UNI_PORT_CHECK(port_id);
     __VLAN_MODE_CHECK(vlan_mode);

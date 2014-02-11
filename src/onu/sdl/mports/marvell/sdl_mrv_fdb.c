@@ -1100,8 +1100,6 @@ cs_status epon_request_onu_fdb_entry_get(
 
     FOR_UNIT_END
 
-
- END:   
     return rt;
 }
 
@@ -1130,11 +1128,16 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
         return CS_E_PARAM;
     }
 
+    FOR_UNIT_START(GT_U32, unit)
+
     if(GT_OK != gfdbGetAtuAllCount(QD_DEV_PTR, &count))
     	return CS_E_ERROR;
 
     if(offset > count)
-    	return CS_E_PARAM;
+    {
+    	offset -= count;
+    	continue;
+    }
 
     for(i=0; i<count; i++)
     {
@@ -1165,6 +1168,8 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
     	break;
     }
     
+    FOR_UNIT_END
+
     return ret;
     
 }
