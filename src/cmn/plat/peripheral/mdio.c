@@ -361,8 +361,8 @@ cs_status cs_mdio_init(void)
 
   for(i=0; i<MDIO_MAX_DEVICE_NUM; i++)
   {
-  	g_mdio_speed[i].intf_addr = 0;
-   	g_mdio_speed[i].freq_khz = 0;
+  	g_mdio_speed[i].intf_addr = i;
+   	g_mdio_speed[i].freq_khz = 4000;
 	}
 
 	rt = cs_mutex_init(&g_mdio_mutex,  "mdio mutex",0);

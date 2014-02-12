@@ -115,9 +115,10 @@ static cs_status __sw_acl_add (
     CS_IN cs_sdl_classification_t      *prule
 )
 {
-    cs_int32            i = 0;
+    cs_int32            i;
     cs_sdl_cls_rule_t   *ptemp =NULL;
 
+    i = 0;
     
     ptemp = &prule->fselect[0];
     

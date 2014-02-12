@@ -1292,7 +1292,7 @@ GT_STATUS gqosSetQoSWeight
 		retVal = gsysSetSchedulingMode(dev,mode);
 	if(retVal != GT_OK)
 	{
-    	DBG_INFO(("set gprtSetPortSched failed (%d)\n"));
+    	DBG_INFO(("set gprtSetPortSched failed (%d)\n", retVal));
 		return retVal;
 	}
 	
@@ -3521,7 +3521,7 @@ GT_STATUS gsysSetTrunkPortAdd(GT_QD_DEV *dev, TRUNK_MEMBER* tm, GT_U32 port)
 		
 		if(ts->port == port)
 		{
-			DBG_INFO(("gsysSetTrunkPortAdd port %d have been added \n",port));
+			DBG_INFO(("gsysSetTrunkPortAdd port %lu have been added \n",port));
 			return status;
 		}
 	
@@ -3587,7 +3587,7 @@ GT_STATUS gsysSetTrunkPortDel(GT_QD_DEV *dev, TRUNK_MEMBER* tm, GT_U32 port)
 	}
 	if(i ==tm->nTrunkPort)
 	{
-		DBG_INFO(("gsysSetTrunkPortDel port %d has not added \n",port));
+		DBG_INFO(("gsysSetTrunkPortDel port %lu has not added \n",port));
 			return status;
 	}
 	if((status = gprtSetTrunkPort(dev,port,GT_FALSE,trunkId)) != GT_OK)
@@ -3807,7 +3807,7 @@ GT_STATUS gsysSetTrunkBalancing(GT_QD_DEV *dev, TRUNK_MEMBER* tm)
 			return status;
 		}
 		else
-			DBG_INFO(("\r\ngsysSetTrunkMaskTable success, trunknum =%d, mask=%x!", i ,mask));
+			DBG_INFO(("\r\ngsysSetTrunkMaskTable success, trunknum =%d, mask=%lx!", i ,mask));
 
 	}
 
@@ -3853,7 +3853,7 @@ GT_STATUS gsysTrunkCheckPort(GT_QD_DEV *dev,GT_U32 trunkId, GT_U32 portVec)
 		{
 			if(!(portVec&(1<<i)))
 			{
-				DBG_INFO(("port %d is in trunk %d, But on in portVec %08X\n",i,trunkId,portVec));
+				DBG_INFO(("port %d is in trunk %lu, But on in portVec %08lX\n",i,trunkId,portVec));
 				return status;
 			}
 		}
@@ -3869,12 +3869,12 @@ GT_STATUS gsysTrunkCheckPort(GT_QD_DEV *dev,GT_U32 trunkId, GT_U32 portVec)
 			}
 			if(GT_TRUE != en)
 			{
-				DBG_INFO(("port %d is in portVec %08X, But disable on port\n",i, portVec));
+				DBG_INFO(("port %d is in portVec %08lX, But disable on port\n",i, portVec));
 				return status;
 			}	
 			if(trunkId != trunk)
 			{
-				DBG_INFO(("port %d is in portVec %08X, But it is enabled on on port\n",i, portVec,trunk));
+				DBG_INFO(("port %d is in portVec %08lX, trunk %lu, But it is enabled on on port\n",i, portVec,trunk));
 				return status;
 			}	
 		}

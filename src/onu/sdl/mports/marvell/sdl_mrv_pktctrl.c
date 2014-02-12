@@ -97,11 +97,13 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "aal_cls.h"
 #include "sdl_ma.h"
 #include "sdl_pktctrl.h"
-#include <rtk_api.h>
-#include <rtk_api_ext.h>
+
+#include "MARVELL_BSP_expo.h"
+#include "switch_expo.h"
+#include "gtDrvSwRegs.h"
+#include "switch_drv.h"
 
 extern cs_status aal_pon_mac_addr_get( CS_IN cs_mac_t *mac);
-extern rtk_chip_id_t g_rtk_chip_id ;
 #define LOOPDELETADD 
 #define __LOOPDETECT_ETHTYPE 0xfffe
 #define __IROS_OAM_ETHTYPE   0xffff
@@ -299,39 +301,35 @@ static cs_status __l2_sw_mac_trap_set(
      CS_IN cs_sdl_pkt_dst_t          state
 )
 {   
-    rtk_mac_t mac;
-    rtk_api_ret_t rtk_ret;
-    rtk_trap_rma_action_t rma_action;
-    
-
-    rma_action = (state==DST_FE)?RMA_ACTION_FORWARD:((state==DST_CPU)?RMA_ACTION_TRAP2CPU: RMA_ACTION_DROP);
+    GT_ETHERADDR mac;
+    GT_STATUS rtk_ret;
 
     if(pkt_type == CS_PKT_BPDU)
     {  
-        mac.octet[0] = 0x01;
-        mac.octet[1] = 0x80;
-        mac.octet[2] = 0xc2;
-        mac.octet[3] = 0x00;
-        mac.octet[4] = 0x00;
-        mac.octet[5] = 0x00;    
+        mac.arEther[0] = 0x01;
+        mac.arEther[1] = 0x80;
+        mac.arEther[2] = 0xc2;
+        mac.arEther[3] = 0x00;
+        mac.arEther[4] = 0x00;
+        mac.arEther[5] = 0x00;
     }
     else if(pkt_type == CS_PKT_OAM)
     {  
-        mac.octet[0] = 0x01;
-        mac.octet[1] = 0x80;
-        mac.octet[2] = 0xc2;
-        mac.octet[3] = 0x00;
-        mac.octet[4] = 0x00;
-        mac.octet[5] = 0x02;    
+        mac.arEther[0] = 0x01;
+        mac.arEther[1] = 0x80;
+        mac.arEther[2] = 0xc2;
+        mac.arEther[3] = 0x00;
+        mac.arEther[4] = 0x00;
+        mac.arEther[5] = 0x02;
     }
     else if(pkt_type == CS_PKT_8021X)
     {  
-        mac.octet[0] = 0x01;
-        mac.octet[1] = 0x80;
-        mac.octet[2] = 0xc2;
-        mac.octet[3] = 0x00;
-        mac.octet[4] = 0x00;
-        mac.octet[5] = 0x03;    
+        mac.arEther[0] = 0x01;
+        mac.arEther[1] = 0x80;
+        mac.arEther[2] = 0xc2;
+        mac.arEther[3] = 0x00;
+        mac.arEther[4] = 0x00;
+        mac.arEther[5] = 0x03;
     }
     else
     {
@@ -339,8 +337,9 @@ static cs_status __l2_sw_mac_trap_set(
         return CS_E_PARAM;
     }  
 
-    rtk_ret = rtk_trap_rmaAction_set(&mac, rma_action);
-    if(rtk_ret!=RT_ERR_OK)
+//    rtk_ret = rtk_trap_rmaAction_set(&mac, rma_action);
+//    mtodo: mrv api 针对不同转发规则的相应MAC地址的ATU操作
+    if(rtk_ret!=GT_OK)
     {
         SDL_MIN_LOG("rtk_trap_rmaAction_set return %d. FILE: %s, LINE: %d", rtk_ret, __FILE__, __LINE__);
         return CS_E_ERROR;
@@ -354,28 +353,19 @@ static cs_status __l2_sw_acl_trap_set(
      CS_IN cs_sdl_pkt_dst_t          state
 )
 {  
-    rtk_filter_cfg_t   cfg;
-    rtk_filter_action_t act;
-    rtk_api_ret_t rt = 0;
-    cs_uint32 ruleNum;
-    rtk_filter_id_t  rule_idx;
-    rtk_filter_care_tag_index_t tag_idx;
-    rtk_filter_field_t field;
-   
+    GT_STATUS rt = 0;
+    cs_uint32 rule_idx;
 
     if(pkt_type == CS_PKT_ARP)
     {  
-        tag_idx  = CARE_TAG_ARP;
         rule_idx = __PKT_ARP_RULE;
     }
     else if(pkt_type == CS_PKT_DHCP)
     {  
-        tag_idx  = CARE_TAG_DHCP;
         rule_idx = __PKT_DHCP_RULE;
     }
     else if(pkt_type == CS_PKT_GMP)
     {  
-        tag_idx  = CARE_TAG_IGMP;
         rule_idx = __PKT_IGMP_RULE;
     }
     else if(pkt_type == CS_PKT_PPPOE)
@@ -405,63 +395,28 @@ static cs_status __l2_sw_acl_trap_set(
         SDL_MIN_LOG("pkt type is not be supported.(%d) FILE: %s, LINE: %d", pkt_type, __FILE__, __LINE__);
         return CS_E_PARAM;
     }
-    memset(&cfg, 0, sizeof(rtk_filter_cfg_t));
-    memset(&act, 0, sizeof(rtk_filter_action_t));
-    memset(&field, 0, sizeof(rtk_filter_field_t));
-      
+
     if(state == DST_FE )
     {
-        rt = rtk_filter_igrAcl_cfg_del(rule_idx);
-
-        /*BUG31337 RTP Session packets are trapped to uplink */
         if(pkt_type == CS_PKT_PPPOE)
         {
-            field.fieldType = FILTER_FIELD_DMAC;
-            field.filter_pattern_union.dmac.dataType = FILTER_FIELD_DATA_MASK; 
-
-            field.next = NULL;
-        
-            rt = rtk_filter_igrAcl_field_add(&cfg, &field);       
-      
-            cfg.invert = FALSE;    
-            cfg.activeport.dataType = FILTER_FIELD_DATA_MASK;
-            cfg.activeport.value = 0xF;
-            cfg.activeport.mask = 0xFF;  
-            cfg.careTag.tagType[CARE_TAG_PPPOE].value = TRUE;
-            cfg.careTag.tagType[CARE_TAG_PPPOE].mask  = TRUE; 
-            
-            act.actEnable[FILTER_ENACT_ADD_DSTPORT] = TRUE;       
-            act.filterAddDstPortmask = 0x40;
-            
-            rt = rtk_filter_igrAcl_cfg_add(rule_idx, &cfg, &act, &ruleNum);
+//        	mtodo: pppoe
         }
     }
     else
     {            
         if(pkt_type == CS_PKT_LOOPDETECT)
         {
-            field.fieldType = FILTER_FIELD_ETHERTYPE;
-            field.filter_pattern_union.etherType.dataType = FILTER_FIELD_DATA_MASK;
-            field.filter_pattern_union.etherType.value = __LOOPDETECT_ETHTYPE;
-            field.filter_pattern_union.etherType.mask = 0xFFFF;
+//        	mtodo: loopdetect
         }
         else if(pkt_type == CS_PKT_IROS)
         {
-            field.fieldType = FILTER_FIELD_ETHERTYPE;
-            field.filter_pattern_union.etherType.dataType = FILTER_FIELD_DATA_MASK;
-            field.filter_pattern_union.etherType.value = __IROS_OAM_ETHTYPE;
-            field.filter_pattern_union.etherType.mask = 0xFFFF;
+//        	mtodo: CS_PKT_IROS
         }
 		#ifdef LOOPDELETADD
 	    else if(pkt_type == CS_PKT_GWD_LOOPDETECT)
         {
-        	#if 0
-            field.fieldType = FILTER_FIELD_ETHERTYPE;
-            field.filter_pattern_union.etherType.dataType = FILTER_FIELD_DATA_MASK;
-            field.filter_pattern_union.etherType.value = 0x0800;
-            field.filter_pattern_union.etherType.mask = 0xFFFF;
-			#else
-
+/*
             field.fieldType = FILTER_FIELD_DMAC;
             field.filter_pattern_union.dmac.dataType = FILTER_FIELD_DATA_MASK;
 
@@ -477,16 +432,14 @@ static cs_status __l2_sw_acl_trap_set(
             field.filter_pattern_union.dmac.mask.octet[3]  = 0xFF;
             field.filter_pattern_union.dmac.mask.octet[4]  = 0xFF;
             field.filter_pattern_union.dmac.mask.octet[5]  = 0xFF;
-			#endif
+            */
+//	    	mtodo: CS_PKT_GWD_LOOPDETECT
         }
 
 		#endif
         else if(pkt_type == CS_PKT_PPPOE)
         {
-            field.fieldType = FILTER_FIELD_ETHERTYPE;
-            field.filter_pattern_union.etherType.dataType = FILTER_FIELD_DATA_MASK;
-            field.filter_pattern_union.etherType.value = __PPPOE_DIS_ETHTYPE;
-            field.filter_pattern_union.etherType.mask = 0xFFFF;
+//        	mtodo: pppoe
         }
         else if(pkt_type == CS_PKT_MYMAC)
         {   
@@ -498,6 +451,8 @@ static cs_status __l2_sw_acl_trap_set(
             memset(&mac, 0, sizeof(cs_mac_t));
 
             (void)aal_pon_mac_addr_get(&mac);
+
+            /*
 
             field.fieldType = FILTER_FIELD_DMAC;
             field.filter_pattern_union.dmac.dataType = FILTER_FIELD_DATA_MASK;
@@ -514,39 +469,14 @@ static cs_status __l2_sw_acl_trap_set(
             field.filter_pattern_union.dmac.mask.octet[3]  = 0xFF;
             field.filter_pattern_union.dmac.mask.octet[4]  = 0xFF;
             field.filter_pattern_union.dmac.mask.octet[5]  = 0xFF;
-            
-        }
-        else
-        {
-            field.fieldType = FILTER_FIELD_DMAC;
-            field.filter_pattern_union.dmac.dataType = FILTER_FIELD_DATA_MASK;
+            */
 
-            cfg.careTag.tagType[tag_idx].value = TRUE;
-            cfg.careTag.tagType[tag_idx].mask  = TRUE;    
-        }
-        
-        field.next = NULL;
-        
-        rt = rtk_filter_igrAcl_field_add(&cfg, &field);       
-      
-        cfg.invert = FALSE;    
-        cfg.activeport.dataType = FILTER_FIELD_DATA_MASK;
-        cfg.activeport.value = 0xF;
-        cfg.activeport.mask = 0xFF;  
+//            mtodo: mymac process
             
-        if(state == DST_DROP )
-        {
-            act.actEnable[FILTER_ENACT_DROP] = TRUE;
         }
         else
-        {            
-            act.actEnable[FILTER_ENACT_TRAP_CPU] = TRUE;       
-            act.actEnable[FILTER_ENACT_PRIORITY] = TRUE;           
-            act.filterPriority = 7;
+        {
         }
-        
-        rt = rtk_filter_igrAcl_cfg_del(rule_idx);
-        rt += rtk_filter_igrAcl_cfg_add(rule_idx, &cfg, &act, &ruleNum); 
     }
 
     if(rt)
@@ -584,13 +514,16 @@ static cs_status __l2_sw_uni_stp_block(
      CS_IN cs_boolean                block
 )
 {
-    rtk_api_ret_t rt;
+    GT_STATUS rt;
+    cs_status ret = CS_E_OK;
+
+    rt = GT_OK;
+
+#if 0
     rtk_filter_field_t  field[2];
     rtk_filter_cfg_t     cfg;
     rtk_filter_action_t  act; 
     rtk_filter_number_t  ruleNum;
-    cs_status ret = CS_E_OK;
-
 
     memset(&cfg, 0, sizeof(rtk_filter_cfg_t));
     memset(&act, 0, sizeof(rtk_filter_action_t));
@@ -747,8 +680,10 @@ static cs_status __l2_sw_uni_stp_block(
             }           
         }
     }
+#else
+//    mtodo: 添加目的mac 01-80-c2-00-00-00及全0的丢弃规则。
+#endif
    
-end:
     return ret;
 }
 
@@ -900,10 +835,12 @@ cs_status epon_request_onu_port_stp_state_set(
     CS_IN cs_sdl_stp_state_t        state
 )
 {
-    rtk_port_t rtk_port;
-    rtk_stp_state_t stp_state;
-    rtk_api_ret_t rtk_ret;
+    GT_LPORT rtk_port;
+    GT_PORT_STP_STATE stp_state;
+    GT_STATUS rtk_ret;
     cs_status ret = CS_E_OK;
+
+    GT_32 unit, port;
 
     if((portid < CS_UNI_PORT_ID1) || (portid > CS_UNI_PORT_ID4))
     {
@@ -920,13 +857,17 @@ cs_status epon_request_onu_port_stp_state_set(
         goto end;
     }
 
-    rtk_port = portid - CS_UNI_PORT_ID1;
+    rtk_port = L2P_PORT(portid);
     stp_state = state;
-    rtk_ret = rtk_stp_mstpState_set(__DEFAULT_MSTI, rtk_port, stp_state);
 
-    if(rtk_ret!=RT_ERR_OK)
+    if(GT_OK != gt_getswitchunitbylport(rtk_port, &unit, &port))
+    	return CS_E_PARAM;
+
+    rtk_ret = gstpSetPortState(QD_DEV_PTR, port, stp_state);
+
+    if(rtk_ret!=GT_OK)
     {
-        SDL_MIN_LOG("rtk_stp_mstpState_set return %d. FILE: %s, LINE: %d", rtk_ret, __FILE__, __LINE__);
+        SDL_MIN_LOG("gstpSetPortState return %d. FILE: %s, LINE: %d", rtk_ret, __FILE__, __LINE__);
         ret = CS_E_ERROR; 
         goto end;
     }
@@ -955,11 +896,13 @@ cs_status epon_request_onu_port_stp_state_get(
     CS_OUT cs_sdl_stp_state_t        *state
 )
 {
-    rtk_port_t rtk_port;
-    rtk_stp_state_t stp_state;
-    rtk_api_ret_t rtk_ret;
+    GT_LPORT rtk_port;
+    GT_PORT_STP_STATE stp_state;
+    GT_STATUS rtk_ret;
 
-    if((portid < CS_UNI_PORT_ID1) || (portid > CS_UNI_PORT_ID4))
+    GT_32 unit, port;
+
+    if((portid < CS_UNI_PORT_ID1) || (portid > UNI_PORT_MAX))
     {
         SDL_MIN_LOG("port id invalid.(%d) FILE: %s, LINE: %d", portid, __FILE__, __LINE__);
         return CS_E_PARAM;
@@ -971,11 +914,14 @@ cs_status epon_request_onu_port_stp_state_get(
         return CS_E_PARAM;
     }
 
-    rtk_port = portid - CS_UNI_PORT_ID1;
-    rtk_ret = rtk_stp_mstpState_get(__DEFAULT_MSTI, rtk_port, &stp_state);
-    if(rtk_ret!=RT_ERR_OK)
+    rtk_port = L2P_PORT(portid);
+    if(GT_OK != gt_getswitchunitbylport(rtk_port, &unit, &port))
+    	return CS_E_PARAM;
+
+    rtk_ret = gstpGetPortState(QD_DEV_PTR, port, &stp_state);
+    if(rtk_ret!=GT_OK)
     {
-        SDL_MIN_LOG("rtk_stp_mstpState_set return %d. FILE: %s, LINE: %d", rtk_ret, __FILE__, __LINE__);
+        SDL_MIN_LOG("gstpGetPortState return %d. FILE: %s, LINE: %d", rtk_ret, __FILE__, __LINE__);
         return CS_E_ERROR;
     }
 
@@ -1191,8 +1137,6 @@ cs_status epon_request_onu_pkt_cpu_queue_map_get(
 
 cs_status sdl_switch_init(void)
 {
-    rtk_api_ret_t rtn = RT_ERR_OK;
-    rtk_priority_select_t pridec;
     cs_aal_cl_rule_cfg_t ce_entry;
     cs_aal_cl_fib_data_t fibdata;
     cs_uint16 fib_index = 0;
@@ -1204,64 +1148,12 @@ cs_status sdl_switch_init(void)
     diag_printf("sdl swich chip is being initialized   ... ");
 
     if (startup_config_read(CFG_ID_SWITCH_CHIP_ID, 1, &tmp_val) == CS_E_OK) {
-        if(tmp_val == RTK_CHIP_8365)
-    
-             g_rtk_chip_id = RTK_CHIP_8365;
-    }
-    
-    
-    if ((rtn = rtk_switch_init())!= RT_ERR_OK)
-        goto end;
-
-    if ((rtn = rtk_l2_init()) != RT_ERR_OK)
-        goto end;
-        
-    if ((rtn = rtk_vlan_init()) != RT_ERR_OK)
-        goto end;
-    
-    if ((rtn = rtk_svlan_init()) != RT_ERR_OK)
-        goto end;
-
-	
-
-
-    rtn = rtk_cpu_enable_set(ENABLED);
-    if(rtn){
-        goto end;
-    }
-      
-    rtn = rtk_cpu_tagPort_set(6, CPU_INSERT_TO_TRAPPING);
-    if(rtn){
-        goto end;
-    }
-       
-    rtn = rtk_qos_init(8);
-    if(rtn){
-        goto end;
-    }
-    memset(&pridec, 0, sizeof(rtk_priority_select_t));
-       //ACL>802.1p>>DSCP>Port>SVLAN>CVLAN>DMAC>SMAC
-    pridec.port_pri = 4;
-    pridec.acl_pri = 7;
-    pridec.dscp_pri = 3;
-    pridec.dot1q_pri = 5;
-    pridec.svlan_pri = 6;
-    pridec.cvlan_pri = 2;
-    pridec.dmac_pri = 1;
-    pridec.smac_pri = 0;
-    rtn =rtk_qos_priSel_set(&pridec);
-    if(rtn){
-       goto end;
-    }
-    
-    rtn = rtk_filter_igrAcl_init();
-    if(rtn){
-       goto end;
+//	mtodo: mrv switch chip id set
     }
 
      /* attach cpu tx and rx parser */
-    __ma_rx_parser_hook_reg(rtk_cpu_pkt_rx);
-    __ma_tx_parser_hook_reg(rtk_cpu_pkt_tx);
+//    __ma_rx_parser_hook_reg(rtk_cpu_pkt_rx);
+//    __ma_tx_parser_hook_reg(rtk_cpu_pkt_tx);
 
     /*
     ** create a rule for capturing packet with ether type is 0x8899 to CPU
@@ -1300,16 +1192,6 @@ cs_status sdl_switch_init(void)
     if (aal_cl_fib_set(AAL_PORT_ID_GE, DOMAIN_ID_SWITCH, fib_index, &fibdata) != CS_E_OK)
         goto end;
     
-    /*For SP2C priority, eable 802.1p remarking*/	
-    for(i = 0; i < 4; ++i)
-    {
-        rtk_qos_1pRemarkEnable_set(i, EPON_TRUE);
-    }
-   
-    for(i = 0; i < 8; ++i)
-    {
-        rtk_qos_1pRemark_set(i, i);
-    }
     /*for the throughput and scheduling issue, suggested by realtek engineers*/
     for(i = 0; i<8; i++)
     {

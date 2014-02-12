@@ -99,8 +99,12 @@ Copyright (c) 2010 by Cortina Systems Incorporated
 #include "aal_util.h"
 #include "sdl.h"
 #include "sdl_mac_filterbind_util.h"
-#include "rtk_api_ext.h"
-#include "rtk_error.h"
+
+#include "msApiTypes.h"
+#include "msApi.h"
+
+#include "gtDrvSwRegs.h"
+#include "switch_drv.h"
 
 // for mac filter/bind
 
@@ -110,7 +114,7 @@ extern sw_cls_mac_res_port_t g_sw_tbl[UNI_PORT_MAX];
 
 static cs_uint32  g_macbind_portmask;
 
-
+#if 0
 static cs_status __mac_acl_add(
     CS_IN cs_uint8                     ruleindex,
     CS_IN cs_port_id_t                 port_id,
@@ -121,7 +125,7 @@ static cs_status __mac_acl_add(
     rtk_filter_cfg_t   cfg;
     rtk_filter_action_t act;
     rtk_filter_field_t field;
-    rtk_api_ret_t  retVal;
+    GT_STATUS  retVal;
     cs_uint8  index;
     cs_uint32 ruleNum =0;
     
@@ -174,20 +178,37 @@ static cs_status __mac_acl_add(
 
     return CS_E_OK;
 }
+#else
+static cs_status __mac_acl_add(
+    CS_IN cs_uint8                     ruleindex,
+    CS_IN cs_port_id_t                 port_id,
+    CS_IN cs_sdl_mac_tbl_entry_t       *pmac,
+    CS_IN cs_sdl_mac_filterbind_flag_t flag
+)
+{
+//	mtodo: __mac_acl_add for mrv
+	return CS_E_OK;
+}
+#endif
 
 static cs_status __mac_acl_del( CS_IN cs_uint8  ruleindex )     
 {   
-    rtk_api_ret_t  retVal;
+    GT_STATUS  retVal;
  
-      
+#if 0
     retVal = rtk_filter_igrAcl_cfg_del(ruleindex); 
     if(retVal){
         return CS_E_ERROR;
     }
+#else
+    retVal = GT_OK;
+//    mtodo: __mac_acl_del
+#endif
     
     return CS_E_OK;
 }
 
+#if 0
 /* Beacust VLAN transparent mode use ALWAYS MATH rule to achieve function,
  so API"rtk_filter_igrAcl_unmatchAction_set" is invaild for MAC BINDing.
  Now we use ALWAYS MATH rule to discard those packets which is unmatch 
@@ -199,7 +220,7 @@ static cs_status __mac_bind_acl_deny(
      CS_IN cs_boolean                enable
 )     
 {
-    rtk_api_ret_t rt;
+    GT_STATUS rt;
     rtk_filter_field_t  field;
     rtk_filter_cfg_t     cfg;
     rtk_filter_action_t  act; 
@@ -284,6 +305,15 @@ static cs_status __mac_bind_acl_deny(
    
     return CS_E_OK;
 }
+#else
+static cs_status __mac_bind_acl_deny(
+     CS_IN cs_port_id_t              portid,
+     CS_IN cs_boolean                enable
+)
+{
+	return CS_E_OK;
+}
+#endif
 
 cs_status epon_request_onu_mac_filter_add_entry(
     CS_IN cs_callback_context_t    context,
@@ -366,11 +396,15 @@ cs_status epon_request_onu_mac_filter_add_entry(
     if((SDL_PORT_MAC_INVLAD == flag)&&(0 == entry_count))
     {
         mac_filterbind_status_set(port_id, SDL_PORT_MAC_FILTER);
+#if 0
         if(rtk_filter_igrAcl_unmatchAction_set(port_id-1, FILTER_UNMATCH_PERMIT)!= RT_ERR_OK)
         {   
             SDL_MIN_LOG("RTK ACL SET unmatchAction error. [%s %d]\n", __FUNCTION__, __LINE__);
             return CS_E_ERROR;
         }
+#else
+//        mtodo: epon_request_onu_mac_filter_add_entry
+#endif
     }
 
     memset(&filterbind_entry, 0, sizeof(cs_sdl_mac_filterbind_entry_t));
@@ -727,11 +761,15 @@ cs_status epon_request_onu_mac_bind_add_entry(
     if((SDL_PORT_MAC_INVLAD == flag)&&(0 == entry_count))
     {
         mac_filterbind_status_set(port_id, SDL_PORT_MAC_BIND);
+#if 0
         if(rtk_filter_igrAcl_unmatchAction_set(port_id-1, FILTER_UNMATCH_DROP)!= RT_ERR_OK)
         {   
             SDL_MIN_LOG("RTK ACL SET unmatchAction error. [%s %d]\n", __FUNCTION__, __LINE__);
             return CS_E_ERROR;
         }
+#else
+//        mtodo: mrv api for epon_request_onu_mac_bind_add_entry
+#endif
         /*workaround for Bug 29555  */
         ret =__mac_bind_acl_deny(port_id, TRUE);
         if(ret)
@@ -894,11 +932,15 @@ cs_status epon_request_onu_mac_bind_del_entry(
     if(0 == entry_count)
     {
         mac_filterbind_status_set(port_id, SDL_PORT_MAC_INVLAD);
+#if 0
         if(rtk_filter_igrAcl_unmatchAction_set(port_id-1, FILTER_UNMATCH_PERMIT)!= RT_ERR_OK)
         {   
             SDL_MIN_LOG("RTK ACL SET unmatchAction error. [%s %d]\n", __FUNCTION__, __LINE__);
             return CS_E_ERROR;
         }
+#else
+//        mtodo: mrv api for epon_request_onu_mac_bind_del_entry
+#endif
           /*workaround for Bug 29555  */
         ret =__mac_bind_acl_deny(port_id, FALSE);
         if( ret)
@@ -965,11 +1007,15 @@ cs_status epon_request_onu_mac_bind_clr_entry(
     g_sw_tbl[port_id-1].g_mac_cnt = 0;
  
     mac_filterbind_status_set(port_id, SDL_PORT_MAC_INVLAD);
+#if 0
     if(rtk_filter_igrAcl_unmatchAction_set(port_id-1, FILTER_UNMATCH_PERMIT)!= RT_ERR_OK)
     {   
         SDL_MIN_LOG("RTK ACL SET unmatchAction error. [%s %d]\n", __FUNCTION__, __LINE__);
         return CS_E_ERROR;
     }
+#else
+//    mtodo: mrv api for unmatch mac filter action
+#endif
 
    /*workaround for Bug 29555  */
     ret =__mac_bind_acl_deny(port_id, FALSE);

@@ -97,12 +97,15 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "sdl_vlan.h"
 #include "aal_l2.h"
 #include "aal_cls.h"
-#include "rtk_api_ext.h"
-#include "rtk_error.h"
+
 #include "sdl_ma.h"
 #include "sdl.h"
 #include "aal.h"
 
+#include "MARVELL_BSP_expo.h"
+#include "switch_expo.h"
+#include "gtDrvSwRegs.h"
+#include "switch_drv.h"
 
 #define __DEFAULT_FID        0
 #define __SVL                0
@@ -128,7 +131,8 @@ typedef struct {
 
 static cs_sdl_mc_vlan_port_t  mc_vlan[UNI_PORT_MAX]; 
     
-
+// mtodo: commented __mc_vlan_add __mc_vlan_del __mc_vlan_clr
+#if 0
 static cs_status __mc_vlan_add( CS_IN cs_port_id_t portid, CS_IN cs_uint16  vlanid)
 {    
     cs_int32             i;
@@ -229,7 +233,7 @@ static cs_status __mc_vlan_clr()
     
     return CS_E_OK;    
 }
-
+#endif
 cs_status epon_request_onu_unknown_mc_forward_set(
     CS_IN cs_callback_context_t     context,
     CS_IN cs_int32                  device_id,
@@ -238,42 +242,8 @@ cs_status epon_request_onu_unknown_mc_forward_set(
     CS_IN cs_boolean                enable
 )
 {
-    rtk_portmask_t flood_portmask;
-    rtk_api_ret_t  rtk_ret = 0;
-    rtk_port_t     rtk_port;
-
-    if(portid > CS_UNI_PORT_ID4)
-    {
-        SDL_MIN_LOG("port id invalid.(%d) FILE: %s, LINE: %d", portid, __FILE__, __LINE__);
-        return CS_E_PARAM;
-    }
-    
-    if(portid == CS_PON_PORT_ID)
-        rtk_port = SWITCH_UPLINK_PORT;//RTK uplink port 
-    else
-        rtk_port = (portid-CS_UNI_PORT_ID1);
-
-    memset(&flood_portmask, 0, sizeof(rtk_portmask_t));
-    
-    rtk_l2_floodPortMask_get(FLOOD_UNKNOWNMC, &flood_portmask);
-
-    if(enable)
-    {
-        flood_portmask.bits[0] |= (1 << rtk_port);
-    }
-    else
-    {
-        flood_portmask.bits[0] &= ~(1 << rtk_port);
-    }
-
-    rtk_ret = rtk_l2_floodPortMask_set(FLOOD_UNKNOWNMC, flood_portmask);
-    if(RT_ERR_OK != rtk_ret)
-    {
-        SDL_MIN_LOG("rtk_l2_floodPortMask_set return %d. FILE: %s, LINE: %d", rtk_ret, __FILE__, __LINE__);
-        return CS_E_ERROR;
-    }
-
-    return CS_E_OK;
+//	mtodo: epon_request_onu_unknown_mc_forward_set
+    return CS_E_NOT_SUPPORT;
 }
 
 cs_status epon_request_onu_mc_l2_entry_add (
@@ -284,75 +254,7 @@ cs_status epon_request_onu_mc_l2_entry_add (
     CS_IN  cs_sdl_mc_l2_entry_t      *entry
 )
 {
-    rtk_mac_t       rtk_mac;
-    rtk_portmask_t  rtk_portmask;
-    rtk_api_ret_t   rtk_ret  = 0;
-    rtk_data_t      ivl      = __SVL;
-    rtk_data_t      cvid_fid =__DEFAULT_FID;
-    cs_status       ret = CS_E_OK;
-
-
-    if(NULL==entry)
-        return CS_E_PARAM;     
-    
-    UNI_PORT_CHECK(portid);
-    VID_CHECK(entry->vlan);   
-    
-    /* must be multicast address */
-    if (!(entry->mac.addr[0] & 0x1))
-    {
-        SDL_MIN_LOG("not a multicast mac address. FILE: %s, LINE: %d", __FILE__, __LINE__);
-        return CS_E_PARAM;
-    }
-
-    // vlan==0 ---SVL
-    if(entry->vlan != 0)
-    {
-#if 0    
-       ivl      = __IVL;
-       cvid_fid = entry.vlan;
-#endif   
-        //workaroud for MAC+VLAN
-        // only consider the case that a fdb be set once in a port.
-        ret = __mc_vlan_add(  portid, entry->vlan);
-        if(ret)
-        {
-            SDL_MIN_LOG("__mc_vlan_add return %d. ", ret);
-            return ret;
-        }
-    }
-        
-    memcpy(&rtk_mac, &(entry->mac), sizeof(rtk_mac_t));
-    memset(&rtk_portmask, 0, sizeof(rtk_portmask_t));
-
-    rtk_ret = rtk_l2_mcastAddr_get(&rtk_mac,ivl, cvid_fid, &rtk_portmask);
-
-    if((RT_ERR_OK != rtk_ret)&&
-       (RT_ERR_L2_ENTRY_NOTFOUND != rtk_ret))
-    {
-        SDL_MIN_LOG("rtk_l2_mcastAddr_get return %d. FILE: %s, LINE: %d", rtk_ret, __FILE__, __LINE__);
-        return CS_E_ERROR;
-    }
-   
-    /* already in the bitmap */
-    if(rtk_portmask.bits[0] & (1<<(portid-CS_UNI_PORT_ID1)))
-    {
-        return CS_E_OK;
-    }
-    else
-    {
-        rtk_portmask.bits[0] |= 1<<(portid-CS_UNI_PORT_ID1);
-    }
-
-    /* set to HW */
-    rtk_ret = rtk_l2_mcastAddr_add(&rtk_mac, ivl,cvid_fid, rtk_portmask);
-    if(RT_ERR_OK != rtk_ret)
-    {
-        SDL_MIN_LOG("rtk_l2_mcastAddr_add return %d.", rtk_ret);
-        return CS_E_ERROR;
-    }
-
-    return CS_E_OK;
+	return CS_E_NOT_SUPPORT;
 }
 
 cs_status epon_request_onu_mc_l2_entry_del (
@@ -363,71 +265,7 @@ cs_status epon_request_onu_mc_l2_entry_del (
     CS_IN  cs_sdl_mc_l2_entry_t      *entry
 )
 {
-    rtk_mac_t      rtk_mac;
-    rtk_portmask_t rtk_portmask, temp_mask;
-    rtk_api_ret_t  rtk_ret  = 0;
-    cs_status      ret = CS_E_OK;
-
-
-    if(NULL==entry)
-        return CS_E_PARAM;   
-        
-    UNI_PORT_CHECK(portid);    
-    VID_CHECK(entry->vlan);   
-    
-    /* must be multicast address */
-    if (!(entry->mac.addr[0] & 0x1))
-    {
-        SDL_MIN_LOG("not a multicast mac address. FILE: %s, LINE: %d", __FILE__, __LINE__);
-        return CS_E_PARAM;
-    }
-    
-    memcpy(&rtk_mac, &(entry->mac), sizeof(rtk_mac_t));
-    memset(&rtk_portmask, 0, sizeof(rtk_portmask_t));
-    memset(&temp_mask, 0, sizeof(rtk_portmask_t));
-
-
-    /* query l2 mc table */
-    rtk_ret = rtk_l2_mcastAddr_get(&rtk_mac, __SVL,__DEFAULT_FID, &rtk_portmask);
-
-    if( rtk_ret!=RT_ERR_OK )
-    {
-        SDL_MIN_LOG("rtk_l2_mcastAddr_get return %d. FILE: %s, LINE: %d", rtk_ret, __FILE__, __LINE__);
-        return CS_E_ERROR;
-    }
-
-    /* entry and port exist */
-    if(rtk_portmask.bits[0]&(1<<(portid-CS_UNI_PORT_ID1)))
-    {    
-        // workaroud for MAC+VLAN
-        // only consider the case that a fdb be set once in a port.
-        if(entry->vlan != 0)
-        {
-            ret = __mc_vlan_del(portid, entry->vlan);
-            if(ret)
-            {
-                SDL_MIN_LOG("__mc_vlan_del return %d. ", ret);
-                return ret;
-            }
-        }
-        temp_mask.bits[0] = ((~(1<<(portid-CS_UNI_PORT_ID1))) & 0xf) & rtk_portmask.bits[0];
-        if(temp_mask.bits[0])
-        {
-           /* update MC fdb */
-            rtk_ret = rtk_l2_mcastAddr_add(&rtk_mac, __SVL,__DEFAULT_FID, temp_mask);          
-        }
-        else
-        {
-           rtk_ret = rtk_l2_mcastAddr_del(&rtk_mac, __SVL,__DEFAULT_FID);
-        }
-        if(rtk_ret!=RT_ERR_OK)
-        {
-            SDL_MIN_LOG("rtk_l2_mcastAddr_add/del return %d. ", rtk_ret);
-            return CS_E_ERROR;
-        }
-    }
-     
-    return CS_E_OK;
+	return CS_E_NOT_SUPPORT;
 }
 
 cs_status epon_request_onu_mc_l2_entry_clr (
@@ -436,19 +274,7 @@ cs_status epon_request_onu_mc_l2_entry_clr (
     CS_IN  cs_uint32                 llidport
 )
 {
-    rtk_api_ret_t      rtn  = RT_ERR_OK;
-    rtk_l2_ucastAddr_t l2_data;
-    rtk_uint32         address = 0;
-
-    while(1)
-    {
-        if ((rtn = rtk_l2_addr_next_get(READMETHOD_NEXT_L2MC, 0, &address, &l2_data)) != RT_ERR_OK)
-            break;
-        rtk_l2_mcastAddr_del(&l2_data.mac,l2_data.ivl,l2_data.cvid);
-        address++;
-    }
-
-    return __mc_vlan_clr();
+	return CS_E_NOT_SUPPORT;
 }
 
 cs_status epon_request_onu_mc_l2_port_get (
@@ -459,44 +285,7 @@ cs_status epon_request_onu_mc_l2_port_get (
     CS_OUT cs_sdl_portmask_t         *portmask
 )
 {
-    rtk_mac_t       rtk_mac;
-    rtk_portmask_t  rtk_portmask;
-    rtk_api_ret_t   rtk_ret  = 0;
-
-
-    if((NULL==portmask)||(NULL==entry))
-    {
-        SDL_MIN_LOG("null pointer. FILE: %s, LINE: %d", __FILE__, __LINE__);
-        return CS_E_PARAM;        
-    }
-
-    VID_CHECK(entry->vlan);   
-     
-    /* must be multicast address */
-    if (!(entry->mac.addr[0] & 0x1))
-    {
-        SDL_MIN_LOG("not a multicast mac address. FILE: %s, LINE: %d", __FILE__, __LINE__);
-        return CS_E_PARAM;
-    }
-
-    memcpy(&rtk_mac, &(entry->mac), sizeof(rtk_mac_t));
-    memset(&rtk_portmask, 0, sizeof(rtk_portmask_t));
-
-    rtk_ret = rtk_l2_mcastAddr_get(&rtk_mac,__SVL, __DEFAULT_FID, &rtk_portmask);
-
-    if(rtk_ret!=RT_ERR_OK)
-    {
-        SDL_MIN_LOG("rtk_l2_mcastAddr_get return %d.", rtk_ret);
-        
-        if(rtk_ret == RT_ERR_L2_ENTRY_NOTFOUND)
-            return CS_E_NOT_FOUND;
-        else    
-            return CS_E_ERROR;
-    }
-
-    portmask->bits[0] = rtk_portmask.bits[0];
-
-    return CS_E_OK;
+	return CS_E_NOT_SUPPORT;
 }
 
 cs_status epon_request_onu_mc_ip_entry_add(

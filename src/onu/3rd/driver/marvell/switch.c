@@ -269,7 +269,6 @@ void switch_init()
 #if (FOR_ONU_PON)
 	GT_STATUS          l_ret_val = GT_OK;
     GT_LPORT        i;
- 	extern char * creationDate;
  	GT_ERATE_TYPE   gtEgressRateType;
 	int j;
 	GT_STATUS status;
@@ -643,7 +642,7 @@ void switch_init()
 		MSG_OUT(("\r\nSWITCH: The switch was initialized successfully\r\n"));
 		MSG_OUT(("SWITCH: Marvell DSDT Release version %s \r\n", MSAPI_VERSION));
 		MSG_OUT(("SWITCH: GW Implementation Version %d.%d(Build %d on %s)\r\n",
-			GW_SWITCH_VERSION_MAJOR, GW_SWITCH_VERSION_MINOR, GW_SWITCH_VERSION_BUILD+7, creationDate));
+			GW_SWITCH_VERSION_MAJOR, GW_SWITCH_VERSION_MINOR, GW_SWITCH_VERSION_BUILD+7, __DATE__));
 	}
 
 	gulTypeAll  = BUCKET_TRAFFIC_BROADCAST |

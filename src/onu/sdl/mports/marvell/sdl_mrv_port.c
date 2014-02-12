@@ -102,13 +102,10 @@ Copyright (c) 2010 by Cortina Systems Incorporated
 #include "sdl_event_cmn.h"
 #include "make_file.h"
 
-#include "msApiTypes.h"
-#include "msApi.h"
-
+#include "MARVELL_BSP_expo.h"
+#include "switch_expo.h"
 #include "gtDrvSwRegs.h"
 #include "switch_drv.h"
-
-extern GT_QD_DEV * dev;
 
 #define __SDL_PORT_AUTO_NEGO_FAIL              0
 #define __SDL_PORT_AUTO_NEGO_SUCCESS           1
@@ -209,8 +206,11 @@ static void __sdl_port_auto_neg_polling_handler(void)
     }
 
     for(port=0; port<UNI_PORT_MAX; port++) {
+    	GT_32 unit, hwport;
 
-    	ret = gprtGetSwitchReg(dev, port, QD_PHY_INT_STATUS_REG, &phy_data);
+    	gt_getswitchunitbylport(port, &unit, &hwport);
+
+    	ret = gprtGetSwitchReg(QD_DEV_PTR, hwport, QD_PHY_INT_STATUS_REG, &phy_data);
         if(GT_OK != ret)
            return;
            
@@ -240,21 +240,27 @@ void __sdl_port_int_process(void)
     sdl_event_port_auto_nego_t auto_nego_event;
 #endif
 
-    if(gprtGetPhyIntPortSummary(dev,&portvec) == GT_OK &&
+    FOR_UNIT_START(GT_32, unit)
+
+    if(gprtGetPhyIntPortSummary(QD_DEV_PTR,&portvec) == GT_OK &&
     		portvec )
     {
         for (port=0; port <UNI_PORT_MAX; port++) {
 
+        	GT_32 unit, hwport;
+
+        	gt_getswitchunitbylport(port, &unit, &hwport);
+
         	if(!(portvec & (1<<port)))
         		continue;
 
-        	if(GT_OK != gprtGetPhyIntStatus(dev, port, &inttype))
+        	if(GT_OK != gprtGetPhyIntStatus(QD_DEV_PTR, hwport, &inttype))
         		continue;
 
         	if(!(inttype & GT_LINK_STATUS_CHANGED))
         		continue;
 
-        	gprtGetSwitchReg(dev, port, QD_PHY_INT_STATUS_REG, &phy_data);
+        	gprtGetSwitchReg(QD_DEV_PTR, hwport, QD_PHY_INT_STATUS_REG, &phy_data);
             
 #ifdef HAVE_SDL_CTC
             if (phy_data & GT_LINK_STATUS_CHANGED){
@@ -272,7 +278,7 @@ void __sdl_port_int_process(void)
             }
 #endif
 
-            gprtGetLinkState(dev, port, (GT_BOOL*)&link_status);
+            gprtGetLinkState(QD_DEV_PTR, hwport, (GT_BOOL*)&link_status);
             if (link_status == __uni_link_ststus[port]) {
                 continue;
             }
@@ -284,6 +290,8 @@ void __sdl_port_int_process(void)
             sdl_event_send(EPON_EVENT_PORT_LINK_CHANGE, sizeof(sdl_event_port_link_t), &link_event);
         }
     }
+
+    FOR_UNIT_END
 
     return;
 
@@ -319,7 +327,7 @@ cs_status epon_request_onu_port_mtu_get(
             *mtu = cfg.mtu;
     }
     else{
-    	ret = gsysGetMaxFrameSize(dev,&mode);
+    	ret = gsysGetMaxFrameSize(QD_MASTER_DEV_PTR,&mode);
         uni_mtu = (mode)?1522:1632;
         if(GT_OK != ret){
             SDL_MIN_LOG("gsysGetMaxFrameSize return %d\n", ret);
@@ -380,11 +388,13 @@ cs_status epon_request_onu_port_mtu_set(
             mode = GT_FALSE;
         }
 
-        ret = gsysSetMaxFrameSize(dev, mode);
+        FOR_UNIT_START(GT_32, unit)
+        ret = gsysSetMaxFrameSize(QD_DEV_PTR, mode);
         if (GT_OK != ret) {
             SDL_MIN_LOG("gsysSetMaxFrameSize return %dd\n", ret);
             return CS_E_ERROR;
         }
+        FOR_UNIT_END
     }
         
     return CS_E_OK;
@@ -406,6 +416,8 @@ cs_status epon_request_onu_port_speed_get(
     GT_STATUS          ret = 0;
     GT_PORT_SPEED_MODE			lspeed;
     
+    GT_32 unit, hwport;
+
     if (NULL == speed) {
         SDL_MIN_LOG("Speed is NULL pointer!\n", );
         return CS_E_PARAM;
@@ -417,7 +429,8 @@ cs_status epon_request_onu_port_speed_get(
 
 
     /** PHY link status */
-    ret = gprtGetLinkState(dev, port, &status);
+    gt_getswitchunitbylport(port, &unit, &hwport);
+    ret = gprtGetLinkState(QD_DEV_PTR, hwport, &status);
     if (GT_OK != ret) {
         SDL_MIN_LOG("gprtGetLinkState return %d\n", ret);
         rc=CS_E_ERROR;
@@ -430,7 +443,7 @@ cs_status epon_request_onu_port_speed_get(
         goto end;
     }
     
-    if(GT_OK == gprtGetSpeedMode(dev, port, &lspeed))
+    if(GT_OK == gprtGetSpeedMode(QD_DEV_PTR, hwport, &lspeed))
     {
     	switch(lspeed)
     	{
@@ -466,6 +479,8 @@ cs_status epon_request_onu_port_duplex_get(
     GT_BOOL				lduplex;
     GT_STATUS          ret  = 0;
     
+    GT_32 unit, hwport;
+
     if (NULL == duplex) {
         SDL_MIN_LOG("duplex is NULL pointer\n", );
         return CS_E_PARAM;
@@ -476,7 +491,8 @@ cs_status epon_request_onu_port_duplex_get(
     port = L2P_PORT(port_id);
 
     /** PHY link status */
-    ret = gprtGetC_Duplex(dev, port, &lduplex);
+    gt_getswitchunitbylport(port, &unit, &hwport);
+    ret = gprtGetC_Duplex(QD_DEV_PTR, hwport, &lduplex);
     if (GT_OK != ret) {
         SDL_MIN_LOG("gprtGetC_Duplex return %d\n", ret);
         return CS_E_ERROR;
@@ -533,12 +549,14 @@ cs_status epon_request_onu_port_autoneg_restart(
     GT_LPORT      port;
     GT_STATUS   ret  = 0;
     cs_status       rt = CS_E_OK;
+    GT_32 unit,hwport;
     
     UNI_PORT_CHECK(port_id);
 
     port = L2P_PORT(port_id);
     
-    ret = gprtPortRestartAutoNeg(dev, port);
+    gt_getswitchunitbylport(port, &unit, &hwport);
+    ret = gprtPortRestartAutoNeg(QD_DEV_PTR, hwport);
     
     if(ret != GT_OK)
     	rt = CS_E_ERROR;
@@ -583,7 +601,9 @@ cs_status epon_request_onu_port_lpbk_set(
     GT_STATUS                  ret  = 0;
     cs_status                      rt = CS_E_OK;
     
-    if (port_id > CS_UNI_PORT_ID4){
+    GT_32 unit, hwport;
+
+    if (port_id > UNI_PORT_MAX){
         SDL_MIN_LOG("Port ID is Invalid\n");
         return CS_E_PARAM;
     }
@@ -642,6 +662,8 @@ cs_status epon_request_onu_port_lpbk_set(
             goto END;
         }
 
+        gt_getswitchunitbylport(port, &unit, &hwport);
+
         switch (loopback) {
             case SDL_PORT_LOOPBACK_NONE: {
                 rt = epon_request_onu_port_status_set(context, device_id, llidport, port_id, port_cfg[port]);
@@ -650,7 +672,7 @@ cs_status epon_request_onu_port_lpbk_set(
                     goto END;
                 }
                 
-                ret = gprtGetSwitchReg(dev, port, QD_PHY_CONTROL_REG, &phyData);
+                ret = gprtGetSwitchReg(QD_DEV_PTR, hwport, QD_PHY_CONTROL_REG, &phyData);
                 if(GT_OK != ret){
                     SDL_MIN_LOG("gprtGetSwitchReg return %d\n", ret);
                     rt = CS_E_ERROR;
@@ -658,7 +680,7 @@ cs_status epon_request_onu_port_lpbk_set(
                 }
                 
                 phyData = phyData & (~QD_PHY_LOOPBACK);
-                ret = gprtSetSwitchReg(dev, port, QD_PHY_CONTROL_REG, phyData);
+                ret = gprtSetSwitchReg(QD_DEV_PTR, hwport, QD_PHY_CONTROL_REG, phyData);
                 if(GT_OK != ret){
                     SDL_MIN_LOG("gprtSetSwitchReg return %d\n", ret);
                     rt = CS_E_ERROR;
@@ -675,7 +697,7 @@ cs_status epon_request_onu_port_lpbk_set(
                     goto END;
                 }
                 
-                ret = gprtGetSwitchReg(dev, port, QD_PHY_CONTROL_REG, &phyData);
+                ret = gprtGetSwitchReg(QD_DEV_PTR, hwport, QD_PHY_CONTROL_REG, &phyData);
                 if(GT_OK != ret){
                     SDL_MIN_LOG("gprtGetSwitchReg return %d\n", ret);
                     rt = CS_E_ERROR;
@@ -684,7 +706,7 @@ cs_status epon_request_onu_port_lpbk_set(
 
                 phyData = phyData | QD_PHY_LOOPBACK;
                 
-                ret = gprtSetSwitchReg(dev, port, QD_PHY_CONTROL_REG, phyData);
+                ret = gprtSetSwitchReg(QD_DEV_PTR, hwport, QD_PHY_CONTROL_REG, phyData);
                 if(GT_OK != ret){
                     SDL_MIN_LOG("gprtSetSwitchReg return %d\n", ret);
                     rt = CS_E_ERROR;
@@ -801,6 +823,7 @@ cs_status epon_request_onu_port_admin_set(
     GT_PORT_STP_STATE    state;
     GT_STATUS   ret  = 0;
     cs_status       rt = CS_E_OK;
+    GT_32 unit, hwport;
     
     UNI_PORT_CHECK(port_id);
     
@@ -815,7 +838,8 @@ cs_status epon_request_onu_port_admin_set(
         state = GT_PORT_FORWARDING;
     }
     
-    ret = gstpSetPortState(dev, port, state);
+    gt_getswitchunitbylport(port, &unit, &hwport);
+    ret = gstpSetPortState(QD_DEV_PTR, hwport, state);
     if(GT_OK != ret){
         SDL_MIN_LOG("gstpSetPortState return %d\n", ret);
         rt = CS_E_ERROR;
@@ -1113,6 +1137,7 @@ cs_status epon_request_onu_port_link_status_get(
     GT_LPORT     port;
     GT_STATUS  ret  = 0;
     GT_BOOL		link;
+    GT_32 unit, hwport;
     
     if (NULL == link_status) {
         SDL_MIN_LOG("link_status is NULL pointer\n");
@@ -1123,7 +1148,8 @@ cs_status epon_request_onu_port_link_status_get(
     UNI_PORT_CHECK(port_id);
     port = L2P_PORT(port_id);
 
-    ret = gprtGetLinkState(dev, port, &link);
+    gt_getswitchunitbylport(port, &unit, &hwport);
+    ret = gprtGetLinkState(QD_DEV_PTR, hwport, &link);
     if (GT_OK != ret) {
         SDL_MIN_LOG("gprtGetLinkState return %d\n", ret);
 		//cs_printf("phy port %d status error\n",port_id);
@@ -1149,6 +1175,7 @@ cs_status uni_ge_rx_flow_ctrl_set(cs_boolean enable)
 {
     cs_status rc = CS_E_OK;
     GT_LPORT port;
+    GT_32 unit, hwport;
 
     //set CS8030 UNI rx port flow control
     rc = aal_rx_flow_control_set(enable);
@@ -1159,7 +1186,9 @@ cs_status uni_ge_rx_flow_ctrl_set(cs_boolean enable)
 
     // set uplink port flow control
     port = L2P_PORT(CS_UPLINK_PORT);
-    rc = gprtSetPause(dev, port, GT_PHY_BOTH_PAUSE);
+    gt_getswitchunitbylport(port, &unit, &hwport);
+
+    rc = gprtSetPause(QD_DEV_PTR, hwport, GT_PHY_BOTH_PAUSE);
     if (rc) {
         SDL_MIN_LOG("In function:%s,line:%d invoke gprtSetPause fail!\n", __FUNCTION__, __LINE__);
         goto end;
@@ -1196,6 +1225,7 @@ cs_status epon_request_onu_port_flow_ctrl_set(
     cs_status rc = CS_E_OK;
     GT_LPORT port;
     cs_boolean internal_enable;
+    GT_32 unit, hwport;
 
     if (enable > 1) {
         SDL_MIN_LOG("In %s, port_id %d  enable(%d) is not supported\n", __FUNCTION__, port_id, enable);
@@ -1212,8 +1242,10 @@ cs_status epon_request_onu_port_flow_ctrl_set(
 
     memset(cfg, 0, sizeof(cs_aal_flow_control_t)*4);
 
-    port = port_id - 1;
+    port = L2P_PORT(port_id);
     
+    gt_getswitchunitbylport(port, &unit, &hwport);
+
     if (__port_cfg[port].flow_ctrl_en == enable) {
         SDL_MIN_LOG("set flow control(port: %d): is same( %d) as before\n", port, enable);
         goto end;
@@ -1248,7 +1280,7 @@ cs_status epon_request_onu_port_flow_ctrl_set(
         goto end;
     }
 
-    rc = gprtSetPause(dev, port, GT_PHY_BOTH_PAUSE);
+    rc = gprtSetPause(QD_DEV_PTR, hwport, GT_PHY_BOTH_PAUSE);
 
 #if 0
     rc = rtk_port_phyAutoNegoAbility_get(port, &advertisement);
@@ -1326,6 +1358,7 @@ cs_status epon_request_onu_port_ds_rate_limit_set(
     cs_status rc = CS_E_OK;
     GT_LPORT port;
     cs_aal_rate_limit_t shp;
+    GT_32 unit, hwport;
 
     if (NULL == rate) {
         SDL_MIN_LOG("In %s, rate is NULL pointer\n", __FUNCTION__);
@@ -1340,9 +1373,11 @@ cs_status epon_request_onu_port_ds_rate_limit_set(
             return CS_E_PARAM;
         }   
         
-        port = (GT_LPORT)(port_id - 1);
+        port = L2P_PORT(port_id);
 
-        grcSetEgressRate(dev, port, (GT_ERATE_TYPE*)&rate->rate);
+        gt_getswitchunitbylport(port, &unit, &hwport);
+
+        grcSetEgressRate(QD_DEV_PTR, hwport, (GT_ERATE_TYPE*)&rate->rate);
 
         __ds_rate_limit[port].enable = rate->enable;
         __ds_rate_limit[port].rate = rate->rate;
@@ -1587,6 +1622,7 @@ cs_status sdl_port_init(
     cs_uint8                  index;
 
     GT_LPORT 				port;
+    GT_32 unit, hwport;
 
     
     if (NULL == cfg) {
@@ -1606,12 +1642,16 @@ cs_status sdl_port_init(
     }
     
     /*config switch MTU to __SDL_PORT_MTU_MAX*/
-    ret = gsysSetMaxFrameSize(dev, switch_mtu);
+    FOR_UNIT_START(GT_32, unit)
+
+    ret = gsysSetMaxFrameSize(QD_DEV_PTR, switch_mtu);
     if (GT_OK != ret) {
         SDL_MIN_LOG("gsysSetMaxFrameSize return %d\n", rt);
         rt = CS_E_ERROR;
         goto END;
     }
+
+    FOR_UNIT_END
 
     speed_cfg = SDL_PORT_AUTO_10_100;
 
@@ -1632,8 +1672,8 @@ cs_status sdl_port_init(
         __sc_rate_limit[index].cbs = 10000;
         __sc_rate_limit[index].ebs = 1000;
 
-
-        ret = gprtSetPortAutoMode(dev, index, SPEED_AUTO_DUPLEX_AUTO);
+        gt_getswitchunitbylport(index, &unit, &hwport);
+        ret = gprtSetPortAutoMode(QD_DEV_PTR, hwport, SPEED_AUTO_DUPLEX_AUTO);
         if(GT_OK != ret){
             SDL_MIN_LOG("gprtSetPortAutoMode return %d\n", ret);
             rt =  CS_E_ERROR;
@@ -1779,7 +1819,8 @@ cs_status sdl_port_init(
 
     for(port=0; port<UNI_PORT_MAX; port++)
     {
-    	if(GT_OK != gprtPhyIntEnable(dev, port, GT_LINK_STATUS_CHANGED, GT_TRUE))
+    	gt_getswitchunitbylport(port, &unit, &hwport);
+    	if(GT_OK != gprtPhyIntEnable(QD_DEV_PTR, hwport, GT_LINK_STATUS_CHANGED, GT_TRUE))
     	{
 
 			SDL_MIN_LOG("gprtPhyIntEnable type 0x%x, code %d return %d\n", GT_LINK_STATUS_CHANGED, GT_TRUE, ret);
@@ -2013,10 +2054,8 @@ cs_status epon_request_onu_port_isolation_set(
     CS_IN cs_boolean                enable
 )
 {
-    GT_LPORT     port;
 //    rtk_portmask_t portmask;
     GT_STATUS  ret  = 0;
-    cs_port_id_t   port_id;
     cs_status      rt = CS_E_OK;
     
     if (enable > 1) {
@@ -2025,17 +2064,12 @@ cs_status epon_request_onu_port_isolation_set(
         goto END;
     }
 
-    for (port_id = CS_UNI_PORT_ID1; port_id <= CS_UNI_PORT_ID4; port_id++) {
-        port = L2P_PORT(port_id);
 
-        ret = gvlnSetPortIsolate(dev, enable);
-        if (GT_OK != ret) {
-            SDL_MIN_LOG("gvlnSetPortIsolate return %d\n", ret);
-            rt = CS_E_ERROR;
-            goto END;
-        }
+    FOR_UNIT_START(GT_32, unit)
 
-    }
+    ret = gvlnSetPortIsolate(QD_DEV_PTR, enable);
+
+    FOR_UNIT_END
 
     __port_isolation = enable;
 
@@ -2285,6 +2319,8 @@ cs_status epon_request_onu_port_mirror_set(
     GT_LPORT     port, i;
     cs_status      rt = CS_E_OK;
     
+	GT_32 unit, hwport;
+
     if ((mirror_port < CS_UNI_PORT_ID1) ||
             ((mirror_port > CS_UNI_PORT_ID4) && (mirror_port != CS_UPLINK_PORT))) {
         SDL_MIN_LOG("port_id %d is not supported!\n", mirror_port);
@@ -2331,30 +2367,33 @@ cs_status epon_request_onu_port_mirror_set(
         }
     }
 
-    if(gsysSetIngressMonitorDest(dev, port) != GT_OK)
-    {
-    	rt = CS_E_ERROR;
-    	goto END;
-    }
+	gt_getswitchunitbylport(port, &unit, &hwport);
+	if(gsysSetIngressMonitorDest(QD_DEV_PTR, hwport) != GT_OK)
+	{
+		rt = CS_E_ERROR;
+		goto END;
+	}
+	if(gsysSetEgressMonitorDest(QD_DEV_PTR, hwport) != GT_OK)
+	{
+		rt = CS_E_ERROR;
+		goto END;
+	}
 
-    if(gsysSetEgressMonitorDest(dev, port) != GT_OK)
-    {
-    	rt = CS_E_ERROR;
-    	goto END;
-    }
 
     i=0;
     while(rx_port_msk)
     {
     	if(rx_port_msk & 0x1)
     	{
-    		if( GT_OK != gprtSetIngressMonitorSource(dev, i, GT_TRUE))
+    		gt_getswitchunitbylport(i, &unit, &hwport);
+    		if( GT_OK != gprtSetIngressMonitorSource(QD_DEV_PTR, hwport, GT_TRUE))
     		{
     			rt = CS_E_ERROR;
     			goto END;
     		}
     	}
     	rx_port_msk >>= 1;
+    	i++;
     }
 
     i=0;
@@ -2362,13 +2401,15 @@ cs_status epon_request_onu_port_mirror_set(
     {
     	if(tx_port_msk & 0x1)
     	{
-    		if( GT_OK != gprtSetEgressMonitorSource(dev, i, GT_TRUE))
+    		gt_getswitchunitbylport(i, &unit, &hwport);
+    		if( GT_OK != gprtSetEgressMonitorSource(QD_DEV_PTR, hwport, GT_TRUE))
     		{
     			rt = CS_E_ERROR;
     			goto END;
     		}
     	}
     	tx_port_msk >>= 1;
+    	i++;
     }
 END:
     return rt;
@@ -2399,25 +2440,29 @@ cs_status epon_request_onu_port_mirror_get(
 
     for(port = 0; port < UNI_PORT_MAX; port++)
     {
-    	if((GT_OK == gprtGetIngressMonitorSource(dev, port, &mode)) &&
+    	GT_32 unit, hwport;
+
+    	gt_getswitchunitbylport(port, &unit, &hwport);
+    	if((GT_OK == gprtGetIngressMonitorSource(QD_DEV_PTR, hwport, &mode)) &&
     			(mode == GT_TRUE))
     	{
     		*rx_port_msk |= 1<<port;
     	}
 
-    	if((GT_OK == gprtGetEgressMonitorSource(dev, port, &mode)) &&
+    	if((GT_OK == gprtGetEgressMonitorSource(QD_DEV_PTR, hwport, &mode)) &&
     			(mode == GT_TRUE))
     	{
     		*tx_port_msk |= 1<<port;
     	}
     }
 
-    if(gsysGetIngressMonitorDest(dev, &port) == GT_OK)
+    FOR_UNIT_START(GT_32, unit)
+    if(gsysGetIngressMonitorDest(QD_DEV_PTR, &port) == GT_OK)
     {
     	*mirror_port = P2L_PORT(port);
     }
-    else
-    	rt = CS_E_ERROR;
+
+    FOR_UNIT_END
 
 END:
     return rt;

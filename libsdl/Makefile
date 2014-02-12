@@ -14,7 +14,6 @@ MOD_CFLAGS= -Werror -Wno-uninitialized -nostdlib -fno-inline \
 CFILES= \
 $(SWHOME)/src/onu/cmd/cs_cmd.c \
 $(SWHOME)/src/onu/sdl/cmn/cmn/sdl_fec_cmn.c \
-$(SWHOME)/src/onu/sdl/cmn/cmn/sdl_ptp.c \
 $(SWHOME)/src/onu/sdl/cmn/ctc/sdl_enc.c \
 $(SWHOME)/src/onu/sdl/cmn/cmn/sdl_qos_cmn.c \
 $(SWHOME)/src/onu/sdl/cmn/cmn/sdl_pon.c \
@@ -50,6 +49,7 @@ $(SWHOME)/src/onu/sdl/cmn/cmn/sdl.c
 
 ifeq ($(strip $(USING_SW_TYPE)),RTK)
 CFILES += $(SWHOME)/src/onu/sdl/mports/ctc/sdl_fdb.c \
+$(SWHOME)/src/onu/sdl/cmn/cmn/sdl_ptp.c \
 $(SWHOME)/src/onu/sdl/mports/cmn/sdl_port.c \
 $(SWHOME)/src/onu/sdl/mports/ctc/sdl_macfilter.c \
 $(SWHOME)/src/onu/sdl/mports/ctc/sdl_vlan.c \
@@ -69,6 +69,7 @@ endif
 
 ifeq ($(strip $(USING_SW_TYPE)),MRV)
 CFILES += $(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_fdb.c \
+$(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_ptp.c \
 $(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_port.c \
 $(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_macfilter.c \
 $(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_vlan.c \

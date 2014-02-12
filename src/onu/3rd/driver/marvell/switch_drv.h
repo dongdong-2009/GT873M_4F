@@ -57,8 +57,9 @@
 
 /* Define Chip  */
 #define TOTAL_NUM_OF_PORTS      11
-/*
+
 #define MULTI_ADDR_MODE
+/*
 #define MANUAL_MODE
 */
 

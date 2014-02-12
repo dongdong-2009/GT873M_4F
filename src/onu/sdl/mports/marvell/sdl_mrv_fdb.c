@@ -99,8 +99,6 @@ Copyright (c) 2010 by Cortina Systems Incorporated
 
 #include "MARVELL_BSP_expo.h"
 #include "switch_expo.h"
-#include "msApiTypes.h"
-#include "msApi.h"
 
 /*Private Macro Definition*/
 #define __FDB_ENTRY_MAX                                           (sdl_int_cfg.max_fdb_entry)
