@@ -820,7 +820,7 @@ cs_status epon_request_onu_port_admin_set(
 )
 {
     GT_LPORT      port;
-    GT_PORT_STP_STATE    state;
+    GT_BOOL    state;
     GT_STATUS   ret  = 0;
     cs_status       rt = CS_E_OK;
     GT_32 unit, hwport;
@@ -833,13 +833,13 @@ cs_status epon_request_onu_port_admin_set(
     }
 
     if (admin == SDL_PORT_ADMIN_DOWN) {
-        state = GT_PORT_DISABLE;
+        state = GT_TRUE;
     } else {
-        state = GT_PORT_FORWARDING;
+        state = GT_FALSE;
     }
     
     gt_getswitchunitbylport(port, &unit, &hwport);
-    ret = gstpSetPortState(QD_DEV_PTR, hwport, state);
+    ret = gprtPortPowerDown(QD_DEV_PTR, hwport, state);
     if(GT_OK != ret){
         SDL_MIN_LOG("gstpSetPortState return %d\n", ret);
         rt = CS_E_ERROR;
@@ -1280,7 +1280,12 @@ cs_status epon_request_onu_port_flow_ctrl_set(
         goto end;
     }
 
-    rc = gprtSetPause(QD_DEV_PTR, hwport, GT_PHY_BOTH_PAUSE);
+    rc = gprtSetPause(QD_DEV_PTR, hwport, GT_PHY_PAUSE); //6096ËÆºõ½öÖ§³ÖGT_PHY_PAUSE
+    if(rc)
+    {
+    	SDL_MAJ_LOG("In function:%s, line:%d invoke  gprtSetPause fail!(%d)", __FUNCTION__, __LINE__, rc);
+    	goto end;
+    }
 
 #if 0
     rc = rtk_port_phyAutoNegoAbility_get(port, &advertisement);
@@ -1377,12 +1382,18 @@ cs_status epon_request_onu_port_ds_rate_limit_set(
 
         gt_getswitchunitbylport(port, &unit, &hwport);
 
-        grcSetEgressRate(QD_DEV_PTR, hwport, (GT_ERATE_TYPE*)&rate->rate);
+        rc = grcSetEgressRateInKbps(QD_DEV_PTR, hwport, (GT_ERATE_TYPE*)&rate->rate);
 
-        __ds_rate_limit[port].enable = rate->enable;
-        __ds_rate_limit[port].rate = rate->rate;
-        __ds_rate_limit[port].cbs = rate->cbs;
-        __ds_rate_limit[port].ebs = rate->ebs;
+        if(rc == GT_OK)
+        {
+			__ds_rate_limit[port].enable = rate->enable;
+			__ds_rate_limit[port].rate = rate->rate;
+			__ds_rate_limit[port].cbs = rate->cbs;
+			__ds_rate_limit[port].ebs = rate->ebs;
+			rc = CS_E_OK;
+        }
+        else
+        	rc = CS_E_ERROR;
     }else{
         memset(&shp, 0, sizeof(shp));
 
@@ -1458,6 +1469,7 @@ cs_status epon_request_onu_port_policy_set(
 {
     cs_status rc = CS_E_OK;
     GT_LPORT port;
+    GT_32 unit, hwport;
 
     /* mtodo mrv ingress rate set
     rtk_rate_t us_rate;
@@ -1499,11 +1511,22 @@ cs_status epon_request_onu_port_policy_set(
         return rc;
     }
      */
-    __us_rate_limit[port].enable = policy->enable;
-    __us_rate_limit[port].rate = policy->rate;
-    __us_rate_limit[port].cbs = policy->cbs;
-    __us_rate_limit[port].ebs = policy->ebs;
+    port = L2P_PORT(port_id);
+    gt_getswitchunitbylport(port, &unit, &hwport);
 
+    rc = grcSetPri0RateInKbps(QD_DEV_PTR, hwport, policy->rate);
+
+    if(rc == GT_OK)
+    {
+		__us_rate_limit[port].enable = policy->enable;
+		__us_rate_limit[port].rate = policy->rate;
+		__us_rate_limit[port].cbs = policy->cbs;
+		__us_rate_limit[port].ebs = policy->ebs;
+
+		rc = CS_E_OK;
+    }
+    else
+    	rc = CS_E_ERROR;
 
     return rc;
 }
