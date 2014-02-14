@@ -96,18 +96,120 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "sdl_util.h"
 #include "sdl.h"
 
-#include "msApiTypes.h"
-#include "msApi.h"
-
+#include "MARVELL_BSP_expo.h"
+#include "switch_expo.h"
 #include "gtDrvSwRegs.h"
 #include "switch_drv.h"
 
 // port(1-4),index(0-11)
 #define  __RTK_ACL_IDX(port,index)    (((port-1)*RTK_ACL_CLS_MAC_PORT_LENGTH)+RTK_ACL_CLS_MAC_START+index)
 
+typedef struct _pri_queue_remap_ {
+	cs_uint8 pri;
+	cs_uint8 queue;
+}pri_queue_remap_t;
 
 sw_cls_mac_res_port_t g_sw_tbl[UNI_PORT_MAX];
 static cs_boolean     g_def_rule_en;
+
+static pri_queue_remap_t s_def_pq_map[] = {
+		{0, 0},
+		{1, 0},
+		{2, 1},
+		{3, 1},
+		{4, 2},
+		{5, 2},
+		{6, 3},
+		{7, 3}
+};
+
+static cs_status __sw_acl_8021p_sel_set(cs_port_id_t portid, cs_sdl_cls_rule_t *psel, cs_uint8 pri, cs_uint8 queue)
+{
+	cs_status ret = CS_E_ERROR;
+
+	GT_32 unit, port;
+
+	GT_STATUS rt = GT_OK;
+
+	cs_uint32 lport = L2P_PORT(portid);
+
+	if(gt_getswitchunitbylport(lport, &unit, &port) == GT_OK)
+	{
+		cs_uint8 mpri = ntohl((*(cs_uint32*)&psel->matchValue[CLASS_MATCH_VAL_LEN-4]));
+
+/*		set QD_REG_IEEE_PRI_REMAP_3_0(tag remap)register*/
+
+		rt = gqosSetTagRemap(QD_DEV_PTR, port, mpri, pri);
+
+		if(rt == GT_OK) //添加优先级至队列的映射
+		{
+			rt = gcosSetUserPrio2Tc(QD_DEV_PTR, pri, queue);
+			if(rt == GT_OK)
+				ret = CS_E_OK;
+			else //删除之前成功的优先级转换操作
+				gqosSetTagRemap(QD_DEV_PTR, port, mpri, mpri);
+		}
+	}
+
+	return ret;
+}
+
+static cs_status __sw_acl_8021p_sel_undo(cs_port_id_t portid, cs_sdl_cls_rule_t *psel)
+{
+	cs_status ret = CS_E_ERROR;
+	GT_32 unit, port;
+
+	GT_STATUS rt = GT_OK;
+
+	cs_uint32 lport = L2P_PORT(portid);
+
+	if(gt_getswitchunitbylport(lport, &unit, &port) == GT_OK)
+	{
+		cs_uint8 mpri = ntohl((*(cs_uint32*)&psel->matchValue[CLASS_MATCH_VAL_LEN-4]));
+
+/*		删除优先级转换设置 */
+
+		rt = gqosSetTagRemap(QD_DEV_PTR, port, mpri, s_def_pq_map[mpri].pri);
+		if(rt == GT_OK)
+		{
+
+//删除原来设置的优先级-队列映射
+			rt = gcosSetUserPrio2Tc(QD_DEV_PTR, mpri, s_def_pq_map[mpri].queue);
+			if(rt == GT_OK)
+				ret = CS_E_OK;
+		}
+	}
+
+	return ret;
+}
+
+static cs_status __sw_acl_da_sel_set(cs_port_id_t portid, cs_sdl_cls_rule_t *psel, cs_uint8 pri, cs_uint8 queue)
+{
+	cs_status ret = CS_E_ERROR;
+
+	return ret;
+}
+
+static cs_status __sw_acl_sa_sel_set(cs_port_id_t portid, cs_sdl_cls_rule_t *psel, cs_uint8 pri, cs_uint8 queue)
+{
+	cs_status ret = CS_E_ERROR;
+
+	return ret;
+}
+
+static cs_status __sw_acl_vid_sel_set(cs_port_id_t portid, cs_sdl_cls_rule_t *psel, cs_uint8 pri, cs_uint8 queue)
+{
+	cs_status ret = CS_E_ERROR;
+
+	return ret;
+}
+
+static cs_status __sw_acl_dscp_sel_set(cs_port_id_t portid, cs_sdl_cls_rule_t *psel, cs_uint8 pri, cs_uint8 queue)
+{
+	cs_status ret = CS_E_ERROR;
+
+	return ret;
+}
 
 static cs_status __sw_acl_add (
     CS_IN cs_port_id_t                 port_id,
@@ -115,10 +217,8 @@ static cs_status __sw_acl_add (
     CS_IN cs_sdl_classification_t      *prule
 )
 {
-    cs_int32            i;
     cs_sdl_cls_rule_t   *ptemp =NULL;
-
-    i = 0;
+    cs_status ret = CS_E_ERROR;
     
     ptemp = &prule->fselect[0];
     
@@ -126,18 +226,22 @@ static cs_status __sw_acl_add (
     {
         case CLASS_RULES_FSELECT_DA_MAC:  
         {
+        	ret = __sw_acl_da_sel_set(port_id, ptemp, prule->priMark, prule->queueMapped);
             break;
         }
         case CLASS_RULES_FSELECT_SA_MAC:   
         {
+        	ret = __sw_acl_sa_sel_set(port_id, ptemp, prule->priMark, prule->queueMapped);
             break;
         }
         case CLASS_RULES_FSELECT_802_1P:     
         {
+        	ret = __sw_acl_8021p_sel_set(port_id, ptemp, prule->priMark, prule->queueMapped);
             break;
         }
         case CLASS_RULES_FSELECT_VLAN_ID:    
         {
+        	ret = __sw_acl_vid_sel_set(port_id, ptemp, prule->priMark, prule->queueMapped);
             break;
         }
         case CLASS_RULES_FSELECT_ETH_TYPE:
@@ -158,6 +262,7 @@ static cs_status __sw_acl_add (
         }
         case CLASS_RULES_FSELECT_TOS_DSCP:
         {     
+        	ret = __sw_acl_dscp_sel_set(port_id, ptemp, prule->priMark, prule->queueMapped);
             break;
         }
         case CLASS_RULES_FSELECT_IPV6_TC:
@@ -240,7 +345,7 @@ static cs_status __sw_acl_del (
 static cs_status __sw_acl_def ( CS_IN cs_boolean  enable)
 {    
     cs_uint32      i;
-    GT_STATUS rt;
+    GT_STATUS rt = GT_OK;
 
     if(enable == g_def_rule_en)
         return CS_E_OK;

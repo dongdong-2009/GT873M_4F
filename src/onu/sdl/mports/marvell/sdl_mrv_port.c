@@ -1471,46 +1471,6 @@ cs_status epon_request_onu_port_policy_set(
     GT_LPORT port;
     GT_32 unit, hwport;
 
-    /* mtodo mrv ingress rate set
-    rtk_rate_t us_rate;
-    rtk_enable_t pIfg_include;
-    rtk_enable_t pFc_enable;
-
-    if (NULL == policy) {
-        SDL_MIN_LOG("In %s, NULL pointer!\n", __FUNCTION__);
-        return CS_E_PARAM;
-    }
-
-    UNI_PORT_CHECK(port_id);    
-
-    if (policy->rate > MAX_PORT_TRAFFIC_RATE) {
-        SDL_MIN_LOG("In %s, policy->rate is error!\n", __FUNCTION__);
-        return CS_E_PARAM;
-    }
-    port = (GT_LPORT)(port_id - 1);
-
-    rc = rtk_rate_igrBandwidthCtrlRate_get(port, &us_rate, &pIfg_include, &pFc_enable);
-    if (rc) {
-        SDL_MIN_LOG("In function:%s,line:%d invoke rtk_rate_igrBandwidthCtrlRate_get fail!\n", __FUNCTION__, __LINE__);
-        return rc;
-    }
-
-    if (policy->enable) {
-        us_rate = policy->rate ;
-    } else {
-        us_rate = MAX_PORT_TRAFFIC_RATE;
-    }
-    pIfg_include = 1;
-
-
-    pFc_enable = __port_cfg[port].flow_ctrl_en;
-
-    rc = rtk_rate_igrBandwidthCtrlRate_set(port, us_rate, pIfg_include, pFc_enable);
-    if (rc) {
-        SDL_MIN_LOG("In function:%s,line:%d invoke rtk_rate_igrBandwidthCtrlRate_set fail!\n", __FUNCTION__, __LINE__);
-        return rc;
-    }
-     */
     port = L2P_PORT(port_id);
     gt_getswitchunitbylport(port, &unit, &hwport);
 
