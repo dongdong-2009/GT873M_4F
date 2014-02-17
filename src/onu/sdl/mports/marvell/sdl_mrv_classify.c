@@ -248,6 +248,27 @@ static cs_status __sw_acl_dscp_sel_set(cs_port_id_t portid, cs_sdl_cls_rule_t *p
 {
 	cs_status ret = CS_E_ERROR;
 
+	GT_32 unit, port;
+
+	GT_VTU_ENTRY entry;
+	GT_BOOL	found = GT_FALSE;
+
+	GT_STATUS rt = GT_OK;
+
+	cs_uint32 lport = L2P_PORT(portid);
+
+	if(gt_getswitchunitbylport(lport, &unit, &port) == GT_OK)
+	{
+		cs_uint8 dscp = ntohl((*(cs_uint32*)&psel->matchValue[CLASS_MATCH_VAL_LEN-4]));
+
+		if(gcosSetDscp2Tc(QD_DEV_PTR, dscp, pri) == GT_OK)
+		{
+				rt = gcosSetUserPrio2Tc(QD_DEV_PTR, pri, queue);
+				if(rt == GT_OK)
+					ret = CS_E_OK;
+		}
+	}
+
 	return ret;
 }
 
