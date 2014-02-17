@@ -201,6 +201,46 @@ static cs_status __sw_acl_vid_sel_set(cs_port_id_t portid, cs_sdl_cls_rule_t *ps
 {
 	cs_status ret = CS_E_ERROR;
 
+	GT_32 unit, port;
+
+	GT_VTU_ENTRY entry;
+	GT_BOOL	found = GT_FALSE;
+
+	GT_STATUS rt = GT_OK;
+
+	cs_uint32 lport = L2P_PORT(portid);
+
+	if(gt_getswitchunitbylport(lport, &unit, &port) == GT_OK)
+	{
+		cs_uint16 vid = ntohl((*(cs_uint32*)&psel->matchValue[CLASS_MATCH_VAL_LEN-4]));
+
+//		添加vtu entry的修改
+		memset(&entry, 0, sizeof(GT_VTU_ENTRY));
+		entry.vid = vid;
+		entry.DBNum = vid;
+
+		rt = gvtuFindVidEntry(QD_DEV_PTR, &entry, &found);
+		if(rt == GT_OK && found == GT_TRUE)
+		{
+			gvtuDelEntry(QD_DEV_PTR, &entry);
+
+			entry.vidPriOverride = GT_TRUE;
+			entry.vidPriority = pri;
+
+			gvtuAddEntry(QD_DEV_PTR, &entry);
+
+//		只改变包的优先级，队列映射由优先级-队列映射寄存器设置完成 by wangxy 2014-02-17
+			rt = gprtSetVTUPriOverride(QD_DEV_PTR, port, PRI_OVERRIDE_FRAME);
+
+			if(rt == GT_OK) //添加优先级至队列的映射
+			{
+				rt = gcosSetUserPrio2Tc(QD_DEV_PTR, pri, queue);
+				if(rt == GT_OK)
+					ret = CS_E_OK;
+			}
+		}
+	}
+
 	return ret;
 }
 
