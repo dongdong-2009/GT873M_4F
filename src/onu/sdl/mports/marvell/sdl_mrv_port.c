@@ -885,7 +885,9 @@ cs_status epon_request_onu_port_stats_get(
 
     GT_LPORT           port;
     cs_uint32            val[2] = {0, 0};
-//    GT_STATUS        ret = 0;
+    GT_STATS_COUNTER_SET sts;
+    GT_32 unit, hwport;
+    GT_STATUS   ret = GT_ERROR;
     cs_status            rt = CS_E_OK;
     
     if (NULL == uni_stats) {
@@ -901,58 +903,53 @@ cs_status epon_request_onu_port_stats_get(
     }
 
     memset((cs_uint8 *)uni_stats, 0, sizeof(cs_sdl_port_uni_stats_t));
+    memset((cs_uint8*)&sts, 0, sizeof(GT_STATS_COUNTER_SET));
 //    memset((cs_uint8*)&port_cnt, 0, sizeof(port_cnt));
 
     if (port_id != CS_DOWNLINK_PORT) {
         port = L2P_PORT(port_id);
 
-        /* mtodo added port statistic apis
-        ret = rtk_stat_port_getAll(port, &port_cnt);
-        if (GT_OK != ret) {
-            SDL_MIN_LOG("rtk_stat_port_getAll return %d\n", ret);
-            rt = CS_E_ERROR;
-            goto END;
+        gt_getswitchunitbylport(port, &unit, &hwport);
+
+        ret = gstatsGetPortAllCounters(QD_DEV_PTR, hwport, &sts );
+        if(ret != GT_OK)
+        {
+        	rt = CS_ERROR;
+        	goto END;
         }
 
-        uni_stats->rxucfrm_cnt = port_cnt.ifInUcastPkts;
-        if(port_cnt.etherStatsMcastPkts > port_cnt.ifOutMulticastPkts){
-            uni_stats->rxmcfrm_cnt = port_cnt.etherStatsMcastPkts - port_cnt.ifOutMulticastPkts;
-        }else{
-            uni_stats->rxmcfrm_cnt = 0;
-        }
-        if(port_cnt.etherStatsBcastPkts > port_cnt.ifOutBrocastPkts){
-            uni_stats->rxbcfrm_cnt = port_cnt.etherStatsBcastPkts - port_cnt.ifOutBrocastPkts;
-        }else{
-            uni_stats->rxbcfrm_cnt = 0;
-        }
-        uni_stats->rxpausefrm_cnt = port_cnt.dot3InPauseFrames;
-        uni_stats->rxoamfrm_cnt = port_cnt.inOampduPkts;
-        uni_stats->rxcrcerrfrm_cnt = port_cnt.dot3StatsFCSErrors;
-        uni_stats->fcs_errors = port_cnt.dot3StatsFCSErrors;
-        uni_stats->rxunknownopfrm_cnt = port_cnt.dot3ControlInUnknownOpcodes;
-        uni_stats->rxundersizefrm_cnt = port_cnt.etherStatsUndersizePkts;
-        uni_stats->rxoversizefrm_cnt = port_cnt.etherStatsOversizePkts;
-        uni_stats->rxjabberfrm_cnt = port_cnt.etherStatsJabbers;
-        uni_stats->rxbyte_cnt = port_cnt.ifInOctets;
-        uni_stats->txbyte_cnt = port_cnt.ifOutOctets;
-        uni_stats->txucfrm_cnt = port_cnt.ifOutUcastPkts;
-        uni_stats->txmcfrm_cnt = port_cnt.ifOutMulticastPkts;
-        uni_stats->txbcfrm_cnt = port_cnt.ifOutBrocastPkts;
-        uni_stats->txoamfrm_cnt = port_cnt.outOampduPkts;
-        uni_stats->txpausefrm_cnt = port_cnt.dot3OutPauseFrames;
-        uni_stats->txsinglecolfrm_cnt = port_cnt.dot3StatsSingleCollisionFrames;
-        uni_stats->txmulticolfrm_cnt = port_cnt.dot3StatsMultipleCollisionFrames;
-        uni_stats->txlatecolfrm_cnt = port_cnt.dot3StatsLateCollisions;
-        uni_stats->txexesscolfrm_cnt = port_cnt.etherStatsCollisions;
-		#if 1
-		uni_stats->rxstatsfrm64_cnt = port_cnt.etherStatsPkts64Octets;
-		uni_stats->rxstatsfrm65_127_cnt = port_cnt.etherStatsPkts65to127Octets;
-		uni_stats->rxstatsfrm128_255_cnt = port_cnt.etherStatsPkts128to255Octets;
-		uni_stats->rxstatsfrm256_511_cnt = port_cnt.etherStatsPkts256to511Octets;
-		uni_stats->rxstatsfrm512_1023_cnt = port_cnt.etherStatsPkts512to1023Octets;
+        uni_stats->rxucfrm_cnt = sts.InUnicasts;
+        uni_stats->rxbcfrm_cnt = sts.InBroadcasts;
+        uni_stats->rxmcfrm_cnt = sts.InMulticasts;
+        uni_stats->rxpausefrm_cnt = sts.InPause;
+        uni_stats->rxoamfrm_cnt = 0;
+        uni_stats->rxcrcerrfrm_cnt = sts.InFCSErr;
+        uni_stats->fcs_errors = sts.InFCSErr;
+        uni_stats->rxunknownopfrm_cnt = 0;
+        uni_stats->rxundersizefrm_cnt = sts.Undersize;
+        uni_stats->rxoversizefrm_cnt = sts.Oversize;
+        uni_stats->rxjabberfrm_cnt = sts.Jabber;
+        uni_stats->rxbyte_cnt = sts.InGoodOctets;
+        uni_stats->txbyte_cnt = sts.OutGoodOctets;
+        uni_stats->txucfrm_cnt = sts.OutUnicasts;
+        uni_stats->txmcfrm_cnt = sts.OutMulticasts;
+        uni_stats->txbcfrm_cnt = sts.OutBroadcasts;
+        uni_stats->txoamfrm_cnt = 0;
+        uni_stats->txpausefrm_cnt = sts.OutPause;
+        uni_stats->txsinglecolfrm_cnt = sts.Single;
+        uni_stats->txmulticolfrm_cnt = sts.Multiple;
+        uni_stats->txlatecolfrm_cnt = sts.Late;
+        uni_stats->txexesscolfrm_cnt = sts.Excessive;
+		uni_stats->rxstatsfrm64_cnt = sts.In64Octets;
+		uni_stats->rxstatsfrm65_127_cnt = sts.In127Octets;
+		uni_stats->rxstatsfrm128_255_cnt = sts.In255Octets;
+		uni_stats->rxstatsfrm256_511_cnt = sts.In511Octets;
+		uni_stats->rxstatsfrm512_1023_cnt = sts.In1023Octets;
 		uni_stats->rxfrm_cnt = uni_stats->rxucfrm_cnt + uni_stats->rxmcfrm_cnt + uni_stats->rxbcfrm_cnt;
-		#endif
-		*/
+
+		if(read_clear)
+			gstatsFlushPort(QD_DEV_PTR, hwport);
+
     } 
     else {
         aal_uni_mib_get(AAL_MIB_RxUCPktCnt, read_clear, &val[1], &val[0]);
