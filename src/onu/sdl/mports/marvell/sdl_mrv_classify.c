@@ -137,9 +137,15 @@ static cs_status __sw_acl_8021p_sel_set(cs_port_id_t portid, cs_sdl_cls_rule_t *
 	{
 		cs_uint8 mpri = ntohl((*(cs_uint32*)&psel->matchValue[CLASS_MATCH_VAL_LEN-4]));
 
+		gqosSetPrioMapRule(QD_DEV_PTR, port, GT_FALSE);
+
 /*		set QD_REG_IEEE_PRI_REMAP_3_0(tag remap)register*/
 
 		rt = gqosSetTagRemap(QD_DEV_PTR, port, mpri, pri);
+
+		rt |= gqosUserPrioMapEn(QD_DEV_PTR, port, GT_TRUE);
+
+		rt |= gqosIpPrioMapEn(QD_DEV_PTR, port, GT_FALSE);
 
 		if(rt == GT_OK) //添加优先级至队列的映射
 		{
@@ -167,6 +173,10 @@ static cs_status __sw_acl_8021p_sel_undo(cs_port_id_t portid, cs_sdl_cls_rule_t 
 	{
 		cs_uint8 mpri = ntohl((*(cs_uint32*)&psel->matchValue[CLASS_MATCH_VAL_LEN-4]));
 
+		rt |= gqosUserPrioMapEn(QD_DEV_PTR, port, GT_FALSE);
+
+		rt |= gqosIpPrioMapEn(QD_DEV_PTR, port, GT_FALSE);
+
 /*		删除优先级转换设置 */
 
 		rt = gqosSetTagRemap(QD_DEV_PTR, port, mpri, s_def_pq_map[mpri].pri);
@@ -183,16 +193,19 @@ static cs_status __sw_acl_8021p_sel_undo(cs_port_id_t portid, cs_sdl_cls_rule_t 
 	return ret;
 }
 
+
 static cs_status __sw_acl_da_sel_set(cs_port_id_t portid, cs_sdl_cls_rule_t *psel, cs_uint8 pri, cs_uint8 queue)
 {
-	cs_status ret = CS_E_ERROR;
+//	没想好动态学习的MAC地址怎么设置，取消qos时怎么恢复原来的配置，暂时不支持
+	cs_status ret = CS_E_NOT_SUPPORT;
 
 	return ret;
 }
 
 static cs_status __sw_acl_sa_sel_set(cs_port_id_t portid, cs_sdl_cls_rule_t *psel, cs_uint8 pri, cs_uint8 queue)
 {
-	cs_status ret = CS_E_ERROR;
+	//	没想好动态学习的MAC地址怎么设置，取消qos时怎么恢复原来的配置，暂时不支持
+	cs_status ret = CS_E_NOT_SUPPORT;
 
 	return ret;
 }
@@ -244,7 +257,7 @@ static cs_status __sw_acl_vid_sel_set(cs_port_id_t portid, cs_sdl_cls_rule_t *ps
 	return ret;
 }
 
-static cs_status __sw_acl_dscp_sel_set(cs_port_id_t portid, cs_sdl_cls_rule_t *psel, cs_uint8 pri, cs_uint8 queue)
+static cs_status __sw_acl_vid_sel_undo(cs_port_id_t portid, cs_sdl_classification_t *prule)
 {
 	cs_status ret = CS_E_ERROR;
 
@@ -255,17 +268,98 @@ static cs_status __sw_acl_dscp_sel_set(cs_port_id_t portid, cs_sdl_cls_rule_t *p
 
 	GT_STATUS rt = GT_OK;
 
+	cs_sdl_cls_rule_t *psel = &prule->fselect[0];
+
+	cs_uint32 lport = L2P_PORT(portid);
+
+	if(gt_getswitchunitbylport(lport, &unit, &port) == GT_OK)
+	{
+		cs_uint16 vid = ntohl((*(cs_uint32*)&psel->matchValue[CLASS_MATCH_VAL_LEN-4]));
+
+//		添加vtu entry的修改
+		memset(&entry, 0, sizeof(GT_VTU_ENTRY));
+		entry.vid = vid;
+		entry.DBNum = vid;
+
+		rt = gvtuFindVidEntry(QD_DEV_PTR, &entry, &found);
+		if(rt == GT_OK && found == GT_TRUE)
+		{
+			gvtuDelEntry(QD_DEV_PTR, &entry);
+
+			entry.vidPriOverride = GT_FALSE;
+			entry.vidPriority = 0;
+
+			gvtuAddEntry(QD_DEV_PTR, &entry);
+
+//		不改变包的优先级 by wangxy 2014-02-18
+			rt = gprtSetVTUPriOverride(QD_DEV_PTR, port, PRI_OVERRIDE_NONE);
+
+			if(rt == GT_OK) //优先级映射队列改为默认
+			{
+				rt = gcosSetUserPrio2Tc(QD_DEV_PTR, prule->priMark, s_def_pq_map[prule->priMark].queue);
+				if(rt == GT_OK)
+					ret = CS_E_OK;
+			}
+		}
+	}
+
+	return ret;
+}
+
+static cs_status __sw_acl_dscp_sel_set(cs_port_id_t portid, cs_sdl_cls_rule_t *psel, cs_uint8 pri, cs_uint8 queue)
+{
+	cs_status ret = CS_E_ERROR;
+
+	GT_32 unit, port;
+
+	GT_STATUS rt = GT_OK;
+
 	cs_uint32 lport = L2P_PORT(portid);
 
 	if(gt_getswitchunitbylport(lport, &unit, &port) == GT_OK)
 	{
 		cs_uint8 dscp = ntohl((*(cs_uint32*)&psel->matchValue[CLASS_MATCH_VAL_LEN-4]));
 
-		if(gcosSetDscp2Tc(QD_DEV_PTR, dscp, pri) == GT_OK)
+		//initialpri = 2 (reg 4 bit5:4)
+		gqosUserPrioMapEn(QD_DEV_PTR, port , GT_FALSE);
+		gqosIpPrioMapEn(QD_DEV_PTR, port, GT_TRUE);
+
+		if(gcosSetDscp2Tc(QD_DEV_PTR, dscp, queue) == GT_OK) //dscp remap qpri
 		{
-				rt = gcosSetUserPrio2Tc(QD_DEV_PTR, pri, queue);
-				if(rt == GT_OK)
-					ret = CS_E_OK;
+			rt = gqosSetDefFPri(QD_DEV_PTR, port, (pri%(queue<<1))); //fpri[0] == defpri[0] fpri[2:1] = qpri
+			if(rt == GT_OK)
+				ret = CS_E_OK;
+		}
+	}
+
+	return ret;
+}
+
+static cs_status __sw_acl_dscp_sel_undo(cs_port_id_t portid, cs_sdl_classification_t *prule)
+{
+	cs_status ret = CS_E_ERROR;
+
+	GT_32 unit, port;
+
+	GT_STATUS rt = GT_OK;
+
+	cs_uint32 lport = L2P_PORT(portid);
+
+	cs_sdl_cls_rule_t *psel = &prule->fselect[0];
+
+	if(gt_getswitchunitbylport(lport, &unit, &port) == GT_OK)
+	{
+		cs_uint8 dscp = ntohl((*(cs_uint32*)&psel->matchValue[CLASS_MATCH_VAL_LEN-4]));
+
+		//initialpri = 2 (reg 4 bit5:4)
+		gqosUserPrioMapEn(QD_DEV_PTR, port , GT_FALSE);
+		gqosIpPrioMapEn(QD_DEV_PTR, port, GT_FALSE);
+
+		if(gcosSetDscp2Tc(QD_DEV_PTR, dscp, (dscp/64)) == GT_OK) //dscp remap qpri
+		{
+			rt = gqosSetDefFPri(QD_DEV_PTR, port, 0); //fpri[0] == defpri[0] fpri[2:1] = qpri
+			if(rt == GT_OK)
+				ret = CS_E_OK;
 		}
 	}
 
@@ -390,17 +484,100 @@ static cs_status __sw_acl_add (
 
 static cs_status __sw_acl_del (
     CS_IN cs_port_id_t                 port_id,
-    CS_IN cs_uint8                     index
+    CS_IN cs_sdl_classification_t		*prule
 )
 {   
-    GT_STATUS  retVal;
-          
-//    retVal = rtk_filter_igrAcl_cfg_del(__RTK_ACL_IDX(port_id,index));
-    if(retVal){
-        return CS_E_ERROR;
-    }
+    cs_sdl_cls_rule_t   *ptemp =NULL;
+    cs_status ret = CS_E_ERROR;
+
+    ptemp = &prule->fselect[0];
     
-    return CS_E_OK;
+    switch(ptemp->fieldSelect)
+    {
+        case CLASS_RULES_FSELECT_DA_MAC:
+        {
+            break;
+        }
+        case CLASS_RULES_FSELECT_SA_MAC:
+        {
+            break;
+        }
+        case CLASS_RULES_FSELECT_802_1P:
+        {
+        	ret = __sw_acl_8021p_sel_undo(port_id, ptemp);
+            break;
+        }
+        case CLASS_RULES_FSELECT_VLAN_ID:
+        {
+        	ret = __sw_acl_vid_sel_undo(port_id, prule);
+            break;
+        }
+        case CLASS_RULES_FSELECT_ETH_TYPE:
+        {
+            break;
+        }
+        case CLASS_RULES_FSELECT_DA_IPV4:
+        {
+            break;
+        }
+        case CLASS_RULES_FSELECT_SA_IPV4:
+        {
+            break;
+        }
+        case CLASS_RULES_FSELECT_IPPRTO:
+        {
+            break;
+        }
+        case CLASS_RULES_FSELECT_TOS_DSCP:
+        {
+        	ret = __sw_acl_dscp_sel_undo(port_id, prule);
+            break;
+        }
+        case CLASS_RULES_FSELECT_IPV6_TC:
+        {
+            break;
+        }
+        case CLASS_RULES_FSELECT_L4_SRC_PORT:
+        {
+            break;
+        }
+        case CLASS_RULES_FSELECT_L4_DST_PORT:
+        {
+            break;
+        }
+        case CLASS_RULES_FSELECT_IPVER:
+        {
+            break;
+        }
+        case CLASS_RULES_FSELECT_IPV6_FLOWLABEL:
+        {
+            break;
+        }
+        case CLASS_RULES_FSELECT_DA_IPV6:
+        {
+            break;
+        }
+        case CLASS_RULES_FSELECT_SA_IPV6:
+        {
+            break;
+        }
+        case CLASS_RULES_FSELECT_DA_IPV6_PREFIX:
+        {
+            break;
+        }
+        case CLASS_RULES_FSELECT_SA_IPV6_PREFIX:
+        {
+            break;
+        }
+        case CLASS_RULES_FSELECT_IPV6_NEXT_HEADER:
+        {
+            break;
+        }
+        default:
+            return CS_E_PARAM;
+    }
+
+    return ret;
 }
 
 static cs_status __sw_acl_def ( CS_IN cs_boolean  enable)
@@ -575,13 +752,16 @@ cs_status epon_request_onu_port_classification_del(
     
     if(tbl_num==0)
          return CS_E_OK;
-        
+
     ret = class_rule_tbl_del_record(port_id, prenum, precedence, &start_idx);
     if (ret) 
         return ret;
     /* can't deleted any entry*/
     if(start_idx == tbl_num)
         return CS_E_OK;
+
+    for(i=0; i<tbl_num; i++)
+    	__sw_acl_del(port_id, tbl+i);
 
     memset(tbl, 0, RTK_ACL_CLS_MAC_PORT_LENGTH*sizeof(cs_sdl_classification_t));
     tbl_num =0;
@@ -590,17 +770,9 @@ cs_status epon_request_onu_port_classification_del(
     if (ret) 
         return ret;
 
-    for(i=start_idx; i< tbl_size; i++)
+    for(i=0; i< tbl_num; i++)
     {   
-        if(i>=tbl_num)
-        {
-            ret =__sw_acl_del(port_id, i);
-        }
-        else
-        {
-            ret =__sw_acl_add(port_id, i, &tbl[i]);
-        }
-      
+        ret =__sw_acl_add(port_id, i, &tbl[i]);
         if (ret) 
             return ret;
     }
@@ -641,24 +813,30 @@ cs_status epon_request_onu_port_classification_clr(
 )
 {
     cs_int32  i;
-    cs_uint8  tbl_size =0;
+    cs_uint8  tbl_size =0, tbl_num=0;
     cs_status ret = CS_E_OK;
+    cs_sdl_classification_t  tbl[RTK_ACL_CLS_MAC_PORT_LENGTH];
 
   
     UNI_PORT_CHECK(port_id);
 
    // tbl_size = (g_sw_tbl[port_id-1].g_mac_cnt >4)?(RTK_ACL_CLS_MAC_PORT_LENGTH -g_sw_tbl[port_id-1].g_mac_cnt): RTK_ACL_CLS_PORT_LENGTH;
     tbl_size = RTK_ACL_CLS_MAC_PORT_LENGTH -g_sw_tbl[port_id-1].g_mac_cnt;
-    ret = class_rule_tbl_clr_record(port_id);
-    if (ret) 
-        return ret;
-    
-    for(i=0; i< tbl_size; i++)
+
+    ret = class_rule_tbl_get_record(port_id, &tbl_num, tbl);
+    if(ret)
+    	return ret;
+
+    for(i=0; i< tbl_num; i++)
     {       
-        ret =__sw_acl_del(port_id, i);
+        ret =__sw_acl_del(port_id, tbl+i);
         if (ret) 
             return ret;
     }
+
+    ret = class_rule_tbl_clr_record(port_id);
+    if (ret)
+        return ret;
 
     g_sw_tbl[port_id-1].g_cls_cnt = 0;
 

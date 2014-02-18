@@ -60,7 +60,7 @@ void gtDbgPrint(char* format, ...)
 	printf("%s",dbgStr);
 /*	DbgPrint(dbgStr);*/
 #elif defined(LINUX)
-	printk("%s",dbgStr);
+	printf("%s",dbgStr);
 #endif
 	return;
 }
