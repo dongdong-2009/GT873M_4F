@@ -885,7 +885,7 @@ cs_status epon_request_onu_port_stats_get(
 
     GT_LPORT           port;
     cs_uint32            val[2] = {0, 0};
-    GT_STATS_COUNTER_SET sts;
+    GT_STATS_COUNTER_SET3 sts;
     GT_32 unit, hwport;
     GT_STATUS   ret = GT_ERROR;
     cs_status            rt = CS_E_OK;
@@ -903,7 +903,7 @@ cs_status epon_request_onu_port_stats_get(
     }
 
     memset((cs_uint8 *)uni_stats, 0, sizeof(cs_sdl_port_uni_stats_t));
-    memset((cs_uint8*)&sts, 0, sizeof(GT_STATS_COUNTER_SET));
+    memset((cs_uint8*)&sts, 0, sizeof(GT_STATS_COUNTER_SET3));
 //    memset((cs_uint8*)&port_cnt, 0, sizeof(port_cnt));
 
     if (port_id != CS_DOWNLINK_PORT) {
@@ -911,7 +911,7 @@ cs_status epon_request_onu_port_stats_get(
 
         gt_getswitchunitbylport(port, &unit, &hwport);
 
-        ret = gstatsGetPortAllCounters(QD_DEV_PTR, hwport, &sts );
+        ret = gstatsGetPortAllCounterGwd(QD_DEV_PTR, hwport, &sts );
         if(ret != GT_OK)
         {
         	rt = CS_ERROR;
@@ -929,8 +929,8 @@ cs_status epon_request_onu_port_stats_get(
         uni_stats->rxundersizefrm_cnt = sts.Undersize;
         uni_stats->rxoversizefrm_cnt = sts.Oversize;
         uni_stats->rxjabberfrm_cnt = sts.Jabber;
-        uni_stats->rxbyte_cnt = sts.InGoodOctets;
-        uni_stats->txbyte_cnt = sts.OutGoodOctets;
+        uni_stats->rxbyte_cnt = sts.InGoodOctetsLo;
+        uni_stats->txbyte_cnt = sts.OutOctetsLo;
         uni_stats->txucfrm_cnt = sts.OutUnicasts;
         uni_stats->txmcfrm_cnt = sts.OutMulticasts;
         uni_stats->txbcfrm_cnt = sts.OutBroadcasts;
@@ -940,11 +940,11 @@ cs_status epon_request_onu_port_stats_get(
         uni_stats->txmulticolfrm_cnt = sts.Multiple;
         uni_stats->txlatecolfrm_cnt = sts.Late;
         uni_stats->txexesscolfrm_cnt = sts.Excessive;
-		uni_stats->rxstatsfrm64_cnt = sts.In64Octets;
-		uni_stats->rxstatsfrm65_127_cnt = sts.In127Octets;
-		uni_stats->rxstatsfrm128_255_cnt = sts.In255Octets;
-		uni_stats->rxstatsfrm256_511_cnt = sts.In511Octets;
-		uni_stats->rxstatsfrm512_1023_cnt = sts.In1023Octets;
+		uni_stats->rxstatsfrm64_cnt = sts.Octets64;
+		uni_stats->rxstatsfrm65_127_cnt = sts.Octets127;
+		uni_stats->rxstatsfrm128_255_cnt = sts.Octets255;
+		uni_stats->rxstatsfrm256_511_cnt = sts.Octets511;
+		uni_stats->rxstatsfrm512_1023_cnt = sts.Octets1023;
 		uni_stats->rxfrm_cnt = uni_stats->rxucfrm_cnt + uni_stats->rxmcfrm_cnt + uni_stats->rxbcfrm_cnt;
 
 		if(read_clear)
