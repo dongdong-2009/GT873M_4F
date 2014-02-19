@@ -296,6 +296,7 @@ static cs_status __l2_pon_spec_pkt_state_set(
     return CS_E_OK;
 }
 
+#if 0
 static cs_status __l2_sw_mac_trap_set(
      CS_IN cs_pkt_type_t             pkt_type,
      CS_IN cs_sdl_pkt_dst_t          state
@@ -508,6 +509,7 @@ static cs_status __l2_sw_uni_set(
     
     return ret;
 }
+#endif
 
 static cs_status __l2_sw_uni_stp_block(
      CS_IN cs_port_id_t              portid,
@@ -687,6 +689,7 @@ static cs_status __l2_sw_uni_stp_block(
     return ret;
 }
 
+#if 0
 static cs_status __l2_mii_port_set(
      CS_IN cs_pkt_type_t             pkt_type,
      CS_IN cs_sdl_pkt_dst_t          state
@@ -695,6 +698,7 @@ static cs_status __l2_mii_port_set(
     //Not support now
     return CS_E_OK;
 }
+#endif
 
 /******Special packet MA status ********************/ 
 static cs_status __l2_pkt_rate_set(    
@@ -967,10 +971,35 @@ cs_status epon_request_onu_spec_pkt_dst_set(
     }
     else 
     {
-        /* set Realtek switch chip */        
+#if 0
+        /* set Realtek switch chip */
         ret = __l2_sw_uni_set(pkt_type, state);
         // set management port
         ret +=__l2_mii_port_set(pkt_type, state);
+#else
+    	cs_aal_port_id_t port;
+    	cs_aal_pkt_type_t pkt;
+        cs_aal_spec_pkt_ctrl_msk_t  pkt_msk;
+        cs_aal_spec_pkt_ctrl_t      pkt_cfg;
+
+        memset(&pkt_msk, 0, sizeof(cs_aal_spec_pkt_ctrl_msk_t));
+        memset(&pkt_cfg, 0, sizeof(cs_aal_spec_pkt_ctrl_t));
+
+        pkt_msk.u32 = 0;
+        pkt_msk.s.dpid = 1;
+
+        pkt_cfg.dpid.dst_op = (state==DST_FE)?AAL_SPEC_DST_FE:((state==DST_CPU)?AAL_SPEC_DST_PORT: AAL_SPEC_DST_DROP);
+        pkt_cfg.dpid.dpid   = AAL_PORT_ID_CPU;
+
+    	pkt = g_sdl_pkt_map[pkt_type];
+
+        if(CS_DOWN_STREAM==direction)
+           port = AAL_PORT_ID_PON;
+        else
+           port = AAL_PORT_ID_GE;
+        ret = aal_special_pkt_behavior_set(port, pkt, pkt_msk, &pkt_cfg);
+
+#endif
     }
     
     if(ret != CS_E_OK)
