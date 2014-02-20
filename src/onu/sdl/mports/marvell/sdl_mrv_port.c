@@ -419,7 +419,7 @@ cs_status epon_request_onu_port_speed_get(
     GT_32 unit, hwport;
 
     if (NULL == speed) {
-        SDL_MIN_LOG("Speed is NULL pointer!\n", );
+        SDL_MIN_LOG("Speed is NULL pointer!\n");
         return CS_E_PARAM;
     }
 
@@ -482,7 +482,7 @@ cs_status epon_request_onu_port_duplex_get(
     GT_32 unit, hwport;
 
     if (NULL == duplex) {
-        SDL_MIN_LOG("duplex is NULL pointer\n", );
+        SDL_MIN_LOG("duplex is NULL pointer\n" );
         return CS_E_PARAM;
     }
     
@@ -492,7 +492,7 @@ cs_status epon_request_onu_port_duplex_get(
 
     /** PHY link status */
     gt_getswitchunitbylport(port, &unit, &hwport);
-    ret = gprtGetC_Duplex(QD_DEV_PTR, hwport, &lduplex);
+    ret = gprtGetDuplex(QD_DEV_PTR, hwport, &lduplex);
     if (GT_OK != ret) {
         SDL_MIN_LOG("gprtGetC_Duplex return %d\n", ret);
         return CS_E_ERROR;
@@ -519,7 +519,7 @@ cs_status epon_request_onu_port_auto_neg_get(
     cs_sdl_port_speed_cfg_t port_cfg;
 
     if (NULL == auto_neg) {
-        SDL_MIN_LOG("auto_neg is NULL pointer!\n", );
+        SDL_MIN_LOG("auto_neg is NULL pointer!\n" );
         return CS_E_PARAM;
     }
 
@@ -718,7 +718,7 @@ cs_status epon_request_onu_port_lpbk_set(
 
             case SDL_PORT_LOOPBACK_RX2TX:
             default: {
-                SDL_MIN_LOG(" loopback %d is not supported\n", , loopback);
+                SDL_MIN_LOG(" loopback %d is not supported\n", loopback);
                 rt = CS_E_PARAM;
                 goto END;
             }
@@ -800,7 +800,7 @@ cs_status epon_request_onu_port_status_get(
 )
 {
     if (NULL == speed_cfg) {
-        SDL_MIN_LOG("speed_cfg is a NULL pointer\n", );
+        SDL_MIN_LOG("speed_cfg is a NULL pointer\n" );
         return CS_E_PARAM;
     }
 
@@ -862,7 +862,7 @@ cs_status epon_request_onu_port_admin_get(
 )
 {
     if (NULL == admin) {
-        SDL_MIN_LOG("admin is a NULL pointer\n", );
+        SDL_MIN_LOG("admin is a NULL pointer\n" );
         return CS_E_PARAM;
     }
     
@@ -1606,7 +1606,7 @@ cs_status sdl_port_init(
 
     
     if (NULL == cfg) {
-        SDL_MIN_LOG(" NULL pointer!\n", );
+        SDL_MIN_LOG(" NULL pointer!\n" );
         return CS_E_PARAM;
     }
     
@@ -2341,7 +2341,7 @@ cs_status epon_request_onu_port_mirror_set(
     }
     else{
         if (((tx_port_msk &(1 << port)) > 0) || ((rx_port_msk &(1 << port)) > 0)) {
-            SDL_MIN_LOG("mirror_port %d should not be included into source port!\n", , mirror_port);
+            SDL_MIN_LOG("mirror_port %d should not be included into source port!\n", mirror_port);
             rt = CS_E_PARAM;
             goto END;
         }

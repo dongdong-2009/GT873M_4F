@@ -1112,7 +1112,7 @@ GT_STATUS gfdbGetAtuEntryNext
     gtMemCpy(entry.macAddr.arEther,atuEntry->macAddr.arEther,6);
 
 	entry.DBNum = atuEntry->DBNum;
-    DBG_INFO(("DBNum : %i\n",entry.DBNum));
+    DBG_INFO(("DBNum : %u\n",entry.DBNum));
 
     retVal = atuOperationPerform(dev,GET_NEXT_ENTRY,NULL,&entry);
     if(retVal != GT_OK)

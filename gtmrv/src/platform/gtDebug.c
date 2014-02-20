@@ -44,6 +44,7 @@
 *
 *******************************************************************************/
 #if defined(_VXWORKS) || defined(WIN32) || defined(LINUX)
+#if 0
 void gtDbgPrint(char* format, ...)
 {
     va_list argP;
@@ -64,6 +65,20 @@ void gtDbgPrint(char* format, ...)
 #endif
 	return;
 }
+#else
+void gtDbgPrint(char* format, ...)
+{
+    va_list ap;
+    int ret;
+
+    extern int diag_vprintf(const char *fmt, va_list ap);
+
+    va_start(ap, format);
+    ret = diag_vprintf(format, ap);
+    va_end(ap);
+
+}
+#endif
 #else
 void gtDbgPrint(char* format, ...)
 {

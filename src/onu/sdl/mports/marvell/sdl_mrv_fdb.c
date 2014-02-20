@@ -239,7 +239,7 @@ static void __onu_fdb_entry_clr_uplink_port (
     	{
     		ret = gfdbGetAtuEntryNext(QD_DEV_PTR, &entry);
     		if(ret != GT_OK)
-    			SDL_MIN_LOG("pord: %d, address: %d.\n", portid, address);
+    			SDL_MIN_LOG("%s call gfdbGetAtuEntryNext fail\r\n", __func__);
     	}
     }
     FOR_UNIT_END
@@ -1112,9 +1112,10 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
 )
 {
     GT_ATU_ENTRY l2_data;
-    GT_U32 count = 0, i;
+    GT_U32 count = 0, i, loffset = offset;
     GT_STATUS gt_ret = GT_OK;
     cs_status ret = CS_E_OK;
+    GT_BOOL found = GT_FALSE;
 
     if((NULL==next) || (NULL==entry)) {
         SDL_MIN_LOG("null pointer\n");
@@ -1131,27 +1132,36 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
     if(GT_OK != gfdbGetAtuAllCount(QD_DEV_PTR, &count))
     	return CS_E_ERROR;
 
-    if(offset > count)
+    SDL_MIN_LOG("fdb count: %lu\r\n", count);
+
+    if(loffset > count)
     {
-    	offset -= count;
+    	loffset -= count;
     	continue;
     }
 
-    for(i=0; i<count; i++)
+    memset(&l2_data, 0, sizeof(l2_data));
+    i = 0;
+
+    while(1)
     {
-    	if(i == 0)
-    		gt_ret = gfdbGetAtuEntryFirst(QD_DEV_PTR, &l2_data);
-    	else
-    		gt_ret = gfdbGetAtuEntryNext(QD_DEV_PTR, &l2_data);
+
+    	gt_ret = gfdbGetAtuEntryNext(QD_DEV_PTR, &l2_data);
 
     	if(gt_ret != GT_OK)
     	{
     		ret = CS_E_ERROR;
+    		SDL_MIN_LOG("gfdbGetAtuEntryNext fail(%d)\r\n", gt_ret);
     		break;
     	}
 
+    	SDL_MIN_LOG("found fdb idx %lu\r\n", i);
+
     	if(i < offset)
+    	{
+    		i++;
     		continue;
+    	}
 
     	if((l2_data.entryState.ucEntryState != GT_UC_DYNAMIC && mode == SDL_FDB_ENTRY_DYNAMIC) ||
     			(l2_data.entryState.ucEntryState != GT_UC_STATIC && mode == SDL_FDB_ENTRY_STATIC) )
@@ -1162,11 +1172,17 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
     	entry->vlan_id = l2_data.DBNum;
     	entry->port = P2L_PORT(getlportfromucportvec(l2_data.portVec));
     	entry->type = l2_data.entryState.ucEntryState == GT_UC_DYNAMIC ? SDL_FDB_ENTRY_DYNAMIC : SDL_FDB_ENTRY_STATIC;
-    	*next = i+1;
+    	found = GT_TRUE;
     	break;
     }
     
+    if(found == GT_TRUE)
+    	break;
+
     FOR_UNIT_END
+
+    if(found == GT_TRUE)
+    	*next = offset+1;
 
     return ret;
     
