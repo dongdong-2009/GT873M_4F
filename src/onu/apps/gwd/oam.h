@@ -814,7 +814,12 @@ typedef struct alarm_loop
         cs_uint8 onuPort[4];
 } __attribute__ ((packed)) ALARM_LOOP;
 
+#if(PRODUCT_CLASS == PRODUCTS_GT811D || PRODUCT_CLASS == PRODUCTS_GT811G ||	PRODUCT_CLASS == PRODUCTS_GT873_M_4F4S)
 #define NUM_PORTS_PER_SYSTEM 5
+#elif(PRODUCT_CLASS == PRODUCTS_GT812C)
+#define NUM_PORTS_PER_SYSTEM 9
+#endif
+
 #define IFM_ETH_ALARM_STATUS_LOOP     0x08
 
 /*added by wangxiaoyu 2009-03-11*/

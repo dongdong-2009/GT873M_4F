@@ -70,6 +70,7 @@ cs_uint8 phy_log_map[NUM_UNITS_PER_SYSTEM][PHY_PORT_MAX+1] = {
     {1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 9, 0xFF} /* uint 0 */
 };
 
+#if(PRODUCT_CLASS == PRODUCTS_GT811D || PRODUCT_CLASS == PRODUCTS_GT811G ||	PRODUCT_CLASS == PRODUCTS_GT873_M_4F4S)
 log_phy_map_t log_phy_map[NUM_PORTS_PER_SYSTEM] = {
      {0, (PHY_PORT_FE0+0)}
     ,{0, (PHY_PORT_FE0+1)}
@@ -77,6 +78,20 @@ log_phy_map_t log_phy_map[NUM_PORTS_PER_SYSTEM] = {
     ,{0, (PHY_PORT_FE0+3)}
     ,{0, (PHY_PORT_FE0+10)}
 };
+
+#elif(PRODUCT_CLASS == PRODUCTS_GT812C)
+log_phy_map_t log_phy_map[NUM_PORTS_PER_SYSTEM] = {
+     {0, (PHY_PORT_FE0+0)}
+    ,{0, (PHY_PORT_FE0+1)}
+    ,{0, (PHY_PORT_FE0+2)}
+    ,{0, (PHY_PORT_FE0+3)}
+    ,{0, (PHY_PORT_FE0+4)}
+    ,{0, (PHY_PORT_FE0+5)}
+    ,{0, (PHY_PORT_FE0+6)}
+    ,{0, (PHY_PORT_FE0+7)}
+    ,{0, (PHY_PORT_FE0+10)}
+};
+#endif
 
 cs_int8 port_loop_back_session[8]="";
 

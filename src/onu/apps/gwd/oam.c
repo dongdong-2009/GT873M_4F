@@ -3249,7 +3249,6 @@ int cmd_static_mac_del_fdb(struct cli_def *cli, char *command, char *argv[], int
 extern int show_port_statistic(struct cli_def * cli, int portid);
 
 
-#define NUM_PORTS_PER_SYSTEM 5
 #define NUM_PORTS_MINIMUM_SYSYTEM 1
 int cmd_stat_port_show(struct cli_def *cli, char *command, char *argv[], int argc)
 {
