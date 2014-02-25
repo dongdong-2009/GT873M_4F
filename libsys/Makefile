@@ -8,7 +8,7 @@ ECOS_INSTALL_HOME=../iros/install
 IROS_CONFIG_H=$(shell pwd)/../iros_config.h
 
 MOD_CFLAGS= -Werror -Wno-uninitialized -nostdlib -fno-inline \
--mthumb-interwork -mthumb -mcpu=arm9 \
+-mthumb-interwork -mthumb -mcpu=arm9 -DUSE_SEMAPHORE -D_RELEASE_VERSION_\
 -include $(IROS_CONFIG_H)
 
 CFILES= \

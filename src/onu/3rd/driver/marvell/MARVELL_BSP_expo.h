@@ -22,6 +22,8 @@
 
 #include "msApi.h"
 
+extern void cs_printf(const char *String, ...);
+
 /* ---------- APPLICATION VERSION ---------- */
 
 #define BSP_VER_MAJOR       3
@@ -103,11 +105,11 @@ extern int BSP_Console_FD;
         result = status; \
     }
 
-#define MSG_OUT(x) printf x;
+#define MSG_OUT(x) cs_printf x;
 #else
 #define CHECK_MARVELL_RESULT_AND_RETURN(__drv_func__) 
 #define CHECK_MARVELL_RESULT_NO_RETURN(__drv_func__) 
-#define MSG_OUT(x)	sys_console_printf x
+#define MSG_OUT(x)	cs_printf x
 #endif
 
 /* check if multicast - type GT_ETHERADDR*/

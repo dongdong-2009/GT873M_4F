@@ -1428,12 +1428,16 @@ GT_STATUS switch_default_config(GT_QD_DEV * dev)
 	GT_STATUS    	l_ret_val = GT_OK;
 	GT_STATUS       result = GT_OK;
     GT_LPORT        i, phyPort;
+#ifndef _RELEASE_VERSION_
     GT_VTU_ENTRY    vtuEntry;
+#endif
  	GT_ERATE_TYPE   gtEgressRateType;
  	GT_U8			pri;
+#if 0
 	GT_ATU_ENTRY gtAtuEntryBc;
 	GT_ATU_ENTRY gtAtuEntryMcLn;
 	GT_U8 Mc_LocalNetwork[6] = {0x01, 0x00, 0x5E, 0x00, 0x00, 0x01};
+#endif
 /*#define  _SIMPLEST_*/
 
 #if 1
@@ -1868,7 +1872,7 @@ GT_STATUS switch_default_config(GT_QD_DEV * dev)
 		l_ret_val = result;
 	}
 #endif
-#if 1
+#if 0
 	/* 6095 not support broadcast flood, 6097 does */
 	if (IS_IN_DEV_GROUP(dev, DEV_FLOOD_BROADCAST))
     {
@@ -2655,7 +2659,7 @@ GT_STATUS InternalVlanInit(GT_QD_DEV * dev, GT_U32 vid)
 	return l_ret_val;
 }
 
-GT_STATUS InternalVlanJoin(GT_QD_DEV * dev, GT_U32 vid, GT_LPORT phyPort)
+GT_STATUS InternalVlanJoin(GT_QD_DEV * dev, GT_U32 vid, GT_LPORT phyPort, GT_BOOL tagged)
 {
     GT_VTU_ENTRY    vtuEntry;
     GT_BOOL			bFound;
@@ -2675,7 +2679,7 @@ GT_STATUS InternalVlanJoin(GT_QD_DEV * dev, GT_U32 vid, GT_LPORT phyPort)
 
 	if(GT_TRUE == bFound)
 	{
-		vtuEntry.vtuData.memberTagP[phyPort] = MEMBER_EGRESS_TAGGED;
+		vtuEntry.vtuData.memberTagP[phyPort] = tagged?MEMBER_EGRESS_TAGGED:MEMBER_EGRESS_UNTAGGED;
 	    if ((result = gvtuAddEntry(dev, &vtuEntry)) != GT_OK)
 		{
 			MSG_OUT(( "gvtuAddEntry return Failed(%d)\r\n", result));

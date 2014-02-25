@@ -126,7 +126,7 @@ GT_STATUS smiChannelSemGive(void);
 GT_STATUS setDSAMode(GT_BOOL mode);
 GT_BOOL isInterswitchPort(GT_LPORT port);
 GT_STATUS InternalVlanInit(GT_QD_DEV * dev, GT_U32 vid);
-GT_STATUS InternalVlanJoin(GT_QD_DEV * dev, GT_U32 vid, GT_LPORT phyPort);
+GT_STATUS InternalVlanJoin(GT_QD_DEV * dev, GT_U32 vid, GT_LPORT phyPort, GT_BOOL tagged);
 GT_STATUS InternalVlanLeave(GT_QD_DEV * dev, GT_U32 vid, GT_LPORT phyPort);
 GT_STATUS IsolateTwoPorts(GT_QD_DEV * dev, GT_BOOL mode, GT_LPORT phyPortA, GT_LPORT phyPortB);
 GT_STATUS switch_fe_port_pause_ctrl(GT_QD_DEV * dev, GT_LPORT phyPort, GT_BOOL mode);

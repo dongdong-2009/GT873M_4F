@@ -120,7 +120,7 @@ GT_U16 runQDHash(GT_U8* eaddr, GT_U16 dbNum, int bSize, GT_U16* pHash,
 					GT_U16* preBucket, GT_U16* posBucket);
 GT_STATUS testDisplayATUList();
 
-#undef USE_SEMAPHORE
+//#undef USE_SEMAPHORE
 
 #ifdef USE_SEMAPHORE
 GT_SEM osSemCreate(GT_SEM_BEGIN_STATE state);

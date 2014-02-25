@@ -122,18 +122,17 @@ typedef struct{
 
 __fdb_static_entry_t  __fdb_static_entry_table[UNI_PORT_MAX];      
 
-static GT_U8 getlportfromucportvec(GT_U16 portvec)
+static GT_U8 getlportfromucportvec(GT_QD_DEV *dev, GT_U16 portvec)
 {
-	GT_U8 port, lport = GT_INVALID_PORT;
+	GT_U8 port;
 
-	for(port=0; port<UNI_PORT_MAX; port++)
+	for(port=0; port<dev->maxPorts; port++)
 	{
-		lport = port2lport(portvec, port);
-		if(lport != GT_INVALID_PORT)
+		if(portvec & (1<<port))
 			break;
 	}
 
-	return lport;
+	return port;
 }
 
 /* Check if it is a valid Unicast mac addr 
@@ -162,7 +161,7 @@ static cs_status __fdb_check_mac(cs_mac_t *mac)
 /* workaround for BUG 29184,make 802.1x packet to be known MC packet*/
 static cs_status __fdb_8021x_static_mac(void)
 {
-    GT_STATUS gt_ret;
+    GT_STATUS gt_ret = GT_OK;
     GT_ATU_ENTRY entry;
     GT_LPORT port;
 
@@ -183,7 +182,7 @@ static cs_status __fdb_8021x_static_mac(void)
 			entry.portVec = 1<<port;
 		else
 			continue;
-		gt_ret = gfdbAddMacEntry(QD_DEV_PTR, &entry);
+//		gt_ret = gfdbAddMacEntry(QD_DEV_PTR, &entry);
 		if(GT_OK != gt_ret)
 		{
 			SDL_MIN_LOG("gfdbAddMacEntry return %d. FILE: %s, LINE: %d", gt_ret, __FILE__, __LINE__);
@@ -585,9 +584,9 @@ cs_status epon_request_onu_mac_learn_set(
     	GT_32 unit, port;
     	if(GT_OK == gt_getswitchunitbylport(port_id-1, &unit, &port))
     	{
-    		gt_ret = gfdbSetPortAtuLearnLimit(QD_DEV_PTR, port_id-1, 0);
+    		gt_ret = gprtSetLearnDisable(QD_DEV_PTR, port_id-1, GT_TRUE);
     		if(GT_OK != gt_ret){
-    			SDL_MIN_LOG("In function:%s,line:%d invoke gfdbSetPortAtuLearnLimit fail!\n",__FUNCTION__, __LINE__);
+    			SDL_MIN_LOG("In function:%s,line:%d invoke gprtSetLearnDisable fail!\n",__FUNCTION__, __LINE__);
     			rt = CS_E_ERROR;
     			goto END;
     		}
@@ -609,9 +608,9 @@ cs_status epon_request_onu_mac_learn_set(
 
     	if(GT_OK == gt_getswitchunitbylport(port_id-1, &unit, &port))
     	{
-			gt_ret = gfdbLearnEnable(QD_DEV_PTR,1);
+			gt_ret = gprtSetLearnDisable(QD_DEV_PTR, port, GT_FALSE);
 			if(GT_OK != gt_ret){
-				SDL_MIN_LOG("In function:%s,line:%d invoke gfdbLearnEnable fail!\n",__FUNCTION__, __LINE__);
+				SDL_MIN_LOG("In function:%s,line:%d invoke gprtSetLearnDisable fail!\n",__FUNCTION__, __LINE__);
 				rt = CS_E_ERROR;
 				goto END;
 			}
@@ -619,12 +618,15 @@ cs_status epon_request_onu_mac_learn_set(
 
         g_fdb_port_cfg[port_id-1].lrn_en = SDL_FDB_MAC_LEARN_ENABLE;
         
+#if 0
         /*when enable mac learn, mac limit should take effect*/
         rt = epon_request_onu_fdb_mac_limit_set(context, device_id, llidport, port_id, g_fdb_port_cfg[port_id-1].mac_limit);
         if(rt){
             SDL_MIN_LOG("In function:%s,line:%d invoke epon_request_onu_uc_l2_entry_clr fail!\n",__FUNCTION__, __LINE__);
             goto END;
+
         }
+#endif
     }
     
 END:
@@ -1090,7 +1092,7 @@ cs_status epon_request_onu_fdb_entry_get(
 
     memcpy(&entry->mac, &l2_data.macAddr.arEther[0], sizeof(cs_mac_t));
     entry->vlan_id = l2_data.DBNum;
-    entry->port = P2L_PORT(getlportfromucportvec(l2_data.portVec));
+    entry->port = P2L_PORT(getlportfromucportvec(QD_DEV_PTR, l2_data.portVec));
     entry->type = l2_data.entryState.ucEntryState == GT_UC_DYNAMIC ? SDL_FDB_ENTRY_DYNAMIC : SDL_FDB_ENTRY_STATIC;
     
     rt = CS_E_OK;
@@ -1112,7 +1114,7 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
 )
 {
     GT_ATU_ENTRY l2_data;
-    GT_U32 count = 0, i, loffset = offset;
+    GT_U32 count = 0, i,maxdb, j, loffset = offset;
     GT_STATUS gt_ret = GT_OK;
     cs_status ret = CS_E_OK;
     GT_BOOL found = GT_FALSE;
@@ -1132,57 +1134,81 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
     if(GT_OK != gfdbGetAtuAllCount(QD_DEV_PTR, &count))
     	return CS_E_ERROR;
 
-    SDL_MIN_LOG("fdb count: %lu\r\n", count);
+    SDL_MIN_LOG("count is %lu\r\n", count);
 
-    if(loffset > count)
+	if (IS_IN_DEV_GROUP(QD_DEV_PTR,DEV_DBNUM_FULL))
+		maxdb = 16;
+	else if(IS_IN_DEV_GROUP(QD_DEV_PTR,DEV_DBNUM_64))
+		maxdb = 64;
+	else if(IS_IN_DEV_GROUP(QD_DEV_PTR,DEV_DBNUM_256))
+		maxdb = 256;
+	else if(IS_IN_DEV_GROUP(QD_DEV_PTR,DEV_DBNUM_4096))
+		maxdb = 4096;
+	else
+		maxdb = 1;
+
+    if(loffset >= count)
     {
     	loffset -= count;
     	continue;
     }
 
-    memset(&l2_data, 0, sizeof(l2_data));
     i = 0;
 
-    while(1)
+    for(j=0; j<maxdb; j++)
     {
-
-    	gt_ret = gfdbGetAtuEntryNext(QD_DEV_PTR, &l2_data);
-
-    	if(gt_ret != GT_OK)
+    	GT_U32 count = 0;
+    	if(gfdbGetAtuAllCountInDBNum(QD_DEV_PTR, j, &count) == GT_OK && count > 0)
     	{
-    		ret = CS_E_ERROR;
-    		SDL_MIN_LOG("gfdbGetAtuEntryNext fail(%d)\r\n", gt_ret);
-    		break;
+    		cs_printf("db (%lu) count: %lu\n", j, count);
     	}
-
-    	SDL_MIN_LOG("found fdb idx %lu\r\n", i);
-
-    	if(i < offset)
-    	{
-    		i++;
+    	else
     		continue;
-    	}
+    	memset(&l2_data, 0, sizeof(l2_data));
+		while(1)
+		{
+			l2_data.DBNum = j;
+			gt_ret = gfdbGetAtuEntryNext(QD_DEV_PTR, &l2_data);
 
-    	if((l2_data.entryState.ucEntryState != GT_UC_DYNAMIC && mode == SDL_FDB_ENTRY_DYNAMIC) ||
-    			(l2_data.entryState.ucEntryState != GT_UC_STATIC && mode == SDL_FDB_ENTRY_STATIC) )
-    		continue;
+			if(gt_ret != GT_OK)
+			{
+				ret = CS_E_ERROR;
+				SDL_MIN_LOG("gfdbGetAtuEntryNext fail(%d)\r\n", gt_ret);
+				break;
+			}
 
-    	memset(entry, 0, sizeof(cs_sdl_fdb_entry_t));
-    	memcpy(&entry->mac, &l2_data.macAddr.arEther[0], sizeof(cs_mac_t));
-    	entry->vlan_id = l2_data.DBNum;
-    	entry->port = P2L_PORT(getlportfromucportvec(l2_data.portVec));
-    	entry->type = l2_data.entryState.ucEntryState == GT_UC_DYNAMIC ? SDL_FDB_ENTRY_DYNAMIC : SDL_FDB_ENTRY_STATIC;
-    	found = GT_TRUE;
-    	break;
+			if(i < offset)
+			{
+				i++;
+				continue;
+			}
+
+			if((l2_data.entryState.ucEntryState != GT_UC_DYNAMIC && mode == SDL_FDB_ENTRY_DYNAMIC) ||
+					(l2_data.entryState.ucEntryState != GT_UC_STATIC && mode == SDL_FDB_ENTRY_STATIC) )
+				continue;
+
+			memset(entry, 0, sizeof(cs_sdl_fdb_entry_t));
+			memcpy(&entry->mac, &l2_data.macAddr.arEther[0], sizeof(cs_mac_t));
+			entry->vlan_id = l2_data.DBNum;
+			entry->port = P2L_PORT(getlportfromucportvec(QD_DEV_PTR, l2_data.portVec));
+			entry->type = l2_data.entryState.ucEntryState == GT_UC_DYNAMIC ? SDL_FDB_ENTRY_DYNAMIC : SDL_FDB_ENTRY_STATIC;
+			found = GT_TRUE;
+			break;
+		}
+
+		if(found == GT_TRUE)
+			break;
     }
     
-    if(found == GT_TRUE)
-    	break;
+	if(found == GT_TRUE)
+		break;
 
     FOR_UNIT_END
 
     if(found == GT_TRUE)
     	*next = offset+1;
+    else
+    	ret = CS_E_ERROR;
 
     return ret;
     
@@ -1365,7 +1391,7 @@ cs_status epon_request_onu_fdb_entry_get_byindex_per_port(
     	memset(entry, 0, sizeof(cs_sdl_fdb_entry_t));
     	memcpy(&entry->mac, &l2_data.macAddr.arEther[0], sizeof(cs_mac_t));
     	entry->vlan_id = l2_data.DBNum;
-    	entry->port = P2L_PORT(getlportfromucportvec(l2_data.portVec));
+    	entry->port = P2L_PORT(getlportfromucportvec(QD_DEV_PTR, l2_data.portVec));
     	entry->type = l2_data.entryState.ucEntryState == GT_UC_DYNAMIC ? SDL_FDB_ENTRY_DYNAMIC : SDL_FDB_ENTRY_STATIC;
     	*next = i+1;
     	break;
@@ -1412,7 +1438,7 @@ cs_status sdl_fdb_init(
 #endif
                 
         g_fdb_port_cfg[portid-1].mac_limit = 0;
-        epon_request_onu_fdb_mac_limit_set(context, 0, 0, portid, 0xffff);
+//        epon_request_onu_fdb_mac_limit_set(context, 0, 0, portid, 0xffff);
         
         g_fdb_port_cfg[portid-1].lrn_en = SDL_FDB_MAC_LEARN_DISABLE;
         g_fdb_port_cfg[portid-1].full_mod = 0;

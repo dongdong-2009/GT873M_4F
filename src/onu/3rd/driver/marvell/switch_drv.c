@@ -23,9 +23,12 @@
 #include "switch_expo.h"
 #include "switch_drv.h"
 
+#include "cs_types.h"
+
 extern GT_U32   ulMrvTagtype;
 
 extern GT_STATUS cBurstEnum2Number(GT_QD_DEV *dev, GT_BURST_RATE rate, GT_U32 *rLimit);
+extern cs_int32 boards_logical_to_physical(cs_ulong32 lport, cs_ulong32 *unit, cs_ulong32 *pport);
 
 /* For GT812 use: Logical to Physical port map */
 #if (FOR_ONU_812_AB)
@@ -2069,7 +2072,6 @@ GT_STATUS gprtSetPortInSeries
 	IN  GT_BOOL   mode
 )
 {
-    GT_U16          data;           
     GT_STATUS       retVal = GT_OK; 	/* Functions return value.      */
     GT_LPORT        unit,hwPort1,hwPort2; 	/* the physical port number     */
     GT_U8           i,j;
@@ -2117,7 +2119,7 @@ GT_STATUS gprtSetPortInSeries
                 }
                 gtPortInSeries = GT_FALSE;
                 break;
-            defaul:
+            default:
             	break;
         }
     }

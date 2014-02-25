@@ -22,9 +22,10 @@ SRC_DIR = $(TOP_DIR)/src
 INCLUDE_DIR = $(TOP_DIR)/include
 OBJ_DIR = $(TOP_DIR)/lib
 
+# -DDEBUG_QD		
 CFLAGS += -I$(INCLUDE_DIR) -I$(INCLUDE_DIR)/h -I$(INCLUDE_DIR)/h/driver \
 					-I$(INCLUDE_DIR)/h/msApi -I$(INCLUDE_DIR)/h/platform \
-					-DLINUX -DDEBUG_QD			
+					-DLINUX	
 					
 CFLAGS += -g -Werror -nostdlib -Wno-uninitialized \
 -mthumb -mthumb-interwork -mcpu=arm9				
