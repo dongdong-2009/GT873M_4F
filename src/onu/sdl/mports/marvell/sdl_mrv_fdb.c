@@ -1198,7 +1198,7 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
 			memset(entry, 0, sizeof(cs_sdl_fdb_entry_t));
 			memcpy(&entry->mac, &l2_data.macAddr.arEther[0], sizeof(cs_mac_t));
 			entry->vlan_id = l2_data.DBNum;
-			entry->port = P2L_PORT(getlportfromucportvec(QD_DEV_PTR, l2_data.portVec));
+			entry->port = getlportfromucportvec(QD_DEV_PTR, l2_data.portVec)+1;
 			entry->type = l2_data.entryState.ucEntryState == GT_UC_DYNAMIC ? SDL_FDB_ENTRY_DYNAMIC : SDL_FDB_ENTRY_STATIC;
 			found = GT_TRUE;
 			break;
