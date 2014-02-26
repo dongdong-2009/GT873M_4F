@@ -1453,6 +1453,10 @@ cs_status sdl_vlan_init(void)
         epon_request_onu_vlan_set(context,0,0, port, def_vlan,SDL_VLAN_MODE_TRUNK,&cfg, 0);
     }
 
+    //set uplink port FALLBACK mode
+
+    gvlnSetPortVlanDot1qMode(QD_MASTER_DEV_PTR, CS_UPLINK_PHY_PORT, GT_FALLBACK);
+
     SDL_MAJ_LOG("sdl vlan initialized\n");
     
     return CS_E_OK;
