@@ -1453,7 +1453,7 @@ GT_STATUS switch_default_config(GT_QD_DEV * dev)
 #endif	
 #ifndef _SIMPLEST_
 	MSG_OUT(( "Stage 1\r\n"));
-	for(i=0; i<NUM_UNI_PORTS_PER_SWITCH; i++)
+	for(i=0; i<NUM_PORTS_PER_SWITCH; i++)
 	{
 		/* Disable Energydetect function of the integated PHY */
 		/* Default is enabled, which can cause MD1230A line error! */
@@ -1474,7 +1474,7 @@ GT_STATUS switch_default_config(GT_QD_DEV * dev)
 	/* Restore default value of each port */
 	gtEgressRateType.definedRate = GT_NO_LIMIT;
 	MSG_OUT(( "Stage 2\r\n"));
-	for(phyPort=0; phyPort<NUM_UNI_PORTS_PER_SWITCH; phyPort++)
+	for(phyPort=0; phyPort<NUM_PORTS_PER_SWITCH; phyPort++)
 	{
 		/* UserPri more importent than ip dscp */
         if ((result = gqosSetPrioMapRule(dev, phyPort, GT_TRUE)) != GT_OK)
@@ -2242,7 +2242,7 @@ GT_STATUS MinimizeCPUTraffic2(GT_QD_DEV *dev, GT_U8* macAddr)
   Return value  : GT_OK for success, GT_FAILE for others.
   NOTE			: For GT861 only.
 ********************************************************************************************/
-GT_STATUS get_switch_cascade_port_info(GT_U32 unit, GT_U32 *number, GT_U8 ports[NUM_UNI_PORTS_PER_SWITCH])
+GT_STATUS get_switch_cascade_port_info(GT_U32 unit, GT_U32 *number, GT_U8 ports[NUM_PORTS_PER_SWITCH])
 {
 	if(UNIT_IS_MASTER(unit))
 	{
@@ -2604,6 +2604,27 @@ GT_BOOL isInterswitchPort(GT_LPORT port)
 		return GT_FALSE;
 	else
 		return master_interswitch_port[port];
+}
+
+GT_STATUS InternalVlanDestroy(GT_U32 vid)
+{
+
+	GT_STATUS ret = GT_OK;
+	GT_VTU_ENTRY entry;
+
+	memset(&entry, 0, sizeof(entry));
+
+	entry.vid = vid;
+	entry.DBNum = vid;
+
+
+	FOR_UNIT_START(GT_32, unit)
+
+	ret |= gvtuDelEntry(QD_DEV_PTR, &entry);
+
+	FOR_UNIT_END
+
+	return (ret == GT_OK)?GT_OK:GT_ERROR;
 }
 
 GT_STATUS InternalVlanInit(GT_QD_DEV * dev, GT_U32 vid)
@@ -3021,8 +3042,15 @@ GT_STATUS cpu_rate_fast(int enable)
 
 GT_STATUS gt_getswitchunitbylport(GT_LPORT port, GT_32 *unit, GT_32 *lport )
 {
-//	todo 添加对多switch的支持
-	*unit = MASTER_UNIT;
-	*lport = port%CS_UNI_NUMBER;
+	if(port == CS_UPLINK_PHY_PORT)
+	{
+		*unit = MASTER_UNIT;
+		*lport = port;
+	}
+	else
+	{
+		*unit = port/NUM_UNI_PORTS_PER_UNIT;
+		*lport = port%NUM_UNI_PORTS_PER_UNIT;
+	}
 	return GT_OK;
 }

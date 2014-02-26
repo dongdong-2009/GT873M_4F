@@ -38,7 +38,8 @@
 } \
 }
 
-#define NUM_UNI_PORTS_PER_SWITCH	11  //mtdo 修改为可配置的端口数
+#define NUM_PORTS_PER_SWITCH	11  //mtdo 修改为可配置的端口数
+#define NUM_UNI_PORTS_PER_UNIT  8
 
 /**************************************************************************************
 Name: allocate_bridge_mac
@@ -89,7 +90,7 @@ GT_STATUS switch_master_init(GT_U32 unit);
   Return value  : GT_OK for success, GT_FAILE for others.
   NOTE			: For GT861 only.
 ********************************************************************************************/
-GT_STATUS get_switch_cascade_port_info(GT_U32 unit, GT_U32 *number, GT_U8 ports[NUM_UNI_PORTS_PER_SWITCH]);
+GT_STATUS get_switch_cascade_port_info(GT_U32 unit, GT_U32 *number, GT_U8 ports[NUM_PORTS_PER_SWITCH]);
 
 /*******************************************************************************************
   Description   : This function will get the wan port info.
@@ -128,6 +129,7 @@ GT_BOOL isInterswitchPort(GT_LPORT port);
 GT_STATUS InternalVlanInit(GT_QD_DEV * dev, GT_U32 vid);
 GT_STATUS InternalVlanJoin(GT_QD_DEV * dev, GT_U32 vid, GT_LPORT phyPort, GT_BOOL tagged);
 GT_STATUS InternalVlanLeave(GT_QD_DEV * dev, GT_U32 vid, GT_LPORT phyPort);
+GT_STATUS InternalVlanDestroy(GT_U32 vid);
 GT_STATUS IsolateTwoPorts(GT_QD_DEV * dev, GT_BOOL mode, GT_LPORT phyPortA, GT_LPORT phyPortB);
 GT_STATUS switch_fe_port_pause_ctrl(GT_QD_DEV * dev, GT_LPORT phyPort, GT_BOOL mode);
 GT_STATUS switch_fpga_port_enable(GT_BOOL mode);

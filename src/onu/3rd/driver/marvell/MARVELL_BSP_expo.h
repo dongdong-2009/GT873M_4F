@@ -86,7 +86,7 @@ extern GT_QD_DEV	   *pQdDev;
 #define QD_DEV_PTR		qdMultiDev[unit]
 #define QD_MASTER_DEV_PTR		qdMultiDev[0]
 
-#define NUM_UNI_PORTS_PER_SWITCH	11  //mtdo 修改为可配置的端口数
+#define NUM_PORTS_PER_SWITCH	11  //mtdo 修改为可配置的端口数
 
 /* ------------------ Usefull marvell related macros ------------------ */
 
