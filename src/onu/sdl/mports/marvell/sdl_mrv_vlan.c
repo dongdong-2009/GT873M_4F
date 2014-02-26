@@ -99,6 +99,8 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "sdl_util.h"
 #include "sdl.h"
 
+#include "log.h"
+
 #include "msApiTypes.h"
 #include "msApi.h"
 
@@ -266,8 +268,9 @@ static void __vlan_table_del_port(__vlan_t *vlan_table, cs_port_id_t port)
         {
             vlan_table[i].vlan.mbr &= ~(1<<lport);
             vlan_table[i].vlan.utg &= ~(1<<lport);
-            if(0 == (vlan_table[i].vlan.mbr & 0xf))  /* no UNI port in this vlan */
+            if(0 == (vlan_table[i].vlan.mbr & ((1<<UNI_PORT_MAX)-1)))  /* no UNI port in this vlan */
             {
+            	InternalVlanDestroy(vlan_table[i].vlan.vid);
                 vlan_table[i].valid = EPON_FALSE;
             }
         }
@@ -673,6 +676,7 @@ static void __clear_uc(cs_port_id_t port_id)
 
         if(__c_vlan_table[i].valid)
         {
+        	cs_log_msg(IROS_LOG_LEVEL_DBG3, IROS_MID_VLAN, "%s vlanid=%d lport=%d\n", __func__, __c_vlan_table[i].vlan.vid, port_id);
             __remove_port_from_cvlan(__c_vlan_table[i].vlan.vid, lport);
         }
     }
@@ -861,6 +865,13 @@ static void __update_hw_uc(cs_port_id_t port_id)
             {
             	GT_U32 j = 0;
 
+    			GT_VTU_ENTRY entry;
+    			memset(&entry, 0, sizeof(entry));
+
+    			cs_log_msg(IROS_LOG_LEVEL_DBG3, IROS_MID_VLAN, "%s port(%d) vlanid=%d mbr= 0x%x utg=0x%x\n", __func__, port_id, __c_vlan_table[i].vlan.vid,
+    					__c_vlan_table[i].vlan.mbr, __c_vlan_table[i].vlan.utg);
+
+
             	FOR_UNIT_START(GT_U32, unit)
             	InternalVlanInit(QD_DEV_PTR, __c_vlan_table[i].vlan.vid);
             	FOR_UNIT_END
@@ -872,10 +883,10 @@ static void __update_hw_uc(cs_port_id_t port_id)
 
             		if(__c_vlan_table[i].vlan.mbr&(1<<j))
             		{
-            			InternalVlanJoin(QD_DEV_PTR, __c_vlan_table[i].vlan.vid, port);
-
             			if(__c_vlan_table[i].vlan.utg&(1<<j))
-            				gprtSetEgressMode(QD_DEV_PTR, port, GT_UNTAGGED_EGRESS);
+            				InternalVlanJoin(QD_DEV_PTR, __c_vlan_table[i].vlan.vid, port, GT_FALSE);
+            			else
+            				InternalVlanJoin(QD_DEV_PTR, __c_vlan_table[i].vlan.vid, port, GT_TRUE);
             		}
             	}
             }
@@ -958,6 +969,7 @@ static void __update_hw_uc(cs_port_id_t port_id)
     
 
 	gvlnSetPortVid(QD_DEV_PTR, port, port_vlan->def_vlan.vid);
+	gvlnSetPortVlanDBNum(QD_DEV_PTR, port, port_vlan->def_vlan.vid);
 
 }
 
@@ -983,33 +995,6 @@ static void __update_sw
         __vlan_table_add_port(__s_vlan_table, def_vlan.vid, CS_UPLINK_PORT, EPON_FALSE);
 		__port_vlan_table[port_id].mc_vlan[0].valid = EPON_TRUE;
 		__port_vlan_table[port_id].mc_vlan[0].vid =def_vlan.vid;
-		#if 0
-		if(def_vlan.vid == 1 && cfg_nums == 0 && vlan_mode == SDL_VLAN_MODE_TRUNK)
-			{
-				__vlan_table_add_port(__c_vlan_table,def_vlan.vid, port_id, EPON_TRUE);
-		        __vlan_table_add_port(__c_vlan_table,def_vlan.vid, CS_UPLINK_PORT, EPON_TRUE);
-				FALG_DORB = 0;
-			}
-		#else
-		if((1 == def_vlan.vid) && (vlan_mode == SDL_VLAN_MODE_TRUNK))
-		{
-			__vlan_table_add_port(__c_vlan_table,def_vlan.vid, port_id, EPON_TRUE);
-		    __vlan_table_add_port(__c_vlan_table,def_vlan.vid, CS_UPLINK_PORT, EPON_TRUE);
-			if(0 == cfg_nums)
-			{
-				FALG_DORB = 0;
-			}
-			else
-			{
-				//do nothing
-			}
-		}
-		#endif
-		if(def_vlan.vid !=1 && vlan_mode == SDL_VLAN_MODE_TRUNK )
-			{
-				__vlan_table_add_port(__c_vlan_table,def_vlan.vid, port_id, EPON_TRUE);
-		        __vlan_table_add_port(__c_vlan_table,def_vlan.vid, CS_UPLINK_PORT, EPON_TRUE);
-			}
     }
 
     if( (SDL_VLAN_MODE_TRANSLATION == vlan_mode) || (SDL_VLAN_MODE_AGGREGATION == vlan_mode) ) 
@@ -1026,6 +1011,10 @@ static void __update_sw
     }
     else if( SDL_VLAN_MODE_TRUNK == vlan_mode )
     {  	
+
+        __vlan_table_add_port(__c_vlan_table, def_vlan.vid, port_id, EPON_TRUE);
+        __vlan_table_add_port(__c_vlan_table, def_vlan.vid, CS_UPLINK_PORT, EPON_FALSE);
+
         for(i=0; i<cfg_nums; ++i)
         {
             __rule_table_add(__port_vlan_table[port_id].vlan_rule, __RULE_LOOKUP_CVLAN, &vlan_cfg[i]);
