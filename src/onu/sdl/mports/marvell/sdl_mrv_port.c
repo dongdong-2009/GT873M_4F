@@ -100,6 +100,7 @@ Copyright (c) 2010 by Cortina Systems Incorporated
 #include "sdl_int.h"
 #include "sdl.h"
 #include "sdl_event_cmn.h"
+#include "sdl_fdb.h"
 #include "make_file.h"
 
 #include "MARVELL_BSP_expo.h"
@@ -233,7 +234,6 @@ void __sdl_port_int_process(void)
     cs_sdl_port_link_status_t link_status;
     GT_LPORT port;
     sdl_event_port_link_t link_event;
-    GT_U16 phy_data;
     GT_U16 portvec = 0, inttype;
     
 #ifdef HAVE_SDL_CTC
@@ -257,37 +257,31 @@ void __sdl_port_int_process(void)
         	if(GT_OK != gprtGetPhyIntStatus(QD_DEV_PTR, hwport, &inttype))
         		continue;
 
-        	if(!(inttype & GT_LINK_STATUS_CHANGED))
+        	if(!(inttype & (GT_LINK_STATUS_CHANGED | GT_AUTO_NEG_COMPLETED)))
         		continue;
 
-        	gprtGetSwitchReg(QD_DEV_PTR, hwport, QD_PHY_INT_STATUS_REG, &phy_data);
-            
+        	gprtGetLinkState(QD_DEV_PTR, hwport, (GT_BOOL*)&link_status);
 #ifdef HAVE_SDL_CTC
-            if (phy_data & GT_LINK_STATUS_CHANGED){
+            if (inttype & GT_AUTO_NEG_COMPLETED){
                 //cs_printf("port %d, auto nego success! Reg value: 0x%x\n", P2L_PORT(port), phy_data);
                 auto_nego_event.port = P2L_PORT(port);
-                auto_nego_event.status = __SDL_PORT_AUTO_NEGO_SUCCESS;
-                sdl_event_send(EPON_EVENT_PORT_AUTO_NEGO_STATUS, sizeof(sdl_event_port_auto_nego_t), &auto_nego_event);
-            }
-            else
-            {
-                //cs_printf("port %d, auto nego fail! Reg value: 0x%x\n", P2L_PORT(port), phy_data);
-                auto_nego_event.port = P2L_PORT(port);
-                auto_nego_event.status = __SDL_PORT_AUTO_NEGO_FAIL;
+                auto_nego_event.status = link_status?__SDL_PORT_AUTO_NEGO_SUCCESS:__SDL_PORT_AUTO_NEGO_FAIL;
                 sdl_event_send(EPON_EVENT_PORT_AUTO_NEGO_STATUS, sizeof(sdl_event_port_auto_nego_t), &auto_nego_event);
             }
 #endif
 
-            gprtGetLinkState(QD_DEV_PTR, hwport, (GT_BOOL*)&link_status);
-            if (link_status == __uni_link_ststus[port]) {
-                continue;
+            if(inttype & GT_LINK_STATUS_CHANGED)
+            {
+				link_event.link = link_status;
+				link_event.port = P2L_PORT(port);
+				sdl_event_send(EPON_EVENT_PORT_LINK_CHANGE, sizeof(sdl_event_port_link_t), &link_event);
+
+				if(link_status == GT_FALSE)
+				{
+					cs_callback_context_t context;
+					epon_request_onu_fdb_entry_clr_per_port(context, 0, 0, P2L_PORT(port), SDL_FDB_CLR_DYNAMIC);
+				}
             }
-            
-            __uni_link_ststus[port] = link_status;
-            //SDL_MIN_LOG("port %d, %s\n", port + CS_UNI_PORT_ID1, (link_statu == PORT_LINKUP) ? "link up" : "link down");
-            link_event.link = link_status;
-            link_event.port = P2L_PORT(port);
-            sdl_event_send(EPON_EVENT_PORT_LINK_CHANGE, sizeof(sdl_event_port_link_t), &link_event);
         }
     }
 
@@ -1800,7 +1794,7 @@ cs_status sdl_port_init(
     for(port=0; port<UNI_PORT_MAX; port++)
     {
     	gt_getswitchunitbylport(port, &unit, &hwport);
-    	if(GT_OK != gprtPhyIntEnable(QD_DEV_PTR, hwport, GT_LINK_STATUS_CHANGED, GT_TRUE))
+    	if(GT_OK != gprtPhyIntEnable(QD_DEV_PTR, hwport, (GT_LINK_STATUS_CHANGED | GT_AUTO_NEG_COMPLETED), GT_TRUE))
     	{
 
 			SDL_MIN_LOG("gprtPhyIntEnable type 0x%x, code %d return %d\n", GT_LINK_STATUS_CHANGED, GT_TRUE, ret);
