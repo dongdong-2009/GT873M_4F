@@ -1157,10 +1157,14 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
 
     for(j=0; j<maxdb; j++)
     {
-    	GT_U32 count = 0;
     	if(gfdbGetAtuAllCountInDBNum(QD_DEV_PTR, j, &count) == GT_OK && count > 0)
     	{
     		cs_printf("db (%lu) count: %lu\n", j, count);
+    		if(loffset >= count)
+    		{
+    			loffset -= count;
+    			continue;
+    		}
     	}
     	else
     		continue;
@@ -1168,7 +1172,11 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
 		while(1)
 		{
 			l2_data.DBNum = j;
-			gt_ret = gfdbGetAtuEntryNext(QD_DEV_PTR, &l2_data);
+
+			if(i == 0)
+				gt_ret = gfdbGetAtuEntryFirst(QD_DEV_PTR, &l2_data);
+			else
+				gt_ret = gfdbGetAtuEntryNext(QD_DEV_PTR, &l2_data);
 
 			if(gt_ret != GT_OK)
 			{
@@ -1177,7 +1185,7 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
 				break;
 			}
 
-			if(i < offset)
+			if(i < loffset)
 			{
 				i++;
 				continue;
