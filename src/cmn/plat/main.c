@@ -241,7 +241,10 @@ void plat_init(void)
     /* register debug command */
     plat_cmd_init();
 
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
     switch_init();
+#endif
+
 }
 void mbox_init()
 {
