@@ -122,6 +122,28 @@ typedef struct{
 
 __fdb_static_entry_t  __fdb_static_entry_table[UNI_PORT_MAX];      
 
+static GT_U32 getDbnum(GT_QD_DEV * dev)
+{
+	GT_U32 maxdb = 0;
+
+	if(dev)
+	{
+
+		if (IS_IN_DEV_GROUP(dev,DEV_DBNUM_FULL))
+			maxdb = 16;
+		else if(IS_IN_DEV_GROUP(dev,DEV_DBNUM_64))
+			maxdb = 64;
+		else if(IS_IN_DEV_GROUP(dev,DEV_DBNUM_256))
+			maxdb = 256;
+		else if(IS_IN_DEV_GROUP(dev,DEV_DBNUM_4096))
+			maxdb = 4096;
+		else
+			maxdb = 1;
+	}
+
+	return maxdb;
+}
+
 static GT_U8 getlportfromucportvec(GT_QD_DEV *dev, GT_U16 portvec)
 {
 	GT_U8 port;
@@ -664,7 +686,7 @@ cs_status epon_request_onu_fdb_entry_clr (
     cs_status rt = CS_E_OK;
 
     /* Uni port MAC flush */
-    for(portid=CS_UNI_PORT_ID1; portid<=CS_UNI_PORT_ID4; portid++){
+    for(portid=CS_UNI_PORT_ID1; portid<=UNI_PORT_MAX; portid++){
         rt =  epon_request_onu_fdb_entry_clr_per_port(context, device_id, llidport, portid, clr_mode);
         if(rt){
             SDL_MIN_LOG("epon_request_onu_fdb_entry_clr_per_port return %d\n", rt);
@@ -692,6 +714,7 @@ cs_status epon_request_onu_fdb_entry_clr_per_port (
     cs_uint8 index, fdel = 0;
 
     GT_32 	unit,port;
+    GT_U32  maxdb = 0, i;
          
     UNI_PORT_CHECK(portid);
 
@@ -703,75 +726,86 @@ cs_status epon_request_onu_fdb_entry_clr_per_port (
     if(GT_OK != gt_getswitchunitbylport(portid-1, &unit, &port))
     	return CS_ERROR;
 
-    rtn = gfdbGetAtuEntryFirst(QD_DEV_PTR, &l2_data);
-    while(rtn == GT_OK){
+    maxdb = getDbnum(QD_DEV_PTR);
 
-        switch(clr_mode)
-        {
-            case SDL_FDB_CLR_DYNAMIC:
-                 if( l2_data.entryState.ucEntryState == GT_UC_DYNAMIC &&
-                		 (l2_data.portVec &(L2P_PORT(port))))
-                 {
-                	 fdel = 1;
-                 }
-                 break;
+    if(maxdb == 0)
+    	return CS_ERROR;
 
-             case SDL_FDB_CLR_STATIC:
-                if(l2_data.entryState.ucEntryState == GT_UC_STATIC &&
-                		(l2_data.portVec &(L2P_PORT(port))) )
-                {
-                    /* do not delete the MAC address that is not in software static MAC list */
-                    rt = fdb_static_entry_find(portid-1, (cs_mac_t*)&l2_data.macAddr.arEther[0], &index);
-                    if(rt){
-                        /* Clear the corresponding static mac entry table */
-                        memset(&__fdb_static_entry_table[portid-1].entry[index], 0, sizeof(cs_sdl_fdb_entry_t));
-                        __fdb_static_entry_table[portid - 1].valid_map &= ~((0x1)<<index);
-                        g_fdb_port_cfg[portid-1].static_mac_num--;
-                        
-                        fdel = 1;
-                    }
-                }
-                break;
-                
-                case SDL_FDB_CLR_BOTH:
-                    if(l2_data.entryState.ucEntryState == GT_UC_STATIC &&
-                    		(l2_data.portVec &(L2P_PORT(port))))
-                    {
-                        /* do not delete the MAC address that is not in software static MAC list */
-                        rt = fdb_static_entry_find(portid -1, (cs_mac_t*)&l2_data.macAddr.arEther[0], &index);
-                        if(rt){
-                           /* Clear the corresponding static mac entry table */
-                            memset(&__fdb_static_entry_table[portid-1].entry[index], 0, sizeof(cs_sdl_fdb_entry_t));
-                            __fdb_static_entry_table[portid - 1].valid_map &= ~((0x1)<<index);
-                            g_fdb_port_cfg[portid-1].static_mac_num--;
-                            
-                            fdel = 1;
-                        }
-                    }
-                    else if( l2_data.entryState.ucEntryState == GT_UC_DYNAMIC &&
-                   		 (l2_data.portVec &(L2P_PORT(port))))
-                    {
-                    	fdel = 1;
-                    }
-                    break;
-                    
-                default:
-                    /* will not come here logically */
-                    break;  
-          }
+    for(i = 0; i<maxdb; i++)
+    {
+    	memset(&l2_data, 0, sizeof(l2_data));
 
-    	l2_t = l2_data;
-    	rtn = gfdbGetAtuEntryNext(QD_DEV_PTR, &l2_t);
+    	l2_data.DBNum = i;
+		rtn = gfdbGetAtuEntryFirst(QD_DEV_PTR, &l2_data);
+		while(rtn == GT_OK){
 
-        if(fdel)
-        {
-        	fdel = 0;
-        	gfdbDelAtuEntry(QD_DEV_PTR, &l2_data);
-        }
+			switch(clr_mode)
+			{
+				case SDL_FDB_CLR_DYNAMIC:
+					 if( l2_data.entryState.ucEntryState == GT_UC_DYNAMIC &&
+							 (l2_data.portVec & (1<<port)))
+					 {
+						 fdel = 1;
+					 }
+					 break;
 
-    	l2_data = l2_t;
+				 case SDL_FDB_CLR_STATIC:
+					if(l2_data.entryState.ucEntryState == GT_UC_STATIC &&
+							(l2_data.portVec & (1<<port)) )
+					{
+						/* do not delete the MAC address that is not in software static MAC list */
+						rt = fdb_static_entry_find(portid-1, (cs_mac_t*)&l2_data.macAddr.arEther[0], &index);
+						if(rt){
+							/* Clear the corresponding static mac entry table */
+							memset(&__fdb_static_entry_table[portid-1].entry[index], 0, sizeof(cs_sdl_fdb_entry_t));
+							__fdb_static_entry_table[portid - 1].valid_map &= ~((0x1)<<index);
+							g_fdb_port_cfg[portid-1].static_mac_num--;
+
+							fdel = 1;
+						}
+					}
+					break;
+
+					case SDL_FDB_CLR_BOTH:
+						if(l2_data.entryState.ucEntryState == GT_UC_STATIC &&
+								(l2_data.portVec & (1<<port)))
+						{
+							/* do not delete the MAC address that is not in software static MAC list */
+							rt = fdb_static_entry_find(portid -1, (cs_mac_t*)&l2_data.macAddr.arEther[0], &index);
+							if(rt){
+							   /* Clear the corresponding static mac entry table */
+								memset(&__fdb_static_entry_table[portid-1].entry[index], 0, sizeof(cs_sdl_fdb_entry_t));
+								__fdb_static_entry_table[portid - 1].valid_map &= ~((0x1)<<index);
+								g_fdb_port_cfg[portid-1].static_mac_num--;
+
+								fdel = 1;
+							}
+						}
+						else if( l2_data.entryState.ucEntryState == GT_UC_DYNAMIC &&
+							 (l2_data.portVec &(1<<port)))
+						{
+							fdel = 1;
+						}
+						break;
+
+					default:
+						/* will not come here logically */
+						break;
+			  }
+
+			l2_t = l2_data;
+			rtn = gfdbGetAtuEntryNext(QD_DEV_PTR, &l2_t);
+
+			if(fdel)
+			{
+				fdel = 0;
+				gfdbDelAtuEntry(QD_DEV_PTR, &l2_data);
+			}
+
+			l2_data = l2_t;
+		}
+
     }
-    
     /*For security reason, double check the SW Static table*/
     if((SDL_FDB_CLR_STATIC == clr_mode) || (SDL_FDB_CLR_BOTH == clr_mode)){
     
@@ -786,6 +820,8 @@ cs_status epon_request_onu_fdb_entry_clr_per_port (
         /* Clear the static MAC address number */
         g_fdb_port_cfg[portid-1].static_mac_num = 0;
 
+#if 0
+//        mtodo: added mac limit set call
         /*After setting, re-config the mac limit,Dynamic entries will be cleared there */
         
         if(sdl_int_cfg.fdb_limit_include_static){
@@ -799,6 +835,7 @@ cs_status epon_request_onu_fdb_entry_clr_per_port (
                 return rt;
             }
         }
+#endif
     }
     
     return CS_E_OK;    
@@ -1134,18 +1171,7 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
     if(GT_OK != gfdbGetAtuAllCount(QD_DEV_PTR, &count))
     	return CS_E_ERROR;
 
-    SDL_MIN_LOG("count is %lu\r\n", count);
-
-	if (IS_IN_DEV_GROUP(QD_DEV_PTR,DEV_DBNUM_FULL))
-		maxdb = 16;
-	else if(IS_IN_DEV_GROUP(QD_DEV_PTR,DEV_DBNUM_64))
-		maxdb = 64;
-	else if(IS_IN_DEV_GROUP(QD_DEV_PTR,DEV_DBNUM_256))
-		maxdb = 256;
-	else if(IS_IN_DEV_GROUP(QD_DEV_PTR,DEV_DBNUM_4096))
-		maxdb = 4096;
-	else
-		maxdb = 1;
+    maxdb = getDbnum(QD_DEV_PTR);
 
     if(loffset >= count)
     {
@@ -1159,7 +1185,6 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
     {
     	if(gfdbGetAtuAllCountInDBNum(QD_DEV_PTR, j, &count) == GT_OK && count > 0)
     	{
-    		cs_printf("db (%lu) count: %lu\n", j, count);
     		if(loffset >= count)
     		{
     			loffset -= count;
