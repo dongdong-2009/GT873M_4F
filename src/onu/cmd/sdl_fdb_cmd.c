@@ -420,25 +420,36 @@ sal_cmd_result_t fdb_cmd_clr(int argc, char **argv)
     cs_callback_context_t context;
     cs_status  status = 0;
     cs_sdl_fdb_clr_mode_t     fdb_block = 0;
+    cs_uint32 port = 0;
 
     if(argc > 4) {
         return SAL_CMD_INVALID_PARAM;
     }
 
-    if (iros_strtol(argv[2]) == 0xff) {
-        __clr_fdb_sw_table();
-        return CS_E_OK;
-    }
+    port = iros_strtol(argv[3]);
     
     fdb_block = (cs_sdl_fdb_clr_mode_t)iros_strtol(argv[2]);
     if (fdb_block > SDL_FDB_CLR_STATIC) {
         return SAL_CMD_INVALID_PARAM;
     }
     
-    status = epon_request_onu_fdb_entry_clr(context, 0, 0, fdb_block);
-    if(status != CS_E_OK){
-        cs_printf("epon_request_onu_fdb_fdb_clear failed \n");    
-        return cs_status_2_cmd_rc_map(status);       
+    if(port == 0xff)
+    {
+    	__clr_fdb_sw_table();
+    	status = epon_request_onu_fdb_entry_clr(context, 0, 0, fdb_block);
+    	if(status != CS_E_OK){
+    		cs_printf("epon_request_onu_fdb_fdb_clear failed \n");
+    		return cs_status_2_cmd_rc_map(status);
+    	}
+    }
+    else
+    {
+    	status = epon_request_onu_fdb_entry_clr_per_port(context, 0, 0, port, fdb_block);
+    	if(status != CS_E_OK)
+    	{
+    		cs_printf("epon_request_onu_fdb_entry_clr_per_port failed \n");
+    		return cs_status_2_cmd_rc_map(status);
+    	}
     }
     
     return cs_status_2_cmd_rc_map(status);
