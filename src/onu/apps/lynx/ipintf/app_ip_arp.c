@@ -108,7 +108,7 @@ static cs_boolean app_ipintf_send_need_check_vlan()
 #if( PRODUCT_CLASS == PRODUCTS_GT812C )
 	return FALSE;
 #else
-	return TRUE
+	return TRUE;
 #endif
 #elif( 1 )
 #else
