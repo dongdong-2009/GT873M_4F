@@ -1808,6 +1808,9 @@ cs_status sdl_port_init(
     cs_polling_handler_reg(__sdl_port_auto_neg_polling_handler);
 #endif
 
+    FOR_UNIT_START(GT_32, unit)
+    eventSetActive(QD_DEV_PTR, GT_PHY_INTERRUPT);
+    FOR_UNIT_END
 END:
     return rt;
     
