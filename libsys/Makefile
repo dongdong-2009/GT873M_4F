@@ -35,11 +35,14 @@ $(SWHOME)/src/onu/apps/gwd/oam.c \
 $(SWHOME)/src/onu/apps/gwd/gwd_eth_loop_detect.c \
 $(SWHOME)/src/onu/apps/gwd/timer.c \
 $(SWHOME)/src/onu/apps/gwd/gwd_broadstorm.c \
-$(SWHOME)/src/onu/3rd/driver/marvell/msApiInit.c \
+
+ifeq ($(strip $(USING_SW_TYPE)),MRV)
+CFILES += $(SWHOME)/src/onu/3rd/driver/marvell/msApiInit.c \
 $(SWHOME)/src/onu/3rd/driver/marvell/iros_mii.c \
 $(SWHOME)/src/onu/3rd/driver/marvell/osSem.c \
 $(SWHOME)/src/onu/3rd/driver/marvel/switch_drv.c \
-$(SWHOME)/src/onu/3rd/driver/marvel/switch.c \
+$(SWHOME)/src/onu/3rd/driver/marvel/switch.c
+endif
 #$(SWHOME)/src/onu/apps/gwd/iros_flash_oper.c
 
 

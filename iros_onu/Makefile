@@ -65,7 +65,6 @@ MOD_LDFLAGS= -u imst_cli_start -u netdev_eth0 -u flash_hwr_init \
 -L../libptp	\
 -L../libpppoe  \
 -L../libsdl	\
--L../gtmrv/lib \
 -lplat \
 -lipintf \
 -lsys \
@@ -84,10 +83,18 @@ MOD_LDFLAGS= -u imst_cli_start -u netdev_eth0 -u flash_hwr_init \
 -lplat \
 -lsys \
 -losal \
--lgtmrv \
 -Wl,-gc-sections \
 -Ttarget.ld -nostdlib -mcpu=arm9 -mthumb-interwork \
 -Wl,--Map -Wl,iros_onu_asic_ram_lynxd.map
+
+ifeq ($(strip $(USING_SW_TYPE)),RTK)
+MOD_LDFLAGS += -L../libswitch -lswitch
+endif
+
+ifeq ($(strip $(USING_SW_TYPE)),MRV)
+MOD_LDFLAGS += -L../gtmrv/lib -lgtmrv
+endif
+
 
 
 TARGET=$(MOD_TMPHOME)/$(MOD_NAME).zblob $(MOD_TMPHOME)/$(MOD_NAME).wfs $(MOD_TMPHOME)/$(MOD_NAME).wlb
