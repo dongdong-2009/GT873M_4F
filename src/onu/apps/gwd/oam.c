@@ -2928,6 +2928,9 @@ int cmd_show_atu(struct cli_def * cli, char *command, char *argv[], int argc)
 	cs_uint16 idx = 0, next = 0;
 
 	cs_sdl_fdb_entry_t entry;
+	cs_uint8 c = 0;
+
+	memset(&entry, 0, sizeof(cs_sdl_fdb_entry_t));
 
     // deal with help
     if(CLI_HELP_REQUESTED)
@@ -2956,6 +2959,11 @@ int cmd_show_atu(struct cli_def * cli, char *command, char *argv[], int argc)
             vid,
             entry.port,
             entry.type);
+        if(++c > 20)
+        {
+        	cs_thread_delay(100);
+        	c = 0;
+        }
     }
     cli_print(cli, "====== Totally %2d SW entries====\n", idx);
 

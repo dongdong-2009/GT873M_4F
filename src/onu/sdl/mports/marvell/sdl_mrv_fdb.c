@@ -122,6 +122,7 @@ typedef struct{
 
 __fdb_static_entry_t  __fdb_static_entry_table[UNI_PORT_MAX];      
 
+#if 0
 static GT_U32 getDbnum(GT_QD_DEV * dev)
 {
 	GT_U32 maxdb = 0;
@@ -143,6 +144,7 @@ static GT_U32 getDbnum(GT_QD_DEV * dev)
 
 	return maxdb;
 }
+#endif
 
 static GT_U8 getlportfromucportvec(GT_QD_DEV *dev, GT_U16 portvec)
 {
@@ -708,14 +710,17 @@ cs_status epon_request_onu_fdb_entry_clr_per_port (
     CS_IN   cs_sdl_fdb_clr_mode_t   clr_mode
 )
 {
+#if 0
     GT_ATU_ENTRY l2_data, l2_t;
     GT_STATUS rtn  = GT_OK;
     cs_boolean rt = FALSE;
     cs_uint8 index, fdel = 0;
-
+#endif
     GT_32 	unit,port;
+#if 0
     GT_U32  maxdb = 0, i;
-         
+#endif
+
     UNI_PORT_CHECK(portid);
 
     if(clr_mode > SDL_FDB_CLR_STATIC){
@@ -726,6 +731,8 @@ cs_status epon_request_onu_fdb_entry_clr_per_port (
     if(GT_OK != gt_getswitchunitbylport(portid-1, &unit, &port))
     	return CS_ERROR;
 
+#if 0
+
     maxdb = getDbnum(QD_DEV_PTR);
 
     if(maxdb == 0)
@@ -733,10 +740,16 @@ cs_status epon_request_onu_fdb_entry_clr_per_port (
 
     for(i = 0; i<maxdb; i++)
     {
+    	cs_printf("clr dbnum %d\n", i);
+
     	memset(&l2_data, 0, sizeof(l2_data));
 
     	l2_data.DBNum = i;
 		rtn = gfdbGetAtuEntryFirst(QD_DEV_PTR, &l2_data);
+
+		if(rtn == GT_OK)
+			cs_printf("found first for dbnum %d\n", i);
+
 		while(rtn == GT_OK){
 
 			switch(clr_mode)
@@ -796,16 +809,38 @@ cs_status epon_request_onu_fdb_entry_clr_per_port (
 			l2_t = l2_data;
 			rtn = gfdbGetAtuEntryNext(QD_DEV_PTR, &l2_t);
 
+			cs_printf("gfdbGetAtuEntryNext ret (%d)\n", rtn);
+
 			if(fdel)
 			{
 				fdel = 0;
 				gfdbDelAtuEntry(QD_DEV_PTR, &l2_data);
+				cs_printf("del %02x:%02x:%02x:%02x:%02x:%02x\n",
+						l2_data.macAddr.arEther[0],
+						l2_data.macAddr.arEther[1],
+						l2_data.macAddr.arEther[2],
+						l2_data.macAddr.arEther[3],
+						l2_data.macAddr.arEther[4],
+						l2_data.macAddr.arEther[5]);
 			}
 
 			l2_data = l2_t;
 		}
-
     }
+
+#else
+    if(clr_mode == SDL_FDB_CLR_DYNAMIC)
+    {
+    	if(gfdbRemovePort(QD_DEV_PTR, GT_MOVE_ALL_UNLOCKED, port) != GT_OK)
+    		return CS_E_ERROR;
+    }
+    else
+    {
+    	if(gfdbRemovePort(QD_DEV_PTR, GT_MOVE_ALL, port) != GT_OK)
+    		return CS_E_ERROR;
+    }
+#endif
+
     /*For security reason, double check the SW Static table*/
     if((SDL_FDB_CLR_STATIC == clr_mode) || (SDL_FDB_CLR_BOTH == clr_mode)){
     
@@ -1151,10 +1186,12 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
 )
 {
     GT_ATU_ENTRY l2_data;
-    GT_U32 count = 0, i,maxdb, j, loffset = offset;
+    GT_U32 count = 0, i, db = 0, loffset = offset;
     GT_STATUS gt_ret = GT_OK;
     cs_status ret = CS_E_OK;
-    GT_BOOL found = GT_FALSE;
+    GT_BOOL found = GT_FALSE, getnext = 0;
+
+    GT_U8 maczero[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     if((NULL==next) || (NULL==entry)) {
         SDL_MIN_LOG("null pointer\n");
@@ -1166,40 +1203,65 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
         return CS_E_PARAM;
     }
 
+    if(memcmp(entry->mac.addr, maczero, 6))
+    	getnext = 1;
+
+    i = 0;
+    count = 0;
+
     FOR_UNIT_START(GT_U32, unit)
 
+    GT_VTU_ENTRY ve;
+    GT_32 vnum = 0;
+
+    if( gvtuGetEntryCount(QD_DEV_PTR, &vnum) != GT_OK)
+    	continue;
+
+#if 0
     if(GT_OK != gfdbGetAtuAllCount(QD_DEV_PTR, &count))
     	return CS_E_ERROR;
-
-    maxdb = getDbnum(QD_DEV_PTR);
 
     if(loffset >= count)
     {
     	loffset -= count;
     	continue;
     }
+#endif
 
-    i = 0;
 
-    for(j=0; j<maxdb; j++)
+	if(getnext)
+	{
+		db = entry->vlan_id;
+		ve.DBNum = entry->vlan_id;
+		ve.vid = entry->vlan_id;
+		memcpy(l2_data.macAddr.arEther, entry->mac.addr, 6);
+	}
+	else
+	{
+		memset(&l2_data, 0, sizeof(l2_data));
+	    if(vnum > 0)
+	    {
+	    	ve.DBNum = 1;
+	    	ve.vid = 1;
+	    }
+	    else
+	    {
+	    	if( gvtuGetEntryFirst(QD_DEV_PTR, &ve) != GT_OK )
+	    		continue;
+	    }
+	}
+
+	do
     {
-    	if(gfdbGetAtuAllCountInDBNum(QD_DEV_PTR, j, &count) == GT_OK && count > 0)
-    	{
-    		if(loffset >= count)
-    		{
-    			loffset -= count;
-    			continue;
-    		}
-    	}
-    	else
-    		continue;
-    	memset(&l2_data, 0, sizeof(l2_data));
+		cs_printf("searching dbnum %u, db value %lu\n", ve.DBNum, db);
 		while(1)
 		{
-			l2_data.DBNum = j;
-
-			if(i == 0)
+			l2_data.DBNum = ve.DBNum;
+			if( db != ve.DBNum )
+			{
 				gt_ret = gfdbGetAtuEntryFirst(QD_DEV_PTR, &l2_data);
+				db = ve.DBNum;
+			}
 			else
 				gt_ret = gfdbGetAtuEntryNext(QD_DEV_PTR, &l2_data);
 
@@ -1210,7 +1272,7 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
 				break;
 			}
 
-			if(i < loffset)
+			if((!getnext) && (i < loffset))
 			{
 				i++;
 				continue;
@@ -1231,7 +1293,7 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
 
 		if(found == GT_TRUE)
 			break;
-    }
+    }while(gvtuGetEntryNext(QD_DEV_PTR, &ve) == GT_OK);
     
 	if(found == GT_TRUE)
 		break;
