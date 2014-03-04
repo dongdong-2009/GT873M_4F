@@ -13,8 +13,12 @@ export TOP_DIR	OBJS TARGET
 
 all: $(TARGET)
 
-$(TARGET): $(OBJS)
+$(TARGET): $(OBJ_DIR) $(OBJS)	
 	$(AR) -vru $@ $(OBJS)
+
+$(OBJ_DIR):	
+	mkdir -p $(OBJ_DIR)
+	
 	
 clean: 
 	$(RM) -f $(OBJ_DIR)/*.o	
