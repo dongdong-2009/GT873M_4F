@@ -1217,18 +1217,6 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
     if( gvtuGetEntryCount(QD_DEV_PTR, &vnum) != GT_OK)
     	continue;
 
-#if 0
-    if(GT_OK != gfdbGetAtuAllCount(QD_DEV_PTR, &count))
-    	return CS_E_ERROR;
-
-    if(loffset >= count)
-    {
-    	loffset -= count;
-    	continue;
-    }
-#endif
-
-
 	if(getnext)
 	{
 		db = entry->vlan_id;
@@ -1253,7 +1241,6 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
 
 	do
     {
-		cs_printf("searching dbnum %u, db value %lu\n", ve.DBNum, db);
 		while(1)
 		{
 			l2_data.DBNum = ve.DBNum;
@@ -1267,7 +1254,6 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
 
 			if(gt_ret != GT_OK)
 			{
-				ret = CS_E_ERROR;
 				SDL_MIN_LOG("gfdbGetAtuEntryNext fail(%d)\r\n", gt_ret);
 				break;
 			}
