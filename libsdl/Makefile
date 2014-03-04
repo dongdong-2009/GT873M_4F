@@ -75,7 +75,9 @@ $(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_macfilter.c \
 $(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_vlan.c \
 $(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_pktctrl.c \
 $(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_mc.c \
-$(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_classify.c
+$(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_classify.c \
+$(SWHOME)/src/onu/cmd/aal/3rd/marvell/mrv_l2_cmd.c \
+$(SWHOME)/src/onu/cmd/aal/3rd/marvell/mrv_cmd.c
 endif
 
 MOD_INCLUDES=-I$(ECOS_INSTALL_HOME)/include \
