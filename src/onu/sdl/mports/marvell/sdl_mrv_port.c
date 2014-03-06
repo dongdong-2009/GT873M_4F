@@ -354,7 +354,7 @@ cs_status epon_request_onu_port_mtu_set(
         return CS_E_PARAM;
     }
     
-    if (port_id > CS_UNI_PORT_ID4){
+    if (port_id > UNI_PORT_MAX){
         SDL_MIN_LOG("Port ID is Invalid\n");
         return CS_E_PARAM;
     }
@@ -739,7 +739,7 @@ cs_status epon_request_onu_port_lpbk_get(
         return CS_E_PARAM;
     }
 
-    if (port_id >CS_UNI_PORT_ID4){
+    if (port_id >UNI_PORT_MAX){
         SDL_MIN_LOG("Port ID is Invalid\n");
         return CS_E_PARAM;
     }
@@ -2154,7 +2154,7 @@ cs_status epon_request_onu_dot1p_remark_set(
         ret = CS_E_PARAM;
         goto end;
     }
-    if (port_id < CS_UNI_PORT_ID1 || port_id > CS_UNI_PORT_ID4) {
+    if (port_id < CS_UNI_PORT_ID1 || port_id > UNI_PORT_MAX) {
         SDL_MIN_LOG("In %s, port_id %d is not supported!\n", __FUNCTION__, port_id);
         return CS_E_PARAM;
     }
@@ -2266,7 +2266,7 @@ cs_status epon_request_onu_dot1p_remark_get(
         ret = CS_E_PARAM;
         goto end;
     }
-    if (port_id < CS_UNI_PORT_ID1 || port_id > CS_UNI_PORT_ID4) {
+    if (port_id < CS_UNI_PORT_ID1 || port_id > UNI_PORT_MAX) {
         SDL_MIN_LOG("In %s, port_id %d is not supported!\n", __FUNCTION__, port_id);
         ret = CS_E_PARAM;
         goto end;
@@ -2299,7 +2299,7 @@ cs_status epon_request_onu_port_mirror_set(
 	GT_32 unit, hwport;
 
     if ((mirror_port < CS_UNI_PORT_ID1) ||
-            ((mirror_port > CS_UNI_PORT_ID4) && (mirror_port != CS_UPLINK_PORT))) {
+            ((mirror_port > UNI_PORT_MAX) && (mirror_port != CS_UPLINK_PORT))) {
         SDL_MIN_LOG("port_id %d is not supported!\n", mirror_port);
 		cs_printf("mirror port error");
         rt = CS_E_PARAM;

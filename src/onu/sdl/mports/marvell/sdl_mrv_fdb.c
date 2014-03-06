@@ -1499,7 +1499,7 @@ cs_status sdl_fdb_init(
     cs_status rt;
     memset(__fdb_static_entry_table, 0, UNI_PORT_MAX*sizeof(__fdb_static_entry_t));
 
-    for(portid=CS_UNI_PORT_ID1; portid<=CS_UNI_PORT_ID4; portid++){
+    for(portid=CS_UNI_PORT_ID1; portid<=UNI_PORT_MAX; portid++){
     
 #if 1
         g_fdb_port_cfg[portid-1].lrn_en = SDL_FDB_MAC_LEARN_DISABLE;

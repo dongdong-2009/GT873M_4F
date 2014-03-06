@@ -224,7 +224,7 @@ cs_status sdl_service_up(void)
     port = CS_UNI_PORT_ID1;
     
 #ifdef HAVE_MPORTS
-    for(port=CS_UNI_PORT_ID1; port<=CS_UNI_PORT_ID4; port++){
+    for(port=CS_UNI_PORT_ID1; port<=UNI_PORT_MAX; port++){
 #endif
         epon_request_onu_port_admin_set(context,0,0, port, (cs_sdl_port_admin_t)tmp_val);
     

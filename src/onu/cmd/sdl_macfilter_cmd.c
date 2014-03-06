@@ -520,6 +520,7 @@ sal_cmd_cfg_t macfilter_cmd_cfg = {"mfilter", "mac-filter configuration", macfil
 #endif
 #ifdef HAVE_SDL_CMD_CTC
 
+#include "sdl.h"
 #include "sdl_macfilter.h"
 
 extern cs_status aal_cmd_mac_match(char *str);
@@ -593,7 +594,7 @@ sal_cmd_result_t mfilter_cmd_show(int argc, char **argv)
               
     cs_printf("+-------------------MAC filter table--------------------+\n");
        
-    for(port =CS_UNI_PORT_ID1; port <= CS_UNI_PORT_ID4; port++)
+    for(port =CS_UNI_PORT_ID1; port <= UNI_PORT_MAX; port++)
     {  
         rc = epon_request_onu_mac_filter_get_entry( context,0, 0, port, &number, mac_list);
         if(rc!=CS_E_OK)
@@ -630,7 +631,7 @@ sal_cmd_result_t mfilter_cmd_add(int argc, char **argv)
     if(argc!=5) return SAL_CMD_INVALID_PARAM;
 
     port = iros_strtol(argv[2]);
-    if((port>CS_UNI_PORT_ID4)||(port<CS_UNI_PORT_ID1))
+    if((port>UNI_PORT_MAX)||(port<CS_UNI_PORT_ID1))
     {
         cs_printf("port error.\n");
         return EPON_RETURN_INV_PARAM;
@@ -668,7 +669,7 @@ sal_cmd_result_t mfilter_cmd_del(int argc, char **argv)
     if(argc!=5) return SAL_CMD_INVALID_PARAM;
 
     port = iros_strtol(argv[2]);
-    if((port>CS_UNI_PORT_ID4)||(port<CS_UNI_PORT_ID1))
+    if((port>UNI_PORT_MAX)||(port<CS_UNI_PORT_ID1))
     {
         cs_printf("port error.\n");
         return EPON_RETURN_INV_PARAM;
@@ -701,7 +702,7 @@ sal_cmd_result_t mfilter_cmd_clr(int argc, char **argv)
     if(argc!=3) return SAL_CMD_INVALID_PARAM;
 
     port = iros_strtol(argv[2]);
-    if((port>CS_UNI_PORT_ID4)||(port<CS_UNI_PORT_ID1))
+    if((port>UNI_PORT_MAX)||(port<CS_UNI_PORT_ID1))
     {
         cs_printf("port error.\n");
         return EPON_RETURN_INV_PARAM;
@@ -726,7 +727,7 @@ sal_cmd_result_t mbind_cmd_show(int argc, char **argv)
               
     cs_printf("+-------------------MAC bind table----------------------+\n");
        
-    for(port =CS_UNI_PORT_ID1; port <= CS_UNI_PORT_ID4; port++)
+    for(port =CS_UNI_PORT_ID1; port <= UNI_PORT_MAX; port++)
     {  
         rc = epon_request_onu_mac_bind_get_entry( context,0, 0, port, &number, mac_list);
         if(rc!=CS_E_OK)
@@ -763,7 +764,7 @@ sal_cmd_result_t mbind_cmd_add(int argc, char **argv)
     if(argc!=4) return SAL_CMD_INVALID_PARAM;
 
     port = iros_strtol(argv[2]);
-    if((port>CS_UNI_PORT_ID4)||(port<CS_UNI_PORT_ID1))
+    if((port>UNI_PORT_MAX)||(port<CS_UNI_PORT_ID1))
     {
         cs_printf("port error.\n");
         return EPON_RETURN_INV_PARAM;
@@ -800,7 +801,7 @@ sal_cmd_result_t mbind_cmd_del(int argc, char **argv)
     if(argc!=4) return SAL_CMD_INVALID_PARAM;
 
     port = iros_strtol(argv[2]);
-    if((port>CS_UNI_PORT_ID4)||(port<CS_UNI_PORT_ID1))
+    if((port>UNI_PORT_MAX)||(port<CS_UNI_PORT_ID1))
     {
         cs_printf("port error.\n");
         return EPON_RETURN_INV_PARAM;
@@ -833,7 +834,7 @@ sal_cmd_result_t mbind_cmd_clr(int argc, char **argv)
     if(argc!=3) return SAL_CMD_INVALID_PARAM;
 
     port = iros_strtol(argv[2]);
-    if((port>CS_UNI_PORT_ID4)||(port<CS_UNI_PORT_ID1))
+    if((port>UNI_PORT_MAX)||(port<CS_UNI_PORT_ID1))
     {
         cs_printf("port error.\n");
         return EPON_RETURN_INV_PARAM;

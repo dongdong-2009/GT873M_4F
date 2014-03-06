@@ -298,7 +298,7 @@ static cs_boolean fdb_static_entry_check(cs_mac_t *addr,rtk_port_t port_id)
    // cs_uint8 port_id;
     cs_uint8 index;
     
-    for(port_id=0; port_id<CS_UNI_PORT_ID4; port_id++){
+    for(port_id=0; port_id<UNI_PORT_MAX; port_id++){
         if(fdb_static_entry_find(port_id, addr, &index))
             return EPON_TRUE;            
     }
@@ -675,7 +675,7 @@ cs_status epon_request_onu_fdb_entry_clr (
     cs_status rt = CS_E_OK;
 
     /* Uni port MAC flush */
-    for(portid=CS_UNI_PORT_ID1; portid<=CS_UNI_PORT_ID4; portid++){
+    for(portid=CS_UNI_PORT_ID1; portid<=UNI_PORT_MAX; portid++){
         rt =  epon_request_onu_fdb_entry_clr_per_port(context, device_id, llidport, portid, clr_mode);
         if(rt){
             SDL_MIN_LOG("epon_request_onu_fdb_entry_clr_per_port return %d\n", rt);
@@ -1541,7 +1541,7 @@ cs_status sdl_fdb_init(
     cs_status rt;
     memset(__fdb_static_entry_table, 0, UNI_PORT_MAX*sizeof(__fdb_static_entry_t));
 
-    for(portid=CS_UNI_PORT_ID1; portid<=CS_UNI_PORT_ID4; portid++){
+    for(portid=CS_UNI_PORT_ID1; portid<=UNI_PORT_MAX; portid++){
     
 #if 1
         g_fdb_port_cfg[portid-1].lrn_en = SDL_FDB_MAC_LEARN_DISABLE;

@@ -305,7 +305,7 @@ cs_status epon_request_onu_ptp_cfg_set(
         goto END;
     }
 
-    if(port_id > CS_UNI_PORT_ID4){
+    if(port_id > UNI_PORT_MAX){
         rt = CS_E_PARAM;
         SDL_MIN_LOG("ERROR Port ID\n");
         goto END;
@@ -406,7 +406,7 @@ cs_status epon_request_onu_ptp_cfg_get(
         goto END;
     }
 
-    if(port_id > CS_UNI_PORT_ID4){
+    if(port_id > UNI_PORT_MAX){
         rt = CS_E_PARAM;
         SDL_MIN_LOG("ERROR Port ID\n");
         goto END;
@@ -467,7 +467,7 @@ cs_status epon_request_onu_ptp_asym_correction_set(
         goto END;
     }
 
-    if(port_id > CS_UNI_PORT_ID4){
+    if(port_id > UNI_PORT_MAX){
         rt = CS_E_PARAM;
         SDL_MIN_LOG("ERROR Port ID\n");
         goto END;
@@ -526,7 +526,7 @@ cs_status epon_request_onu_ptp_asym_correction_get(
         goto END;
     }
 
-    if(port_id > CS_UNI_PORT_ID4){
+    if(port_id > UNI_PORT_MAX){
         rt = CS_E_PARAM;
         SDL_MIN_LOG("ERROR Port ID\n");
         goto END;
@@ -574,7 +574,7 @@ cs_status epon_request_onu_ptp_capture_eg_timestamp(
         goto END;
     }
 
-    if(port_id > CS_UNI_PORT_ID4){
+    if(port_id > UNI_PORT_MAX){
         rt = CS_E_PARAM;
         SDL_MIN_LOG("ERROR Port ID\n");
         goto END;
@@ -690,7 +690,7 @@ cs_status epon_request_onu_ptp_latch_ing_timestamp(
         goto END;
     }
 
-    if(port_id > CS_UNI_PORT_ID4){
+    if(port_id > UNI_PORT_MAX){
         rt = CS_E_PARAM;
         SDL_MIN_LOG("ERROR Port ID\n");
         goto END;

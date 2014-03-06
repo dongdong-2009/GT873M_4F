@@ -603,6 +603,26 @@ cs_status epon_request_onu_frame_send_w (
     case CS_UNI_PORT_ID2:
     case CS_UNI_PORT_ID3:
     case CS_UNI_PORT_ID4:
+    case CS_UNI_PORT_ID5:
+    case CS_UNI_PORT_ID6:
+    case CS_UNI_PORT_ID7:
+    case CS_UNI_PORT_ID8:
+    case CS_UNI_PORT_ID9:
+    case CS_UNI_PORT_ID10:
+    case CS_UNI_PORT_ID11:
+    case CS_UNI_PORT_ID12:
+    case CS_UNI_PORT_ID13:
+    case CS_UNI_PORT_ID14:
+    case CS_UNI_PORT_ID15:
+    case CS_UNI_PORT_ID16:
+    case CS_UNI_PORT_ID17:
+    case CS_UNI_PORT_ID18:
+    case CS_UNI_PORT_ID19:
+    case CS_UNI_PORT_ID20:
+    case CS_UNI_PORT_ID21:
+    case CS_UNI_PORT_ID22:
+    case CS_UNI_PORT_ID23:
+    case CS_UNI_PORT_ID24:
 	    pkt_len  = pkt_len + 8;
 	    pkt_buf = pkt_buf_tmp;
         port = AAL_PORT_ID_GE;
@@ -676,6 +696,26 @@ cs_status epon_request_onu_ptp_frame_send (
     case CS_UNI_PORT_ID2:
     case CS_UNI_PORT_ID3:
     case CS_UNI_PORT_ID4:
+    case CS_UNI_PORT_ID5:
+    case CS_UNI_PORT_ID6:
+    case CS_UNI_PORT_ID7:
+    case CS_UNI_PORT_ID8:
+    case CS_UNI_PORT_ID9:
+    case CS_UNI_PORT_ID10:
+    case CS_UNI_PORT_ID11:
+    case CS_UNI_PORT_ID12:
+    case CS_UNI_PORT_ID13:
+    case CS_UNI_PORT_ID14:
+    case CS_UNI_PORT_ID15:
+    case CS_UNI_PORT_ID16:
+    case CS_UNI_PORT_ID17:
+    case CS_UNI_PORT_ID18:
+    case CS_UNI_PORT_ID19:
+    case CS_UNI_PORT_ID20:
+    case CS_UNI_PORT_ID21:
+    case CS_UNI_PORT_ID22:
+    case CS_UNI_PORT_ID23:
+    case CS_UNI_PORT_ID24:
     case CS_ALL_UNI_PORT_ID:
         /* if there have external switch callback registered, just insert speical cpu header */
         if (__sw_pkt_tx_func)

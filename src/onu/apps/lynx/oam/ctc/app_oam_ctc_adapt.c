@@ -2006,7 +2006,7 @@ cs_status ctc_oam_onu_mcvlan_get_adapt(
     cs_callback_context_t         context;
     cs_uint8 mc_mode = CTC_MC_SWITCH_START_IMGP_SNOOPING;
 
-    if( (port<CS_UNI_PORT_ID1)||(port>CS_UNI_PORT_ID4) )
+    if( (port<CS_UNI_PORT_ID1)||(port>UNI_PORT_MAX) )
     {
         return CS_E_PARAM;
     }
@@ -2033,7 +2033,7 @@ cs_status ctc_oam_onu_mcvlan_set_adapt(
     cs_callback_context_t         context;
     cs_uint8 mc_mode = CTC_MC_SWITCH_START_IMGP_SNOOPING;
 
-    if( (port<CS_UNI_PORT_ID1)||(port>CS_UNI_PORT_ID4) )
+    if( (port<CS_UNI_PORT_ID1)||(port>UNI_PORT_MAX) )
     {
         return CS_E_PARAM;
     }
@@ -2083,7 +2083,7 @@ cs_status ctc_oam_onu_mctagstrip_get_adapt(
     cs_uint16                     rule_nums;
     int i;
 
-    if( (port<CS_UNI_PORT_ID1)||(port>CS_UNI_PORT_ID4) )
+    if( (port<CS_UNI_PORT_ID1)||(port>UNI_PORT_MAX) )
     {
         return CS_E_PARAM;
     }
@@ -2121,7 +2121,7 @@ cs_status ctc_oam_onu_mctagstrip_set_adapt(
     cs_sdl_vlan_cfg_t             swap_rule[CTC_ONU_AGGR_VLAN_NUM];
     int i;
 
-    if( (port<CS_UNI_PORT_ID1)||(port>CS_UNI_PORT_ID4) )
+    if( (port<CS_UNI_PORT_ID1)||(port>UNI_PORT_MAX) )
     {
         return CS_E_PARAM;
     }

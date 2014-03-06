@@ -846,7 +846,7 @@ cs_status epon_request_onu_port_stp_state_set(
 
     GT_32 unit, port;
 
-    if((portid < CS_UNI_PORT_ID1) || (portid > CS_UNI_PORT_ID4))
+    if((portid < CS_UNI_PORT_ID1) || (portid > UNI_PORT_MAX))
     {
         SDL_MIN_LOG("port id invalid.(%d) FILE: %s, LINE: %d", portid, __FILE__, __LINE__);
 
