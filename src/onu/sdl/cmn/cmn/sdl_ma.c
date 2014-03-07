@@ -241,7 +241,7 @@ cs_status __ma_rx_parse(cs_aal_ma_rx_buf_t *buf, cs_uint16 len, __ma_spid_t spid
             cs_uint8 *pkt = &(buf->pkt->data[0]);
             if(0==__sw_pkt_rx_func(pkt + CS_PKT_OFFSET, pkt_len, &pkt_len, &s_port))
             {  
-                if(s_port == 5){
+                if(s_port > UNI_PORT_MAX ){
                     iros_free(buf->pkt);
                     //cs_printf("packet from port 5 is freed\n");
                     return CS_E_OK;

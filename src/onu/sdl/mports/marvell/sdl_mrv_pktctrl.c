@@ -1161,6 +1161,71 @@ cs_status epon_request_onu_pkt_cpu_queue_map_get(
     return CS_E_OK;
 }
 
+static cs_int32 mrv_cpu_rx_parse(cs_uint8 *pkt, cs_uint16 in_len, cs_uint16 *out_len, cs_uint8 *s_port)
+{
+	cs_status ret = CS_E_ERROR;
+
+	if(pkt && out_len && s_port)
+	{
+		GT_ATU_ENTRY entry;
+		GT_U16 vid = 0, etype = 0;
+		GT_BOOL found = GT_FALSE;
+
+		memset(&entry, 0, sizeof(entry));
+
+		memcpy(entry.macAddr.arEther, pkt+ETHERNET_HEADER_SIZE, GT_ETHERNET_HEADER_SIZE);
+
+		etype = ntohs(*(GT_U16*)(pkt+12));
+		vid = ntohs(*(GT_U16*)(pkt+14));
+
+		if(etype == 0x8100)
+			vid &= 0xfff;
+		else
+			vid = 1;
+
+		entry.DBNum = 1;
+
+		FOR_UNIT_START(GT_32, unit)
+
+			if(gfdbFindAtuMacEntry(QD_DEV_PTR, &entry, &found) == GT_OK && found)
+			{
+				GT_U8 i = 0;
+				for(i=0; i<QD_DEV_PTR->maxPorts; i++)
+				{
+					if(entry.portVec&(1<<i))
+						break;
+				}
+
+				if(i<QD_DEV_PTR->maxPorts)
+				{
+					*s_port = i+1;
+					ret = CS_E_OK;
+					break;
+				}
+			}
+
+		FOR_UNIT_END
+
+		*out_len = in_len;
+	}
+
+	return ret;
+}
+
+static cs_int32 mrv_cpu_tx_parse(cs_uint8 *pkt_in, cs_uint16 in_len, cs_uint8 *pkt_out, cs_uint16 *out_len, cs_uint8 d_port)
+{
+	cs_status ret = CS_E_ERROR;
+
+	if(pkt_in && pkt_out && out_len && in_len > 8)
+	{
+		*out_len = in_len-8;
+		memcpy(pkt_out, pkt_in, *out_len);
+		ret = CS_E_OK;
+	}
+
+	return ret;
+}
+
 // fo fwd packet with ether type 0x8899 from reateltek switch
 //#define SDL_VLAN_SW_RTK                    10 // total 12 entries
 
@@ -1181,8 +1246,8 @@ cs_status sdl_switch_init(void)
     }
 
      /* attach cpu tx and rx parser */
-//    __ma_rx_parser_hook_reg(rtk_cpu_pkt_rx);
-//    __ma_tx_parser_hook_reg(rtk_cpu_pkt_tx);
+    __ma_rx_parser_hook_reg(mrv_cpu_rx_parse);
+    __ma_tx_parser_hook_reg(mrv_cpu_tx_parse);
 
     /*
     ** create a rule for capturing packet with ether type is 0x8899 to CPU
