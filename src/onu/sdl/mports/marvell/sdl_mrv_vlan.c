@@ -1013,7 +1013,7 @@ static void __update_sw
     {  	
 
         __vlan_table_add_port(__c_vlan_table, def_vlan.vid, port_id, EPON_TRUE);
-        __vlan_table_add_port(__c_vlan_table, def_vlan.vid, CS_UPLINK_PORT, EPON_FALSE);
+        __vlan_table_add_port(__c_vlan_table, def_vlan.vid, CS_UPLINK_PORT,  (def_vlan.vid == 1)?EPON_TRUE:EPON_FALSE);
 
         for(i=0; i<cfg_nums; ++i)
         {
