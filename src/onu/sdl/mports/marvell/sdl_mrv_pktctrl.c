@@ -1198,7 +1198,7 @@ static cs_int32 mrv_cpu_rx_parse(cs_uint8 *pkt, cs_uint16 in_len, cs_uint16 *out
 
 				if(i<QD_DEV_PTR->maxPorts)
 				{
-					*s_port = i+1;
+					*s_port = i;
 					ret = CS_E_OK;
 					break;
 				}

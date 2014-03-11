@@ -131,8 +131,6 @@ typedef struct {
 
 static cs_sdl_mc_vlan_port_t  mc_vlan[UNI_PORT_MAX]; 
     
-// mtodo: commented __mc_vlan_add __mc_vlan_del __mc_vlan_clr
-#if 0
 static cs_status __mc_vlan_add( CS_IN cs_port_id_t portid, CS_IN cs_uint16  vlanid)
 {    
     cs_int32             i;
@@ -233,7 +231,7 @@ static cs_status __mc_vlan_clr()
     
     return CS_E_OK;    
 }
-#endif
+
 cs_status epon_request_onu_unknown_mc_forward_set(
     CS_IN cs_callback_context_t     context,
     CS_IN cs_int32                  device_id,
@@ -254,7 +252,72 @@ cs_status epon_request_onu_mc_l2_entry_add (
     CS_IN  cs_sdl_mc_l2_entry_t      *entry
 )
 {
-	return CS_E_NOT_SUPPORT;
+	cs_status ret = CS_E_ERROR;
+
+    if(NULL==entry)
+        return CS_E_PARAM;
+
+    UNI_PORT_CHECK(portid);
+    VID_CHECK(entry->vlan);
+
+    /* must be multicast address */
+    if (!(entry->mac.addr[0] & 0x1))
+    {
+        SDL_MIN_LOG("not a multicast mac address. FILE: %s, LINE: %d", __FILE__, __LINE__);
+        return CS_E_PARAM;
+    }
+
+    // vlan==0 ---SVL
+    if(entry->vlan != 0)
+    {
+        //workaroud for MAC+VLAN
+        // only consider the case that a fdb be set once in a port.
+        ret = __mc_vlan_add(  portid, entry->vlan);
+        if(ret)
+        {
+            SDL_MIN_LOG("__mc_vlan_add return %d. ", ret);
+            return ret;
+        }
+    }
+
+    {
+    	GT_ATU_ENTRY atu;
+    	GT_BOOL found = GT_FALSE;
+
+    	GT_32 unit, port;
+
+    	SDL_MIN_LOG("gmac: %02x:%02x:%02x:%02x:%02x:%02x vid: %d port %d\n", entry->mac.addr[0],
+    			entry->mac.addr[1],
+    			entry->mac.addr[2],
+    			entry->mac.addr[3],
+    			entry->mac.addr[4],
+    			entry->mac.addr[5],
+    			entry->vlan, portid);
+
+    	memset(&atu, 0, sizeof(atu));
+
+    	memcpy(atu.macAddr.arEther, entry->mac.addr, sizeof(atu.macAddr.arEther));
+    	atu.DBNum = entry->vlan == 0 ? 1:entry->vlan;
+    	atu.entryState.mcEntryState = GT_MC_STATIC;
+
+    	gt_getswitchunitbylport(L2P_PORT(portid), &unit, &port);
+
+    	if(gfdbFindAtuMacEntry(QD_DEV_PTR, &atu, &found) == GT_OK)
+    	{
+   			atu.portVec |= 1<<(L2P_PORT(portid));
+    	}
+    	else
+    	{
+    		atu.portVec = 1<<(L2P_PORT(portid));
+    	}
+
+    	if(gfdbAddMacEntry(QD_DEV_PTR, &atu) == GT_OK)
+    		ret = CS_E_OK;
+
+    	SDL_MIN_LOG("%s ret (%d)\n", __func__, ret);
+    }
+
+	return ret;
 }
 
 cs_status epon_request_onu_mc_l2_entry_del (
@@ -265,7 +328,62 @@ cs_status epon_request_onu_mc_l2_entry_del (
     CS_IN  cs_sdl_mc_l2_entry_t      *entry
 )
 {
-	return CS_E_NOT_SUPPORT;
+	cs_status ret = CS_E_ERROR;
+
+    if(NULL==entry)
+        return CS_E_PARAM;
+
+    UNI_PORT_CHECK(portid);
+    VID_CHECK(entry->vlan);
+
+    /* must be multicast address */
+    if (!(entry->mac.addr[0] & 0x1))
+    {
+        SDL_MIN_LOG("not a multicast mac address. FILE: %s, LINE: %d", __FILE__, __LINE__);
+        return CS_E_PARAM;
+    }
+
+    {
+    	GT_ATU_ENTRY atu;
+    	GT_STATUS gtret = GT_ERROR;
+    	GT_BOOL found = GT_FALSE;
+    	GT_32 unit, port;
+
+    	if(gt_getswitchunitbylport(L2P_PORT(portid), &unit, &port) == GT_OK)
+    	{
+
+    		memset(&atu, 0, sizeof(atu));
+    		memcpy(atu.macAddr.arEther, entry->mac.addr, sizeof(atu.macAddr.arEther));
+    		atu.DBNum = entry->vlan;
+    		if( gfdbFindAtuMacEntry(QD_DEV_PTR, &atu, &found) == GT_OK)
+    		{
+    			if(atu.portVec& ( 1<<port ))
+    			{
+    		        if(entry->vlan != 0)
+    		        {
+    		            ret = __mc_vlan_del(portid, entry->vlan);
+    		            if(ret)
+    		            {
+    		                SDL_MIN_LOG("__mc_vlan_del return %d. ", ret);
+    		                return ret;
+    		            }
+    		        }
+
+    		        atu.portVec &= ~(1<<port);
+
+    		        if(atu.portVec & ((1<<UNI_PORT_MAX)-1))
+    		        	gtret = gfdbAddMacEntry(QD_DEV_PTR, &atu);
+    		        else
+    		        	gtret =gfdbDelMacEntry(QD_DEV_PTR, &atu.macAddr);
+    			}
+    		}
+
+    		if(gtret == GT_OK)
+    			ret = CS_E_OK;
+    	}
+    }
+
+	return ret;
 }
 
 cs_status epon_request_onu_mc_l2_entry_clr (
@@ -274,7 +392,7 @@ cs_status epon_request_onu_mc_l2_entry_clr (
     CS_IN  cs_uint32                 llidport
 )
 {
-	return CS_E_NOT_SUPPORT;
+	return __mc_vlan_clr();
 }
 
 cs_status epon_request_onu_mc_l2_port_get (
@@ -285,7 +403,45 @@ cs_status epon_request_onu_mc_l2_port_get (
     CS_OUT cs_sdl_portmask_t         *portmask
 )
 {
-	return CS_E_NOT_SUPPORT;
+	cs_status ret = CS_E_ERROR;
+
+	GT_ATU_ENTRY atu;
+	GT_BOOL found = GT_FALSE;
+	GT_STATUS gt_ret = GT_ERROR;
+
+	if(entry && portmask)
+	{
+		memset(&atu, 0, sizeof(atu));
+
+		memcpy(atu.macAddr.arEther, entry->mac.addr, sizeof(entry->mac.addr));
+		atu.DBNum = entry->vlan == 0?1:entry->vlan;
+
+		FOR_UNIT_START(GT_32, unit)
+
+		gt_ret = gfdbFindAtuMacEntry(QD_DEV_PTR, &atu, &found);
+
+		if(gt_ret == GT_OK && found)
+		{
+			int i;
+			portmask->bits[0] = 0;
+
+			for(i=0; i<QD_DEV_PTR->maxPorts; i++)
+			{
+				if(atu.portVec&(1<<i))
+					portmask->bits[0] |= 1<<i;
+			}
+
+			ret = CS_E_OK;
+			break;
+		}
+
+		FOR_UNIT_END
+
+		if(!found)
+			ret = CS_E_NOT_FOUND;
+	}
+
+	return ret;
 }
 
 cs_status epon_request_onu_mc_ip_entry_add(
