@@ -36,7 +36,7 @@ extern void cs_printf(const char *String, ...);
 
 
 #define DEVICE0_PHY_ADDR	1
-#define DEVICE0_CPU_PORT    9
+#define DEVICE0_CPU_PORT    10
 #define DEVICE0_WAN_PORT	10
 
 #define DEVICE1_PHY_ADDR	DEVICE0_PHY_ADDR + 1
