@@ -113,6 +113,7 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #endif
 
 #include "sdl_vlan.h"
+#include "sdl_mc.h"
 #include "port_stats.h"
 #include "oam_std_pdu.h"
 #include "cli_common.h"
@@ -2219,6 +2220,10 @@ cs_status ctc_oam_onu_mc_switch_set_adapt(
     for(port = 1; port < port_num+1; port++) {
         cs_callback_context_t  context;
         epon_request_onu_mc_vlan_clr(context, 0, 0, port);
+
+#if(PRODUCT_CLASS == PRODUCTS_GT812C)
+        epon_request_onu_igmpsnoop_set(context, 0, 0, port, mode == MC_DISABLE?FALSE:TRUE);
+#endif
     }
 	
     #if 0

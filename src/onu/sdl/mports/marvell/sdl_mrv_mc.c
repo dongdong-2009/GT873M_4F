@@ -240,8 +240,68 @@ cs_status epon_request_onu_unknown_mc_forward_set(
     CS_IN cs_boolean                enable
 )
 {
-//	mtodo: epon_request_onu_unknown_mc_forward_set
-    return CS_E_NOT_SUPPORT;
+	cs_status ret = CS_E_ERROR;
+
+	GT_32 unit, port;
+
+	if(portid == CS_PON_PORT_ID)
+		portid = CS_UPLINK_PORT;
+
+	if(gt_getswitchunitbylport(L2P_PORT(portid), &unit, &port) == GT_OK)
+	{
+		GT_STATUS ret = GT_OK;
+		GT_EGRESS_FLOOD mode;
+		if(gprtGetEgressFlood(QD_DEV_PTR, port, &mode) == GT_OK)
+		{
+			switch(mode)
+			{
+			case GT_BLOCK_EGRESS_NONE:
+				if(!enable)
+					mode = GT_BLOCK_EGRESS_UNKNOWN_MULTICAST;
+				break;
+			case GT_BLOCK_EGRESS_UNKNOWN:
+				if(enable)
+					mode = GT_BLOCK_EGRESS_UNKNOWN_UNICAST;
+				break;
+			case GT_BLOCK_EGRESS_UNKNOWN_MULTICAST:
+				if(enable)
+					mode = GT_BLOCK_EGRESS_NONE;
+				break;
+			case GT_BLOCK_EGRESS_UNKNOWN_UNICAST:
+				if(!enable)
+					mode = GT_BLOCK_EGRESS_UNKNOWN_MULTICAST;
+				break;
+			}
+
+			if(gprtSetEgressFlood(QD_DEV_PTR, port, mode) == GT_OK)
+				ret = CS_E_OK;
+		}
+	}
+    return ret;
+}
+
+cs_status epon_request_onu_igmpsnoop_set(
+    CS_IN cs_callback_context_t     context,
+    CS_IN cs_int32                  device_id,
+    CS_IN cs_int32                  llidport,
+    CS_IN cs_port_id_t              portid,
+    CS_IN cs_boolean                enable
+)
+{
+	cs_status ret = CS_E_ERROR;
+
+	GT_32 unit, port;
+
+	if(portid == CS_PON_PORT_ID)
+		portid = CS_UPLINK_PORT;
+
+	if(gt_getswitchunitbylport(L2P_PORT(portid), &unit, &port) == GT_OK)
+	{
+		if(gprtSetIGMPSnoop(QD_DEV_PTR, port, enable) == GT_OK)
+			ret = CS_E_OK;
+	}
+
+	return ret;
 }
 
 cs_status epon_request_onu_mc_l2_entry_add (
@@ -354,7 +414,7 @@ cs_status epon_request_onu_mc_l2_entry_del (
 
     		memset(&atu, 0, sizeof(atu));
     		memcpy(atu.macAddr.arEther, entry->mac.addr, sizeof(atu.macAddr.arEther));
-    		atu.DBNum = entry->vlan;
+    		atu.DBNum = entry->vlan == 0?1:entry->vlan;
     		if( gfdbFindAtuMacEntry(QD_DEV_PTR, &atu, &found) == GT_OK)
     		{
     			if(atu.portVec& ( 1<<port ))
