@@ -4065,63 +4065,47 @@ static void __sw_fdb_cmd_flush(int  argc, char **argv)
 
     return;
 }
+#endif
 
 static void __sw_fdb_cmd_query(int  argc, char **argv)
 {
-    GT_STATUS rtn  = GT_ERROR;
-    rtk_l2_ucastAddr_t l2_data;
-    rtk_uint32 address = 0, total = 0;;
+	cs_callback_context_t context;
+	cs_uint16 idx = 0, next = 0;
 
-    while (1)
+	cs_sdl_fdb_entry_t entry;
+	cs_uint8 c = 0;
+
+	memset(&entry, 0, sizeof(cs_sdl_fdb_entry_t));
+
+
+	diag_printf( "====== FDB SW table is shown:======\n");
+	diag_printf( "index   mac_address        vid   port type \n");
+
+    while(epon_request_onu_fdb_entry_get_byindex(context, 0, 0, SDL_FDB_ENTRY_GET_MODE_ALL, idx, &entry, &next) == CS_OK)
     {
-        if ((rtn = rtk_l2_addr_next_get(READMETHOD_NEXT_L2UC, 0, &address, &l2_data)) != RT_ERR_OK)
-            break;
-
-        diag_printf("+-------------+------------------------------------------------------------------------+\n");
-        diag_printf("| index(%04d) | mac(%02x:%02x:%02x:%02x:%02x:%02x) port(%d) vlan(%d) fid(%d) efid(%d) sa-block(%d) da-block(%d) is-static(%s) |\n",
-            address, 
-            l2_data.mac.octet[0], l2_data.mac.octet[1], l2_data.mac.octet[2],
-            l2_data.mac.octet[3], l2_data.mac.octet[4], l2_data.mac.octet[5],
-            l2_data.port, l2_data.cvid, l2_data.fid, l2_data.efid, l2_data.sa_block, l2_data.da_block, (l2_data.is_static ? "y" : "n"));
-
-        address++;
-        total++;
-
-        if(total % 10 == 0) {
-            cs_thread_delay(10);
-        }  
+    	cs_uint16 vid = entry.vlan_id?entry.vlan_id:1;
+    	idx = next;
+    	diag_printf(" %2d   %02x:%02x:%02x:%02x:%02x:%02x %6d   %2d   %2d  \n", idx,
+            entry.mac.addr[0],
+            entry.mac.addr[1],
+            entry.mac.addr[2],
+            entry.mac.addr[3],
+            entry.mac.addr[4],
+            entry.mac.addr[5],
+            vid,
+            entry.port,
+            entry.type);
+        if(++c > 20)
+        {
+        	cs_thread_delay(100);
+        	c = 0;
+        }
     }
-    
-    address = 0;
-    while (1)
-    {
-        if ((rtn = rtk_l2_addr_next_get(READMETHOD_NEXT_L2MC, 0, &address, &l2_data)) != RT_ERR_OK)
-            break;
+    diag_printf( "====== Totally %2d SW entries====\n", idx);
 
-        diag_printf("+-------------+------------------------------------------------------------------------+\n");
-        diag_printf("| index(%04d) | mac(%02x:%02x:%02x:%02x:%02x:%02x) port(%d) vlan(%d) fid(%d) efid(%d) sa-block(%d) da-block(%d) is-static(%s) |\n",
-            address, 
-            l2_data.mac.octet[0], l2_data.mac.octet[1], l2_data.mac.octet[2],
-            l2_data.mac.octet[3], l2_data.mac.octet[4], l2_data.mac.octet[5],
-            l2_data.port, l2_data.cvid, l2_data.fid, l2_data.efid, l2_data.sa_block, l2_data.da_block, (l2_data.is_static ? "y" : "n"));
-
-        address++;
-        total++;
-
-        if(total % 10 == 0) {
-            cs_thread_delay(10);
-        }          
-    }
-
-    if (address)
-    {
-        diag_printf("+-------------+------------------------------------------------------------------------+\n");
-        diag_printf("total fdb entries : %d\n", total);
-    }
-
-    return;
 }
 
+#if 0
 static void __sw_fdb_cmd_mc_query(int  argc, char **argv)
 {
     GT_STATUS rtn  = GT_ERROR;
@@ -4275,6 +4259,7 @@ extern void fdb_cmd_list_get(int argc,char **argv);
 extern void fdb_cmd_list_add(int argc, char **argv);
 extern void fdb_cmd_list_del(int argc, char **argv);
 
+#endif
 static struct {
     char                   *name;
     aal_l2_cmd_func_t  exe_func;
@@ -4282,6 +4267,7 @@ static struct {
     char                   *para;
     char                   *help;
 }sw_fdb_cmds[] = {
+#if 0
         { "add-uc-entry",      __sw_fdb_cmd_ucast_add       , 8, "[mac] [fid] [efid] [port] [sa-block][da-block] [auth] [is-static]", "add a unicast fdb entry"},
         { "del-uc-entry",      __sw_fdb_cmd_ucast_del       , 3, "[mac] [fid] [efid]", "del a unicast fdb entry"},
         { "get-uc-entry",      __sw_fdb_cmd_ucast_get       , 3, "[mac] [fid] [efid]", "get a unicast fdb entry"},
@@ -4294,7 +4280,9 @@ static struct {
         { "clr-mc-entry",      __sw_fdb_cmd_mcast_clr       , 0, "<cr>", "clear all mcast fdb entry"},
         { "get-l2-entry",      __sw_fdb_cmd_l2_entry_get    , 1, "[index : 1 - 2112]",      "get a l2 entry by index"},
         { "flush",             __sw_fdb_cmd_flush           , 3, "[flush-type] [vlan-id] [port]", "flush l2 entry by vlan and port"},
+#endif
         { "query",             __sw_fdb_cmd_query           , 0, "<cr>", "query all fdb entries"},
+#if 0
         { "mc-query",          __sw_fdb_cmd_mc_query        , 0, "<cr>", "query all mc-fdb entries"},
         { "ipmc-query",        __sw_fdb_cmd_ipmc_query      , 0, "<cr>", "query all IP mc-fdb entries"},
         { "add-ipmc-entry",    __sw_fdb_cmd_ipmcast_add     , 3, "[sip] [dip] [port_msk]", "add a ip mcast fdb entry"},
@@ -4311,6 +4299,7 @@ static struct {
         { "entry-get",				fdb_cmd_list_get 		, 2, "[port] [vlan]","list all entries in FDB"},
         { "entry-add",				fdb_cmd_list_add 		, 4, "[port] [vlan] [mac] [type]"," add entry"},
         { "entry-del",				fdb_cmd_list_del 		, 2, "[vlan] [mac]"," del designated entry"},
+#endif
 };
 
 void __sw_fdb_cmd_help(void)
@@ -4380,7 +4369,6 @@ void sw_fdb_cmd(int argc, char **argv)
     return;
     
 }
-#endif
 
 
 /*  end of file */

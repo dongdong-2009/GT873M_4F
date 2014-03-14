@@ -104,9 +104,7 @@ Copyright (c) 2009 by Cortina Systems Incorporated
  * externs
  */
 extern void sw_vlan_cmd(int argc, char **argv);
-#if 0
 extern void sw_fdb_cmd(int argc, char **argv);
-#endif
 extern void sw_l2_cmd(int argc, char **argv);
 #if 0
 extern void sw_igmp_cmd(int argc, char **argv);
@@ -141,8 +139,8 @@ typedef struct {
 static aal_cmd_reg_struct_t sw_cmd_list[] = { 
     { sw_vlan_cmd,   "vlan",  "vlan   operations"},
     { sw_l2_cmd,     "l2",    "layer2 operations"},
-#if 0
     { sw_fdb_cmd,    "fdb",   "fdb    operations"},
+#if 0
     { sw_igmp_cmd,   "igmp",  "igmp   operations"},
     { sw_trunk_cmd,  "trunk", "trunk  operations"},
     { rtk_port_cmd,  "port",  "port  operations"},
