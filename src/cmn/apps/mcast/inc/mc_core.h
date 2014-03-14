@@ -3,7 +3,7 @@
 
 #include "mc_pkt.h"
 
-#define MC_MAX_PORT    8
+#define MC_MAX_PORT    32
 #define MC_MAX_VLAN     4095
 
 #define         MC_PORT_DEFAULT_GROUP           32
@@ -118,7 +118,7 @@ typedef struct  {
     cs_uint32       port_num;   
     
     mc_port_t  *up_port;  
-    mc_port_t  *port[MC_MAX_PORT];   
+    mc_port_t  *port[MC_MAX_PORT];
 
     mc_port_ingress_filter_routine_t  ing_filter;
     mc_port_egress_filter_routine_t   eg_filter;

@@ -273,6 +273,8 @@ void switch_init()
 	int j;
 	GT_STATUS status;
 
+	j=0;
+
 	for(i=0; i<N_OF_QD_DEVICES; i++)
 	{
 		qdMultiDev[i] = (GT_QD_DEV*)malloc(sizeof(GT_QD_DEV));
@@ -367,6 +369,7 @@ void switch_init()
 #endif
 			if (IS_IN_DEV_GROUP(qdMultiDev[i], DEV_88E6097_FAMILY))
 			{
+#if(PRODUCT_CLASS != PRODUCTS_GT812C)
 #if (!(FOR_MRV_INDUSTRY_SW))
 				MSG_OUT(("Setting FE CPU Port(%d)...\r\n", dev_cpuPort[i]));
 				if((status = switch_fe_port_init(qdMultiDev[i],dev_cpuPort[i],GT_TRUE)) != GT_OK)
@@ -375,6 +378,8 @@ void switch_init()
 					l_ret_val = status;
 				}
 #endif
+#endif
+
 #if (PRODUCT_CLASS == GT815)
 				MSG_OUT(("Setting GE Cascade Port(%d)...\r\n", dev_casPort[i]));
 				if((status = switch_ge_port_init(qdMultiDev[i],dev_casPort[i])) != GT_OK)
@@ -423,43 +428,8 @@ void switch_init()
 				ingressing/egressing this port.
 			2. Set CPU Port information (for To_CPU frame) for each port of device.
 		*/			
-#if (PRODUCT_CLASS == GT815)
-		MSG_OUT(("Setting InterSwitch Port(%d) and CPU Port(%d)...\r\n",dev_casPort[i],dev_cpuPort[i]));
-		if((status=gsysSetCPUDest(qdMultiDev[i],dev_cpuPort[i])) != GT_OK)
-		{
-			MSG_OUT(("gsysSetCPUDest returned %d (port %d)\r\n",status,dev_cpuPort[i]));
-			l_ret_val = status;
-		}
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
 
-		if( 1/*i != 0*/)
-		{
-			if((status=gprtSetFrameMode(qdMultiDev[i],dev_cpuPort[i], GT_FRAME_MODE_DSA)) != GT_OK)
-			{
-				MSG_OUT(("gprtSetFrameMode returned %d (port %d, DSA_MODE)\r\n",status,dev_cpuPort[i]));
-				l_ret_val = status;
-			}
-		}
-
-		if( 0 == i )
-		{
-			for(j=0;j<sg_switch_bsp_config.numOfCasPorts;j++)
-			{
-				MSG_OUT(("Setting Cascade Port(%d/%d)...\r\n",sg_switch_bsp_config.cas_ports[j].port,sg_switch_bsp_config.cas_ports[j].devid));
-				if((status=gsysSetDevRoutingTable(qdMultiDev[i],sg_switch_bsp_config.cas_ports[j].devid,sg_switch_bsp_config.cas_ports[j].port)) != GT_OK)
-				{
-					MSG_OUT(("gsysSetDevRoutingTable returned %d\r\n",status));
-					l_ret_val = status;
-				}
-			}
-		}
-		if(dev_casPort[i] != dev_cpuPort[i])
-		{
-			if((status=gprtSetFrameMode(qdMultiDev[i],dev_casPort[i], GT_FRAME_MODE_DSA)) != GT_OK)
-			{
-				MSG_OUT(("gprtSetFrameMode returned %d (port %d, DSA_MODE)\r\n",status,dev_casPort[i]));
-				l_ret_val = status;
-			}
-		}
 #else  	/* 6096/6097 don't need set cpu port to every user port */
 		for(j=0; j<qdMultiDev[i]->numOfPorts; j++)
 		{
@@ -576,66 +546,7 @@ void switch_init()
 #endif
 	       /*wugang add 2011.6.3, disable all the interrupts for init..*/
 	       eventSetActive(qdMultiDev[i], 0);
-
-		 /* for the external phy on different devices , Libl, 2012.3.12*/
-#if(PRODUCT_CLASS == GIS2109)
-		if(IS_IN_DEV_GROUP(qdMultiDev[i], DEV_88E6097_FAMILY))
-		{
-			guiPhyBoardSmiAddr = 0x09;
-		}
-		else
-		{
-			guiPhyBoardSmiAddr = 0x1c;
-		}
-#endif
 	}
-#if 0
-	if (IS_IN_DEV_GROUP(qdMultiDev[0],DEV_ARP_DEST_SUPPORT))
-	{
-		if(dev_cpuPort[0] != dev_wanPort[0])
-		{
-#ifdef _RELEASE_VERSION_
-			char cMac[8];
-			extern GT_U32 device_product_basemac_get( GT_U8 * mac_mem );
-			device_product_basemac_get(cMac);
-			if(GT_OK != (status = MinimizeCPUTraffic1(qdMultiDev[0], cMac)))
-#else
-			if(GT_OK != (status = MinimizeCPUTraffic1(qdMultiDev[0], NULL)))
-#endif
-			{
-				l_ret_val = status;
-			}
-		}
-	}
-
-	if (IS_IN_DEV_GROUP(qdMultiDev[0],DEV_FLOOD_BROADCAST))
-	{
-#ifdef _RELEASE_VERSION_
-		char cMac[8];
-		extern GT_U32 device_product_basemac_get( GT_U8 * mac_mem );
-		device_product_basemac_get(cMac);
-		if(GT_OK != (status = MinimizeCPUTraffic2(qdMultiDev[0], cMac)))
-#else
-		if(GT_OK != (status = MinimizeCPUTraffic2(qdMultiDev[0], NULL)))
-#endif
-		{
-			l_ret_val = status;
-		}
-	}
-#endif
-
-#if 0	/* Use Hmii to receive downstream packet */
-	/* Make WAN port and CPU port isolate */
-	if(dev_cpuPort[0] != dev_wanPort[0])
-	{
-		MSG_OUT(("Isolating WAN port(%d) and CPU port(%d)...\r\n", dev_wanPort[0], dev_cpuPort[0]));
-		if((status = IsolateTwoPorts(qdMultiDev[0], GT_TRUE, dev_wanPort[0], dev_cpuPort[0])) != GT_OK)
-		{
-			MSG_OUT(("IsolateTwoPorts failed(%d).\r\n", status));
-			l_ret_val = status;
-		}
-	}
-#endif
 
 	if(GT_OK == l_ret_val)
 	{

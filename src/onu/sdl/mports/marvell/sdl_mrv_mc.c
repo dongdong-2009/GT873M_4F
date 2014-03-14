@@ -434,7 +434,7 @@ cs_status epon_request_onu_mc_l2_entry_del (
     		        if(atu.portVec & ((1<<UNI_PORT_MAX)-1))
     		        	gtret = gfdbAddMacEntry(QD_DEV_PTR, &atu);
     		        else
-    		        	gtret =gfdbDelMacEntry(QD_DEV_PTR, &atu.macAddr);
+    		        	gtret =gfdbDelAtuEntry(QD_DEV_PTR, &atu);
     			}
     		}
 
