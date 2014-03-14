@@ -1418,6 +1418,13 @@ GT_STATUS switch_default_config(GT_QD_DEV * dev)
     		MSG_OUT(( "gprtPortRestartAutoNeg return Failed(%lu,%d)\r\n", phyPort,result));
     		l_ret_val = result;
     	}
+
+        /*broadcast frame not treated as multicast frame*/
+        if((result = gsysSetFloodBC(dev, GT_TRUE)) != GT_OK)
+        {
+        	MSG_OUT(( "gsysSetFloodBC return Failed(%lu,%d)\r\n", phyPort,result));
+        	l_ret_val = result;
+        }
 		/* Forward unknown unicast is enable */
         if ((result = gprtSetForwardUnknown(dev, phyPort, GT_TRUE)) != GT_OK)
     	{
