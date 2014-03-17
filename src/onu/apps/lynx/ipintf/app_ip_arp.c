@@ -100,6 +100,22 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "sdl_port.h"
 static cs_uint8 packet_buf[CS_ETHER_MTU];
 extern cs_uint32 PTY_ENABLE;
+
+static cs_boolean app_ipintf_send_need_check_vlan()
+{
+
+#if FOR_ONU_PON
+#if( PRODUCT_CLASS == PRODUCTS_GT812C )
+	return FALSE;
+#else
+	return TRUE;
+#endif
+#elif( 1 )
+#else
+#error "PRODUCT_CLASS must be set!!!"
+#endif
+}
+
 /*
 *   PROTOTYPE    void app_ipintf_build_arp_packet(cs_pkt_t *pkt)
 *   INPUT            pkt
@@ -317,7 +333,11 @@ cs_status app_ipintf_arp_pre_process(cs_pkt_t* pkt)
                 
                 APP_IPINTF_LOG(IROS_LOG_LEVEL_DBG3, "RX to TX len %d,sport %d, dport %d\n", 
                                                                                       pkt->len,pkt->port, PTABLE[i].port);
-                ret |= app_ipintf_send_pkt_with_vlan_check(PTABLE[i].port, pkt, packet_buf);
+                if(app_ipintf_send_need_check_vlan())
+                    ret |= app_ipintf_send_pkt_with_vlan_check(PTABLE[i].port, pkt, packet_buf);
+                else
+                	ret |= app_ipintf_send_pkt(PTABLE[i].port, pkt);
+
             }
         }
         

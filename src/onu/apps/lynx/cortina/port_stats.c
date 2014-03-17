@@ -125,7 +125,7 @@ static app_timer_msg_t g_app_stats_timer;
 #if 0
 static cs_uint8 g_app_max_uni_port = 1;
 #else
-static cs_uint8 g_app_max_uni_port = 4;
+static cs_uint8 g_app_max_uni_port = UNI_PORT_MAX;
 #endif
 
 /* use the current value and last value to make sure the value not over 32 bit */

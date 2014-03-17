@@ -36,7 +36,7 @@ ifneq ($(THIS_OS), Linux)
 endif
 
 
-do_this: $(TARGET_LIST)
+do_this: products_config.h $(TARGET_LIST)
 
 
 $(TARGET_LIST): force
@@ -50,6 +50,14 @@ $(TARGET_LIST): force
     else \
         printf "No makefile found in %s\n" $@ ; \
     fi 
+
+products_config.h: force
+	
+ifeq ($(strip $(PRODUCT)), )
+else
+	echo "#define PRODUCT_CLASS  PRODUCTS_$(PRODUCT)" > $(SWHOME)/products_config.h
+endif
+	
 
 clean: $(CLEAN_LIST)
 

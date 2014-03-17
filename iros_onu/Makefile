@@ -34,7 +34,11 @@ MOD_INCLUDES= \
 -I$(SWHOME)//src/onu/apps/lynx/dbmngt/cmn/ \
 -I$(SWHOME)//src/onu/apps/lynx/web/cmn/cgi/include \
 -I$(SWHOME)/src/onu/apps/lynx/web/cs/cgi/include \
--I$(SWHOME)/src/onu/apps/lynx/gpio/cmn
+-I$(SWHOME)/src/onu/apps/lynx/gpio/cmn \
+-I$(SWHOME)/gtmrv/include \
+-I$(SWHOME)/gtmrv/include/h/driver \
+-I$(SWHOME)/gtmrv/include/h/msApi \
+-I$(SWHOME)/gtmrv/include/h/platform
 
 
 IROS_CONFIG_H=$(shell pwd)/../iros_config.h
@@ -57,7 +61,6 @@ MOD_LDFLAGS= -u imst_cli_start -u netdev_eth0 -u flash_hwr_init \
 -L../libdb \
 -L../libloopdetect \
 -L../libaal \
--L../libswitch \
 -L../libmc	\
 -L../libptp	\
 -L../libpppoe  \
@@ -75,7 +78,6 @@ MOD_LDFLAGS= -u imst_cli_start -u netdev_eth0 -u flash_hwr_init \
 -lpppoe \
 -lsdl	\
 -laal \
--lswitch \
 -lflash \
 -lcache \
 -lplat \
@@ -84,6 +86,15 @@ MOD_LDFLAGS= -u imst_cli_start -u netdev_eth0 -u flash_hwr_init \
 -Wl,-gc-sections \
 -Ttarget.ld -nostdlib -mcpu=arm9 -mthumb-interwork \
 -Wl,--Map -Wl,iros_onu_asic_ram_lynxd.map
+
+ifeq ($(strip $(USING_SW_TYPE)),RTK)
+MOD_LDFLAGS += -L../libswitch -lswitch
+endif
+
+ifeq ($(strip $(USING_SW_TYPE)),MRV)
+MOD_LDFLAGS += -L../gtmrv/lib -lgtmrv
+endif
+
 
 
 TARGET=$(MOD_TMPHOME)/$(MOD_NAME).zblob $(MOD_TMPHOME)/$(MOD_NAME).wfs $(MOD_TMPHOME)/$(MOD_NAME).wlb
@@ -95,7 +106,8 @@ IMAGES_DIR=$(MOD_TMPHOME)/../images/
 
 
 include $(SWHOME)/tools/support/build/makefile.mod_start
-$(MOD_TMPHOME)/$(MOD_NAME): ../libosal/libosal.a ../libplat/libplat.a ../libcache/libcache.a ../libmc/libmc.a ../libflash/libflash.a ../libipintf/libipintf.a ../libweb/libweb.a  ../libsys/libsys.a ../liboam/liboam.a  ../libdb/libdb.a  ../libtrmsvr/libtrmsvr.a ../libloopdetect/libloopdetect.a ../libaal/libaal.a ../libswitch/libswitch.a ../libsdl/libsdl.a ../libpppoe/libpppoe.a
+#$(MOD_TMPHOME)/$(MOD_NAME): ../libosal/libosal.a ../libplat/libplat.a ../libcache/libcache.a ../libmc/libmc.a ../libflash/libflash.a ../libipintf/libipintf.a ../libweb/libweb.a  ../libsys/libsys.a ../liboam/liboam.a  ../libdb/libdb.a  ../libtrmsvr/libtrmsvr.a ../libloopdetect/libloopdetect.a ../libaal/libaal.a ../libswitch/libswitch.a ../libsdl/libsdl.a ../libpppoe/libpppoe.a
+$(MOD_TMPHOME)/$(MOD_NAME): ../libosal/libosal.a ../libplat/libplat.a ../libcache/libcache.a ../libmc/libmc.a ../libflash/libflash.a ../libipintf/libipintf.a ../libweb/libweb.a  ../libsys/libsys.a ../liboam/liboam.a  ../libdb/libdb.a  ../libtrmsvr/libtrmsvr.a ../libloopdetect/libloopdetect.a ../libaal/libaal.a ../gtmrv/lib/libgtmrv.a ../libsdl/libsdl.a ../libpppoe/libpppoe.a
 
 WEB_CMN_ROOT=$(SWHOME)/src/onu/apps/lynx/web/cmn/res
 WEB_CTC_ROOT=$(SWHOME)/src/onu/apps/lynx/web/cs/res/

@@ -96,6 +96,7 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 
 #include "cs_types.h"
 
+#if 0
 typedef enum {
     IROS_LOG_LEVEL_DBG0 = 0,
     IROS_LOG_LEVEL_DBG1 = 1,
@@ -107,6 +108,17 @@ typedef enum {
     IROS_LOG_LEVEL_CRI = 7,
     MAX_LOG_LEVEL
 }SYS_LOG_LEVEL;
+#else
+#define IROS_LOG_LEVEL_DBG0 0
+#define IROS_LOG_LEVEL_DBG1 1
+#define IROS_LOG_LEVEL_DBG2  2
+#define IROS_LOG_LEVEL_DBG3  3
+#define IROS_LOG_LEVEL_INF  4
+#define IROS_LOG_LEVEL_MIN  5
+#define IROS_LOG_LEVEL_MAJ  6
+#define IROS_LOG_LEVEL_CRI  7
+#define MAX_LOG_LEVEL	8
+#endif
 
 #define CS_LOG_ERROR        -1
 #define CS_LOG_OK           0
@@ -120,7 +132,8 @@ typedef enum {
 #endif
 
 
-#define CS_DEFT_LOG_ENABLE_LEVEL    IROS_LOG_LEVEL_MAJ
+//#define CS_DEFT_LOG_ENABLE_LEVEL    IROS_LOG_LEVEL_MAJ
+#define CS_DEFT_LOG_ENABLE_LEVEL    IROS_LOG_LEVEL_DBG0
 #define CS_DFLT_LOG_PRINT_LEVEL     IROS_LOG_LEVEL_MAJ
 #define CS_DFLT_LOG_RECORD_LEVEL    IROS_LOG_LEVEL_MIN
 

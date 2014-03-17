@@ -9,6 +9,7 @@
 #include "onu_datetype.h"
 #include "onu_uax.h"
 
+unsigned long g_ulMAXPortOnSlotNum              = MAXPortOnSlotNum;
 
 #define STATE_S 1
 #define STATE_PS 2

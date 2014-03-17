@@ -352,13 +352,14 @@ int cmd_exe(int argc, char **argv)
     {
         return 0;
     }
-#ifdef HAVE_RTK_CMD
+#ifdef HAVE_SW_DBG_CMD
         if (sw_debug_cmd_proc(argc, argv))
         {
             return 0;
         }
 #endif
-    do_help();
+
+        do_help();
     return 0;
 }
 

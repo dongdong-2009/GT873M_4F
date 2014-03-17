@@ -131,6 +131,8 @@ This file contains main process entry point
 #ifdef HAVE_TERMINAL_SERVER
 #include "terminal_server.h"
 #endif
+
+#include "../../onu/3rd/driver/marvell/msSample.h"
 #define UART
 static cs_uint32 g_ctc_vlan_trunk_ds_untag_enable = 1;
 cs_uint32 sdl_thread_id = 0;
@@ -185,6 +187,8 @@ extern void cs_gpio_init(void);
 extern cs_status cs_i2c_init(void);
 extern cs_status cs_mdio_init(void);
 extern void ssp_init(void);
+extern void switch_init(void);
+
 cs_uint32 ctc_trunk_vlan_ds_untag_enable_get()
 {
 	return g_ctc_vlan_trunk_ds_untag_enable;
@@ -236,6 +240,11 @@ void plat_init(void)
     
     /* register debug command */
     plat_cmd_init();
+
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+    switch_init();
+#endif
+
 }
 void mbox_init()
 {

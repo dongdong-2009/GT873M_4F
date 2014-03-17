@@ -303,7 +303,7 @@ cs_status epon_request_onu_ptp_cfg_set(
         goto END;
     }
 
-    if(port_id > CS_UNI_PORT_ID4){
+    if(port_id > UNI_PORT_MAX){
         rt = CS_E_PARAM;
         SDL_MIN_LOG("ERROR Port ID\n");
         goto END;
@@ -404,7 +404,7 @@ cs_status epon_request_onu_ptp_cfg_get(
         goto END;
     }
 
-    if(port_id > CS_UNI_PORT_ID4){
+    if(port_id > UNI_PORT_MAX){
         rt = CS_E_PARAM;
         SDL_MIN_LOG("ERROR Port ID\n");
         goto END;
@@ -465,7 +465,7 @@ cs_status epon_request_onu_ptp_asym_correction_set(
         goto END;
     }
 
-    if(port_id > CS_UNI_PORT_ID4){
+    if(port_id > UNI_PORT_MAX){
         rt = CS_E_PARAM;
         SDL_MIN_LOG("ERROR Port ID\n");
         goto END;
@@ -524,7 +524,7 @@ cs_status epon_request_onu_ptp_asym_correction_get(
         goto END;
     }
 
-    if(port_id > CS_UNI_PORT_ID4){
+    if(port_id > UNI_PORT_MAX){
         rt = CS_E_PARAM;
         SDL_MIN_LOG("ERROR Port ID\n");
         goto END;
@@ -572,7 +572,7 @@ cs_status epon_request_onu_ptp_capture_eg_timestamp(
         goto END;
     }
 
-    if(port_id > CS_UNI_PORT_ID4){
+    if(port_id > UNI_PORT_MAX){
         rt = CS_E_PARAM;
         SDL_MIN_LOG("ERROR Port ID\n");
         goto END;
@@ -688,7 +688,7 @@ cs_status epon_request_onu_ptp_latch_ing_timestamp(
         goto END;
     }
 
-    if(port_id > CS_UNI_PORT_ID4){
+    if(port_id > UNI_PORT_MAX){
         rt = CS_E_PARAM;
         SDL_MIN_LOG("ERROR Port ID\n");
         goto END;
@@ -1079,7 +1079,7 @@ cs_status epon_request_onu_ptp_sw_port_set(
     rtk_uint32 port;
     rtk_api_ret_t rtk_ret;
 
-    if((port_id<CS_UNI_PORT_ID1) || ((port_id>CS_UNI_PORT_ID4)&&(port_id!=CS_UPLINK_PORT))){
+    if((port_id<CS_UNI_PORT_ID1) || ((port_id>UNI_PORT_MAX)&&(port_id!=CS_UPLINK_PORT))){
         SDL_MIN_LOG("ERROR PARAM\n");
         return CS_E_PARAM;
     }
@@ -1120,7 +1120,7 @@ cs_status epon_request_onu_ptp_capture_sw_eg_timestamp(
     rtk_uint32 port;
     rtk_api_ret_t rtk_ret = RT_ERR_OK;
 
-    if((port_id<CS_UNI_PORT_ID1) || ((port_id>CS_UNI_PORT_ID4)&&(port_id!=CS_UPLINK_PORT))){
+    if((port_id<CS_UNI_PORT_ID1) || ((port_id>UNI_PORT_MAX)&&(port_id!=CS_UPLINK_PORT))){
         SDL_MIN_LOG("ERROR PARAM\n");
         return CS_E_PARAM;
     }

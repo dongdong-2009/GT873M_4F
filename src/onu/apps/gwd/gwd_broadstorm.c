@@ -343,7 +343,6 @@ extern gw_uint32 g_uni_port_num;
 #endif
 
 
-#define NUM_PORTS_PER_SYSTEM 5
 gw_uint64 gulCurrentpktCntIn[NUM_PORTS_PER_SYSTEM-1] = {0};
 gw_uint64 gulCurrentpktCntOut[NUM_PORTS_PER_SYSTEM-1] = {0};
 gw_uint64 gulOctRateIn[NUM_PORTS_PER_SYSTEM-1] = {0};

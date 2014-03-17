@@ -4,7 +4,6 @@
 #include "rtk_api.h"
 #include "cs_cmn.h"
 
-#define NUM_PORTS_PER_SYSTEM 5
 #define IROS_TICK_PER_SECOND 100
 
 #define FLASH_GWD_RCG_SWITCH_CFG_MAX_SIZE	(11*1024)

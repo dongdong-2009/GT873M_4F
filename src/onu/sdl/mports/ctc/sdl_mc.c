@@ -218,7 +218,7 @@ static cs_status __mc_vlan_clr()
     cs_port_id_t          portid;
     cs_status             ret = CS_E_OK;
 
-    for(portid= CS_UNI_PORT_ID1; portid<=CS_UNI_PORT_ID4; portid++)
+    for(portid= CS_UNI_PORT_ID1; portid<=UNI_PORT_MAX; portid++)
     {  
         ret = epon_request_onu_mc_vlan_clr(context,0,0, portid);
         if(ret)
@@ -242,7 +242,7 @@ cs_status epon_request_onu_unknown_mc_forward_set(
     rtk_api_ret_t  rtk_ret = 0;
     rtk_port_t     rtk_port;
 
-    if(portid > CS_UNI_PORT_ID4)
+    if(portid > UNI_PORT_MAX)
     {
         SDL_MIN_LOG("port id invalid.(%d) FILE: %s, LINE: %d", portid, __FILE__, __LINE__);
         return CS_E_PARAM;

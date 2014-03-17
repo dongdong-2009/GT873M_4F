@@ -94,7 +94,7 @@ Copyright (c) 2010 by Cortina Systems Incorporated
 #include "sdl.h"
 
 
-#define  UNI_PORT_RANGE_CHECK(port)  ((port)>CS_UNI_PORT_ID4)||((port)<CS_UNI_PORT_ID1)  
+#define  UNI_PORT_RANGE_CHECK(port)  ((port)>UNI_PORT_MAX)||((port)<CS_UNI_PORT_ID1)
 
 /********************************************************************
  *************************** Global variables ***********************

@@ -905,7 +905,7 @@ cs_status epon_request_onu_port_stp_state_set(
     rtk_api_ret_t rtk_ret;
     cs_status ret = CS_E_OK;
 
-    if((portid < CS_UNI_PORT_ID1) || (portid > CS_UNI_PORT_ID4))
+    if((portid < CS_UNI_PORT_ID1) || (portid > UNI_PORT_MAX))
     {
         SDL_MIN_LOG("port id invalid.(%d) FILE: %s, LINE: %d", portid, __FILE__, __LINE__);
 
@@ -959,7 +959,7 @@ cs_status epon_request_onu_port_stp_state_get(
     rtk_stp_state_t stp_state;
     rtk_api_ret_t rtk_ret;
 
-    if((portid < CS_UNI_PORT_ID1) || (portid > CS_UNI_PORT_ID4))
+    if((portid < CS_UNI_PORT_ID1) || (portid > UNI_PORT_MAX))
     {
         SDL_MIN_LOG("port id invalid.(%d) FILE: %s, LINE: %d", portid, __FILE__, __LINE__);
         return CS_E_PARAM;

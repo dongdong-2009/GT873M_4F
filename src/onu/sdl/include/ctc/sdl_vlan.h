@@ -100,8 +100,9 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "plat_common.h"
 #define __VLAN_RULE_PER_PORT_MAX        8
 
-
-#define UNI_PORT_MAX            4
+#ifndef UNI_PORT_MAX
+#define UNI_PORT_MAX            CS_UNI_NUMBER
+#endif
 
 
 typedef enum

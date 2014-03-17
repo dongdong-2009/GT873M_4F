@@ -99,6 +99,7 @@ Copyright (c) 2010 by Cortina Systems Incorporated
 
 #ifdef HAVE_SDL_CMD_CTC
 
+#include "sdl.h"
 #include "sdl_classify.h"
 
 static cs_sdl_classification_t  g_rule_entry;
@@ -297,7 +298,7 @@ sal_cmd_result_t cls_cmd_class_rule_get(int argc, char **argv)
 
     portid = iros_strtol(argv[2]);
       
-    if((portid>CS_UNI_PORT_ID4)||(portid<CS_UNI_PORT_ID1))
+    if((portid>UNI_PORT_MAX)||(portid<CS_UNI_PORT_ID1))
         return SAL_CMD_INVALID_PARAM;
 
     memset(&cfg, 0, 8*sizeof(cs_sdl_classification_t));
@@ -532,7 +533,7 @@ sal_cmd_result_t cls_cmd_class_rule_add(int argc, char **argv)
     portid     = iros_strtol(argv[2]);
     precedence = iros_strtol(argv[3]);
     entry      = iros_strtol(argv[4]);
-    if((portid>CS_UNI_PORT_ID4)||(portid<CS_UNI_PORT_ID1))
+    if((portid>UNI_PORT_MAX)||(portid<CS_UNI_PORT_ID1))
         return SAL_CMD_INVALID_PARAM;
 
     if(precedence < 1)
@@ -563,7 +564,7 @@ sal_cmd_result_t cls_cmd_class_rule_del(int argc, char **argv)
     portid     = iros_strtol(argv[2]);
     num        = iros_strtol(argv[3]); 
 
-    if((portid>CS_UNI_PORT_ID4)||(portid<CS_UNI_PORT_ID1))
+    if((portid>UNI_PORT_MAX)||(portid<CS_UNI_PORT_ID1))
         return SAL_CMD_INVALID_PARAM;
 
     if((num>8)||(num<1))

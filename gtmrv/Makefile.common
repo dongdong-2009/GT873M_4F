@@ -1,0 +1,35 @@
+
+CROSS_COMPILE_DIR?=/opt/toolchains/iros-tools/gnutools/bin/
+CROSS_COMPILE ?= $(CROSS_COMPILE_DIR)/arm-elf-
+
+AR              = $(CROSS_COMPILE)ar
+AS              = $(CROSS_COMPILE)as
+LD              = $(CROSS_COMPILE)ld
+CC              = $(CROSS_COMPILE)gcc
+CXX             = $(CROSS_COMPILE)g++
+CPP             = $(CROSS_COMPILE)cpp
+NM              = $(CROSS_COMPILE)nm
+STRIP           = $(CROSS_COMPILE)strip
+SSTRIP          = $(CROSS_COMPILE)strip
+OBJCOPY         = $(CROSS_COMPILE)objcopy
+OBJDUMP         = $(CROSS_COMPILE)objdump
+RANLIB          = $(CROSS_COMPILE)ranlib
+
+RM							= rm
+
+TOP_DIR = $(shell pwd)
+SRC_DIR = $(TOP_DIR)/src
+INCLUDE_DIR = $(TOP_DIR)/include
+OBJ_DIR = $(TOP_DIR)/lib
+
+# -DDEBUG_QD		
+CFLAGS += -I$(INCLUDE_DIR) -I$(INCLUDE_DIR)/h -I$(INCLUDE_DIR)/h/driver \
+					-I$(INCLUDE_DIR)/h/msApi -I$(INCLUDE_DIR)/h/platform \
+					-DLINUX	
+					
+CFLAGS += -g -Werror -nostdlib -Wno-uninitialized \
+-mthumb -mthumb-interwork -mcpu=arm9				
+
+export CROSS_COMPILE AR AS LD CC CXX CPP NM STRIP SSTRIP \
+				OBJCOPY OBJDUMP RANLIB CFLAGS RM OBJS
+export SRC_DIR OBJ_DIR

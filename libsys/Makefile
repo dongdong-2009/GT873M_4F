@@ -8,7 +8,7 @@ ECOS_INSTALL_HOME=../iros/install
 IROS_CONFIG_H=$(shell pwd)/../iros_config.h
 
 MOD_CFLAGS= -Werror -Wno-uninitialized -nostdlib -fno-inline \
--mthumb-interwork -mthumb -mcpu=arm9 \
+-mthumb-interwork -mthumb -mcpu=arm9 -DUSE_SEMAPHORE -D_RELEASE_VERSION_\
 -include $(IROS_CONFIG_H)
 
 CFILES= \
@@ -35,6 +35,14 @@ $(SWHOME)/src/onu/apps/gwd/oam.c \
 $(SWHOME)/src/onu/apps/gwd/gwd_eth_loop_detect.c \
 $(SWHOME)/src/onu/apps/gwd/timer.c \
 $(SWHOME)/src/onu/apps/gwd/gwd_broadstorm.c \
+
+ifeq ($(strip $(USING_SW_TYPE)),MRV)
+CFILES += $(SWHOME)/src/onu/3rd/driver/marvell/msApiInit.c \
+$(SWHOME)/src/onu/3rd/driver/marvell/iros_mii.c \
+$(SWHOME)/src/onu/3rd/driver/marvell/osSem.c \
+$(SWHOME)/src/onu/3rd/driver/marvel/switch_drv.c \
+$(SWHOME)/src/onu/3rd/driver/marvel/switch.c
+endif
 #$(SWHOME)/src/onu/apps/gwd/iros_flash_oper.c
 
 
@@ -75,7 +83,11 @@ MOD_INCLUDES=-I$(ECOS_INSTALL_HOME)/include \
 -I$(SWHOME)/src/cmn/plat/peripheral \
 -I$(SWHOME)/src/cmn/apps/mcast/inc \
 -I$(SWHOME)/src/onu/sdl/cmn/cmn \
--I$(SWHOME)/src/onu/sdl/mports/ctc
+-I$(SWHOME)/src/onu/sdl/mports/ctc \
+-I$(SWHOME)/gtmrv/include \
+-I$(SWHOME)/gtmrv/include/h/driver \
+-I$(SWHOME)/gtmrv/include/h/msApi \
+-I$(SWHOME)/gtmrv/include/h/platform
 
 
 

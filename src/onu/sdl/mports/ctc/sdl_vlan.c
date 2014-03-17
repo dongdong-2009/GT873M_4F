@@ -415,7 +415,7 @@ static cs_uint16 __get_transparent_mbp(void)
     int i;
     cs_uint16 mbp = 0;
 
-    for(i = CS_UNI_PORT_ID1; i <= CS_UNI_PORT_ID4; ++i)
+    for(i = CS_UNI_PORT_ID1; i <= UNI_PORT_MAX; ++i)
     {
         if(SDL_VLAN_MODE_TRANSPARENT == __port_vlan_table[i].vlan_mode)
         {
@@ -434,7 +434,7 @@ static cs_uint16 __get_mc_vlan_port_mbp(cs_uint16 s_vid)
     cs_uint16 index;
     cs_uint16 mbp = 0;
     
-    for(port_id = CS_UNI_PORT_ID1; port_id <= CS_UNI_PORT_ID4; port_id++)
+    for(port_id = CS_UNI_PORT_ID1; port_id <= UNI_PORT_MAX; port_id++)
     {
         memset(&vlan_rule, 0, sizeof(cs_sdl_vlan_cfg_t));
         vlan_rule.s_vlan.vid = s_vid;
@@ -1821,7 +1821,7 @@ cs_status sdl_vlan_init(void)
     /* transparent for all ports */
     def_vlan.vid = 1;
 	bzero(&cfg, sizeof(cfg));
-    for(port = CS_UNI_PORT_ID1; port <=CS_UNI_PORT_ID4; ++port)
+    for(port = CS_UNI_PORT_ID1; port <=UNI_PORT_MAX; ++port)
     {
         epon_request_onu_vlan_set(context,0,0, port, def_vlan,SDL_VLAN_MODE_TRUNK,&cfg, 0);
     }

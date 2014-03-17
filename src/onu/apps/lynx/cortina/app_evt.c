@@ -199,7 +199,7 @@ void onu_link_changed_led_proc(cs_uint16 dev, cs_int32 evt, void *msg)
         }
     }
 
-    if(pMsg->port >= CS_UNI_PORT_ID1 && pMsg->port <= CS_UNI_PORT_ID4)
+    if(pMsg->port >= CS_UNI_PORT_ID1 && pMsg->port <= UNI_PORT_MAX)
     {
         if(pMsg->link)
         {

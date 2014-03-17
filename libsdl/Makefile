@@ -14,9 +14,7 @@ MOD_CFLAGS= -Werror -Wno-uninitialized -nostdlib -fno-inline \
 CFILES= \
 $(SWHOME)/src/onu/cmd/cs_cmd.c \
 $(SWHOME)/src/onu/sdl/cmn/cmn/sdl_fec_cmn.c \
-$(SWHOME)/src/onu/sdl/cmn/cmn/sdl_ptp.c \
 $(SWHOME)/src/onu/sdl/cmn/ctc/sdl_enc.c \
-$(SWHOME)/src/onu/sdl/mports/ctc/sdl_fdb.c \
 $(SWHOME)/src/onu/sdl/cmn/cmn/sdl_qos_cmn.c \
 $(SWHOME)/src/onu/sdl/cmn/cmn/sdl_pon.c \
 $(SWHOME)/src/onu/cmd/sdl_fdb_cmd.c \
@@ -26,12 +24,6 @@ $(SWHOME)/src/onu/sdl/cmn/ctc/sdl_qos.c \
 $(SWHOME)/src/onu/sdl/cmn/ctc/sdl_mac_filterbind_util.c \
 $(SWHOME)/src/onu/sdl/cmn/ctc/sdl_classify_util.c \
 $(SWHOME)/src/onu/sdl/mports/ctc/sdl_util.c \
-$(SWHOME)/src/onu/sdl/mports/cmn/sdl_port.c \
-$(SWHOME)/src/onu/sdl/mports/ctc/sdl_macfilter.c \
-$(SWHOME)/src/onu/sdl/mports/ctc/sdl_vlan.c \
-$(SWHOME)/src/onu/sdl/mports/ctc/sdl_pktctrl.c \
-$(SWHOME)/src/onu/sdl/mports/ctc/sdl_mc.c \
-$(SWHOME)/src/onu/sdl/mports/ctc/sdl_classify.c \
 $(SWHOME)/src/onu/cmd/sdl_vlan_cmd.c \
 $(SWHOME)/src/onu/sdl/cmn/cmn/sdl_vlan_util.c \
 $(SWHOME)/src/onu/cmd/sdl_port_cmd.c \
@@ -45,15 +37,6 @@ $(SWHOME)/src/onu/cmd/aal/aal_fec_cmd.c \
 $(SWHOME)/src/onu/cmd/aal/aal_bm_cmd.c \
 $(SWHOME)/src/onu/cmd/aal/aal_flow_cmd.c \
 $(SWHOME)/src/onu/cmd/aal/aal_l2_cmd.c \
-$(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_cmd.c \
-$(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_l2_cmd.c \
-$(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_port_cmd.c \
-$(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_acl_cmd.c \
-$(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_led_cmd.c \
-$(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_int_cmd.c \
-$(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_qos_cmd.c \
-$(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_glb_cmd.c \
-$(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_acl_cmd.c \
 $(SWHOME)/src/onu/cmd/aal/aal_pon_cmd.c \
 $(SWHOME)/src/onu/cmd/aal/aal_mpcp_cmd.c \
 $(SWHOME)/src/onu/sdl/cmn/cmn/sdl_ma.c \
@@ -64,6 +47,38 @@ $(SWHOME)/src/onu/cmd/sdl_ptp_cmd.c \
 $(SWHOME)/src/onu/cmd/sdl_clear_cmd.c \
 $(SWHOME)/src/onu/sdl/cmn/cmn/sdl.c
 
+ifeq ($(strip $(USING_SW_TYPE)),RTK)
+CFILES += $(SWHOME)/src/onu/sdl/mports/ctc/sdl_fdb.c \
+$(SWHOME)/src/onu/sdl/cmn/cmn/sdl_ptp.c \
+$(SWHOME)/src/onu/sdl/mports/cmn/sdl_port.c \
+$(SWHOME)/src/onu/sdl/mports/ctc/sdl_macfilter.c \
+$(SWHOME)/src/onu/sdl/mports/ctc/sdl_vlan.c \
+$(SWHOME)/src/onu/sdl/mports/ctc/sdl_pktctrl.c \
+$(SWHOME)/src/onu/sdl/mports/ctc/sdl_mc.c \
+$(SWHOME)/src/onu/sdl/mports/ctc/sdl_classify.c \
+$(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_cmd.c \
+$(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_l2_cmd.c \
+$(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_port_cmd.c \
+$(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_acl_cmd.c \
+$(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_led_cmd.c \
+$(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_int_cmd.c \
+$(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_qos_cmd.c \
+$(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_glb_cmd.c \
+$(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_acl_cmd.c 
+endif
+
+ifeq ($(strip $(USING_SW_TYPE)),MRV)
+CFILES += $(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_fdb.c \
+$(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_ptp.c \
+$(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_port.c \
+$(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_macfilter.c \
+$(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_vlan.c \
+$(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_pktctrl.c \
+$(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_mc.c \
+$(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_classify.c \
+$(SWHOME)/src/onu/cmd/aal/3rd/marvell/mrv_l2_cmd.c \
+$(SWHOME)/src/onu/cmd/aal/3rd/marvell/mrv_cmd.c
+endif
 
 MOD_INCLUDES=-I$(ECOS_INSTALL_HOME)/include \
 -I$(SWHOME)/src/cmn/plat/include \
@@ -84,9 +99,17 @@ MOD_INCLUDES=-I$(ECOS_INSTALL_HOME)/include \
 -I$(SWHOME)/src/onu/sdl/cmn/ctc \
 -I$(SWHOME)/src/onu/sdl/include/cmn \
 -I$(SWHOME)/src/onu/3rd/driver/realtek \
+-I$(SWHOME)/src/onu/3rd/driver/marvell \
 -I$(SWHOME)/src/onu/sdl/include \
 -I$(SWHOME)/src/onu/sdl/include/cmn \
 -I$(SWHOME)/src/onu/apps/lynx/gpio/cmn
+
+ifeq ($(strip $(USING_SW_TYPE)),MRV)
+MOD_INCLUDES += -I$(SWHOME)/gtmrv/include \
+-I$(SWHOME)/gtmrv/include/h/driver \
+-I$(SWHOME)/gtmrv/include/h/msApi \
+-I$(SWHOME)/gtmrv/include/h/platform
+endif
 
 include $(SWHOME)/tools/support/build/makefile.mod_start
 

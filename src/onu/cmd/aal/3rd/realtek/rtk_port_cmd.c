@@ -427,7 +427,7 @@ void __sw_cmd_rtk_port_isolation_set(int argc, char **argv)
 	enable = iros_strtol(argv[1]);
 	if(cmd_cmp(argv[0],"all"))
 		{
-			for (port_id = CS_UNI_PORT_ID1; port_id <= CS_UNI_PORT_ID4; port_id++) {
+			for (port_id = CS_UNI_PORT_ID1; port_id <= UNI_PORT_MAX; port_id++) {
 				    port = L2P_PORT(port_id);
 				    if (enable) {
 				        portmask.bits[0] = 0xf0;
@@ -536,7 +536,7 @@ int port_aal_isolation_set(int enable)
 	rtk_port_t port_id,port;
 	rtk_portmask_t portmask;
 	rtk_api_ret_t rtk_ret;
-	for (port_id = CS_UNI_PORT_ID1; port_id <= CS_UNI_PORT_ID4; port_id++) 
+	for (port_id = CS_UNI_PORT_ID1; port_id <= UNI_PORT_MAX; port_id++) 
 	{
 		port = L2P_PORT(port_id);
 		if (enable) 
@@ -590,7 +590,7 @@ int port_aal_isolation_get(int *status)
 	rtk_port_t port_id,port;
     rtk_portmask_t iso;
 
-	for (port_id = CS_UNI_PORT_ID1; port_id <= CS_UNI_PORT_ID4; port_id++)
+	for (port_id = CS_UNI_PORT_ID1; port_id <= UNI_PORT_MAX; port_id++)
 	{
 		port = L2P_PORT(port_id);
 		ret = rtk_port_isolation_get(port,&iso);
