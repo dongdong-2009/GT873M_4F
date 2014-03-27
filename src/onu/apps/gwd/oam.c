@@ -15,6 +15,7 @@
 #include "sys_cfg.h"
 #include "make_file.h"
 #include "sockets.h"
+#include "cs_cmn.h"
 
 #if (GE_RATE_LIMIT == MODULE_YES)
 #include "../../sdl/cmn/cmn/sdl.h"
@@ -1202,7 +1203,7 @@ static int GwOamInformationRequest(GWTT_OAM_MESSAGE_NODE *pRequest )
                 break;
             }
             
-            if(PPPOE_RELAY_DISABLE == *pReq)/*����?����ʾ��ֹ״̬*/
+            if(PPPOE_RELAY_DISABLE == *pReq)/*����?����ʾ��ֹ״̬*/
             {
                 if (PPPOE_RELAY_DISABLE == g_PPPOE_relay)
                 {
@@ -3312,12 +3313,22 @@ int cmd_stat_port_show(struct cli_def *cli, char *command, char *argv[], int arg
 
 
 
-extern int port_aal_isolation_set(int enable);
-extern int port_aal_isolation_get(int *status);
+extern cs_status epon_request_onu_port_isolation_set(
+CS_IN cs_callback_context_t     context,
+CS_IN cs_int32                  device_id,
+CS_IN cs_int32                  llidport,
+CS_IN cs_boolean                enable
+);
+extern cs_status epon_request_onu_port_isolation_get(
+	    CS_IN cs_callback_context_t     context,
+	    CS_IN cs_int32                  device_id,
+	    CS_IN cs_int32                  llidport,
+	    CS_OUT cs_boolean               *enable
+	);
 int cmd_oam_port_isolate(struct cli_def *cli, char *command, char *argv[], int argc)
 {
-
-	int en = 0;
+	CS_IN cs_callback_context_t     context = {0};
+	cs_boolean  en = 0;
 	
 	if(CLI_HELP_REQUESTED)
 	{
@@ -3336,10 +3347,10 @@ int cmd_oam_port_isolate(struct cli_def *cli, char *command, char *argv[], int a
 	{
 		if(argc == 1)
 		{
-			en = atoi(argv[0]);
+			en = (atoi(argv[0])? 1: 0);
 		}
 
-		if(port_aal_isolation_set(en) != CS_E_OK)
+		if(epon_request_onu_port_isolation_set(context, 0, 0, en) != CS_E_OK)
 			cli_print(cli, "set all port isolate %s fail!\r\n", en?"enabled":"disabled");
 		else
 			{
@@ -3351,7 +3362,7 @@ int cmd_oam_port_isolate(struct cli_def *cli, char *command, char *argv[], int a
 	}
 	else
 	{	
-		if(port_aal_isolation_get(&en) != CS_E_OK)
+		if(epon_request_onu_port_isolation_get(context, 0, 0, &en) != CS_E_OK)
 			cli_print(cli, "get port isolate fail!\r\n");
 		else
 			cli_print(cli, "Port isolate is %s\r\n", en?"enabled":"disabled");
@@ -4584,7 +4595,7 @@ void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 		cli_register_command(cmd_root, stat, "port_show", cmd_stat_port_show, PRIVILEGE_UNPRIVILEGED, MODE_ANY, "port statistic show");
 
 		vlan = cli_register_command(cmd_root, NULL, "vlan", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "vlan command");
-//		cli_register_command(cmd_root, vlan, "port_isolate", cmd_oam_port_isolate, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "isolate command");
+		cli_register_command(cmd_root, vlan, "port_isolate", cmd_oam_port_isolate, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "isolate command");
 //		mtodo: cmd_oam_port_isolate modify
 
 		cli_register_command(cmd_root, 0, 		"laser", 		cmd_laser,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "Laser on/off");
