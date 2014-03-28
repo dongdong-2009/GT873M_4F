@@ -157,8 +157,13 @@ cfg_field_t glb_field[] =
             /*HELP STRING*/ "1-255, measured in 10ms",1,255},
     {CFG_ID_PON_LASER_POLARITY  , FIELD_TYPE_CHAR    , "PON port laser polarity"            ,  1     , SCFG_R   , 0 ,         {0},
             /*HELP STRING*/ "(tx_burst_polarity:a sig_loss_polarity:b)\n0 - a=0,b=0\n1 - a=1,b=0\n2 - a=0,b=0\n3 - a=1,b=1",0,3},
-    {CFG_ID_SWITCH_PORT_NUM     , FIELD_TYPE_CHAR    , "Swith port number"                  ,  1     , SCFG_R   , 4 ,         {0},
-            /*HELP STRING*/ "Indicates the external switch port number",1,8},
+#if(PRODUCT_CLASS == PRODUCTS_GT812C)
+	{CFG_ID_SWITCH_PORT_NUM     , FIELD_TYPE_CHAR    , "Swith port number"                  ,  1     , SCFG_R   , 8 ,         {0},
+			/*HELP STRING*/ "Indicates the external switch port number",1,8},
+#else
+	{CFG_ID_SWITCH_PORT_NUM     , FIELD_TYPE_CHAR    , "Swith port number"                  ,  1     , SCFG_R   , 4 ,         {0},
+			/*HELP STRING*/ "Indicates the external switch port number",1,8},
+#endif
     {CFG_ID_OAM_VERSION         , FIELD_TYPE_CHAR    , "OAM version"                        ,  1     , SCFG_R   , 0 ,         {0},
             /*HELP STRING*/ "0x00 - Standard\n0x01 - 802.3ah Draft 2.0",0,1},
     {CFG_ID_VENDOR_ID           , FIELD_TYPE_STRING  , "Vendor ID"                          ,  4     , SCFG_R   , 0 ,         {0},
@@ -168,9 +173,9 @@ cfg_field_t glb_field[] =
     {CFG_ID_HW_VERSION          , FIELD_TYPE_STRING  , "Hardware Version"                   ,  8     , SCFG_W   , 0 ,         {0},
             /*HELP STRING*/ "Hardware version, it is a string",-1,-1},
     {CFG_ID_YEAR                , FIELD_TYPE_SHORT   , "Year"                               ,  2     , SCFG_W   , 0 ,         {0},
-            /*HELP STRING*/ "The low two digits of the production year (00 ¨C 99)",0,99},
+            /*HELP STRING*/ "The low two digits of the production year (00 ï¿½C 99)",0,99},
     {CFG_ID_WEEK                , FIELD_TYPE_SHORT   , "Week"                               ,  2     , SCFG_W   , 0 ,         {0},
-            /*HELP STRING*/ "The production week (01 ¨C 52)",1,52},
+            /*HELP STRING*/ "The production week (01 ï¿½C 52)",1,52},
     {CFG_ID_SERIAL_NUM          , FIELD_TYPE_STRING  , "Serial Number"                      ,  6     , SCFG_W   , 0 ,         {0},
             /*HELP STRING*/ "The ONU system serial number, it shall be a string.",-1,-1},
     {CFG_ID_RESOURECE_MODE      , FIELD_TYPE_CHAR    , "Resource Mode"                      ,  1     , SCFG_W   , 0 ,         {0},
