@@ -565,7 +565,7 @@ LOAD_ACTIVE_SCFG:
             else
                 goto CFG_INIT_ERROR;
         }
-#if 1
+#if 0
 
     startup_config_read(CFG_ID_SWITCH_PORT_NUM, 1, &port_uni);
     cs_printf("99port_uni is %d!!!!!\r\n",port_uni);
@@ -591,7 +591,7 @@ LOAD_ACTIVE_SCFG:
         
         pInst = (tlv_instance_t *)gStartupInst;
         pInst->store = startup_config_write_to_flash;
-#if 1
+#if 0
         port_uni = 8;
         startup_config_write(CFG_ID_SWITCH_PORT_NUM, 1, &port_uni);
         startup_config_save(gStartupInst);
