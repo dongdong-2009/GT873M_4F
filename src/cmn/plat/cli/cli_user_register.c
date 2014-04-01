@@ -1446,13 +1446,14 @@ void user_register_command_entry(struct cli_command **cmd_root)
 
     if(CS_E_OK != startup_config_read(CFG_ID_SWITCH_PORT_NUM, 1, &uni_max_port_num))
     {
-    	#if 0
-        uni_max_port_num = 1;
+    	cs_printf("startup_config_read error,we should reconfig glb_field!!!!!!!!!!!!!!!!!!!!!!\r\n");
+#if(PRODUCT_CLASS == PRODUCTS_GT812C)
+        uni_max_port_num = 9;
 		#else
 		uni_max_port_num = 4;
 		#endif
     }
-
+cs_printf("uni_max_port_num is %d\r\n",uni_max_port_num);
 #ifdef HAVE_IP_STACK
     /*ARP*/
     arp = cli_register_command(cmd_root, NULL, "arp",  NULL,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "ARP configuration");
