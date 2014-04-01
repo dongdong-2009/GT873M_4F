@@ -98,7 +98,7 @@ int RevPkt_Marvel_Handler(char *org, char *out, int *len )
 #if (FOR_MRV_INDUSTRY_SW)
         if (MRVTAG_HEAD == ulMrvTagtype)
         {
-       		memcpy(out,org+2,*len-2);/*Á½×Ö½ÚÍ·*/
+       		memcpy(out,org+2,*len-2);/*ï¿½ï¿½ï¿½Ö½ï¿½Í·*/
                *len -= 2;
 			return 0;		
 			
@@ -256,7 +256,7 @@ void allocate_bridge_mac(GT_ETHERADDR * mac)
 	memcpy(&mac, &new_bridge_mac, sizeof (*mac));
 }
 
-
+extern void mrv_switch_init(IN  GT_QD_DEV    *dev);
 /*******************************************************************************************
   Description   : This function will initialize the 88E6095 switch chip.
   In params     : None.
@@ -361,6 +361,10 @@ void switch_init()
 					MSG_OUT(("Config master device wan port failed(%d).\r\n", status));
 					l_ret_val = status;
 				}
+#endif
+#if 0
+				mrv_switch_init(qdMultiDev[i]);
+				while(1);
 #endif
 #if 0
 /*(FOR_MRV_INDUSTRY_SW)*/
@@ -1805,7 +1809,7 @@ GT_STATUS switch_default_config(GT_QD_DEV * dev)
 	        gtAtuEntryBc.macAddr.arEther[i] = 0xFF;
 	    gtAtuEntryBc.portVec = 0;
 	  	for ( phyPort=0; phyPort<dev->maxPorts; phyPort++ )
-	  	{/* zhangxinhui ¼ÓÈëÕâÁ½¸ö¶Ë¿Úºó£¬PONÓëIADºÜ¿ìÊ§È¥ÁªÏµ£¬Ô­Òò²»Ã÷ */
+	  	{/* zhangxinhui ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë¿Úºï¿½PONï¿½ï¿½IADï¿½Ü¿ï¿½Ê§È¥ï¿½ï¿½Ïµï¿½ï¿½Ô­ï¿½ï¿½ï¿½ï¿½ */
 	  	/*if ((phyPort != 8) && (phyPort != 9))*/
 	    	gtAtuEntryBc.portVec |= 1<<phyPort;
 	  	}
@@ -1828,7 +1832,7 @@ GT_STATUS switch_default_config(GT_QD_DEV * dev)
 	        gtAtuEntryMcLn.macAddr.arEther[i] = Mc_LocalNetwork[i];
 	    gtAtuEntryMcLn.portVec = 0;
 	  	for ( phyPort=0; phyPort<dev->maxPorts; phyPort++ )
-	  	{ /* zhangxinhui ¼ÓÈëÕâÁ½¸ö¶Ë¿Úºó£¬PONÓëIADºÜ¿ìÊ§È¥ÁªÏµ£¬Ô­Òò²»Ã÷ */
+	  	{ /* zhangxinhui ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë¿Úºï¿½PONï¿½ï¿½IADï¿½Ü¿ï¿½Ê§È¥ï¿½ï¿½Ïµï¿½ï¿½Ô­ï¿½ï¿½ï¿½ï¿½ */
 	  	/*if ((phyPort != 8) && (phyPort != 9))*/
 	    	gtAtuEntryMcLn.portVec |= 1<<phyPort;
 	  	}
@@ -2374,7 +2378,7 @@ GT_STATUS smiChannelSemGive(void)
 	return gtRet;
 }
 
-#if 0 //mtodo ÔÝÊ±¹Ø±Õ¶àÐ¾Æ¬Á¬½Ó·½Ê½µÄ¶Ë¿ÚÄ£Ê½ÉèÖÃ
+#if 0 //mtodo ï¿½ï¿½Ê±ï¿½Ø±Õ¶ï¿½Ð¾Æ¬ï¿½ï¿½ï¿½Ó·ï¿½Ê½ï¿½Ä¶Ë¿ï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½
 
 GT_STATUS setDSAMode(GT_BOOL mode)
 {
@@ -2972,3 +2976,146 @@ GT_STATUS gt_getswitchunitbylport(GT_LPORT port, GT_32 *unit, GT_32 *lport )
 	}
 	return GT_OK;
 }
+
+
+extern GT_STATUS miiSmiIfReadRegister
+(
+    IN  GT_QD_DEV    *dev,
+    IN  GT_U8        phyAddr,
+    IN  GT_U8        regAddr,
+    OUT GT_U16       *data
+);
+extern GT_STATUS miiSmiIfWriteRegister
+(
+    IN  GT_QD_DEV    *dev,
+    IN  GT_U8        phyAddr,
+    IN  GT_U8        regAddr,
+    IN  GT_U16       data
+);
+//extern GT_QD_DEV       *qdMultiDev[N_OF_QD_DEVICES];
+int mrv_reg_read(unsigned char dev_addr, unsigned char reg_addr, unsigned short *data)
+{
+    int   retVal;
+
+    retVal = miiSmiIfReadRegister(QD_MASTER_DEV_PTR,dev_addr,reg_addr,data);
+
+    return retVal;
+}
+int mrv_reg_write(unsigned char dev_addr, unsigned char reg_addr, unsigned short data)
+{
+    int   retVal;
+
+    retVal = miiSmiIfWriteRegister(QD_MASTER_DEV_PTR,dev_addr,reg_addr,data);
+
+    return retVal;
+}
+
+
+
+#if 1
+
+#define MRV_SWITCH_ID_REG	0x03
+#define MRV_PORT_CONTROL_REG 0x04
+#define MRV_GLOBAL_CONTROL_REG 0x04
+#define MRV_PHY_SPEC_CONTROL_REG 0x10
+#define MRV_PHY_SPEC_CONTROL_II_REG 0x1C
+#define MRV_PHY_AUTONEGO_AD_REG 0x04
+#define MRV_PHY_CONTROL_REG 0x00
+#define MRV_PCS_CONTROL_REG 0x01
+#define MRV_PORT_STATUS_REG 0x00
+
+#define MRV_PORT_FORWARDING 0x03
+#define MRV_88E6083		0x83
+#define MRV_88E6096		0x98
+#define MRV_PHY_100_FULL 0x100
+#define MRV_PHY_100_HALF 0x80
+#define MRV_PHY_10_FULL 0x40
+#define MRV_PHY_10_HALF 0x20
+#define MRV_PHY_MODE_AUTO_AUTO MRV_PHY_100_FULL|MRV_PHY_100_HALF|MRV_PHY_10_FULL|MRV_PHY_10_HALF
+
+#define MRV_PHY_SPEED 0x2000
+#define MRV_PHY_DUPLEX 0x100
+#define MRV_PHY_AUTONEGO 0x1000
+//extern cs_status cs_mdio_write(cs_uint8 device, cs_uint8 reg, cs_uint16 data);
+//extern cs_status cs_mdio_read(cs_uint8 device, cs_uint8 reg, cs_uint32 *data);
+
+void mrv_switch_init_t()
+{
+	mrv_switch_init(QD_MASTER_DEV_PTR);
+}
+void mrv_switch_init(IN  GT_QD_DEV    *dev)
+{
+	unsigned short datatmp = 0;
+	unsigned short mask;
+	unsigned int numOfPorts;
+	unsigned int maxcopperPorts = 6;/*GIS2109ç³»åˆ—ç”µå£æœ€å¤š6ä¸ª*/
+	unsigned int cpuPortNum;
+	unsigned int   deviceId;
+	int i;
+	int status = -1;
+
+	if((status = miiSmiIfReadRegister(dev,0x10,MRV_SWITCH_ID_REG,&datatmp)) != GT_OK)
+		{
+//			return ;
+		}
+	cs_printf("datatmp is 0x%x\r\n",datatmp);
+	deviceId = datatmp >> 4;
+	cs_printf("datatmp is 0x%x\r\n",deviceId);
+	switch(deviceId)
+	{
+		case MRV_88E6083:
+			numOfPorts = 10;
+			cpuPortNum = 8;
+			break;
+		case MRV_88E6096:
+			numOfPorts = 11;
+			cpuPortNum = 10;
+			break;
+		default:
+			return ;
+	}
+	cs_printf("mrv_switch_init 11\r\n");
+	for(i=0;i<numOfPorts;i++)
+	{
+		miiSmiIfReadRegister(dev,0x10+i,MRV_PORT_CONTROL_REG,&datatmp);
+		datatmp |= MRV_PORT_FORWARDING;
+		miiSmiIfWriteRegister(dev,0x10+i,MRV_PORT_CONTROL_REG,datatmp);
+	}
+	cs_printf("mrv_switch_init 22\r\n");
+	miiSmiIfReadRegister(dev,0x1B,MRV_GLOBAL_CONTROL_REG,&datatmp);/*disable PPU*/
+	mask = 1U << 14;
+	datatmp &= ~mask;
+	miiSmiIfWriteRegister(dev,0x1B,MRV_GLOBAL_CONTROL_REG,datatmp);
+	cs_printf("mrv_switch_init 33\r\n");
+	for(i=0; i<maxcopperPorts; i++)/*åªè®¾ç”µå£phyï¼Œé¿å…è®¾ç½®GIS2109-6T-3Gçš„cpuå£(7å£)çš„å¤–æŽ¥phyï¼Œå¦åˆ™bspä¸‹cpuä¸é€š*/
+	{
+		miiSmiIfReadRegister(dev,i,MRV_PHY_SPEC_CONTROL_REG,&datatmp);/*disable Energydetect*/
+		mask = 1U << 14;
+		datatmp &= ~mask;
+		miiSmiIfWriteRegister(dev,i,MRV_PHY_SPEC_CONTROL_REG,datatmp);
+
+		miiSmiIfReadRegister(dev,i,MRV_PHY_SPEC_CONTROL_II_REG,&datatmp);/*Set PHY to CLASS A mode*/
+		datatmp |= 1U;
+		miiSmiIfWriteRegister(dev,i,MRV_PHY_SPEC_CONTROL_II_REG,datatmp);
+
+		miiSmiIfReadRegister(dev,i,MRV_PHY_AUTONEGO_AD_REG,&datatmp);/*set phy AUTO_AUTO*/
+		datatmp |= MRV_PHY_MODE_AUTO_AUTO;
+		miiSmiIfWriteRegister(dev,i,MRV_PHY_AUTONEGO_AD_REG,datatmp);
+
+		miiSmiIfReadRegister(dev,i,MRV_PHY_CONTROL_REG,&datatmp);/*enable autonegã€reatart autoneg*/
+		datatmp = (datatmp & (MRV_PHY_SPEED | MRV_PHY_DUPLEX)) | MRV_PHY_AUTONEGO;
+		if(datatmp & 1U<<11)
+			datatmp &= ~(1U<<11);
+		else
+			datatmp |= 1U<<15;
+		miiSmiIfWriteRegister(dev,i,MRV_PHY_CONTROL_REG,datatmp);
+	}
+	cs_printf("mrv_switch_init 44\r\n");
+	return;
+}
+#endif
+
+
+
+
+

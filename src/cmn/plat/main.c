@@ -240,11 +240,15 @@ void plat_init(void)
     
     /* register debug command */
     plat_cmd_init();
-
+#if 1
 #if (PRODUCT_CLASS == PRODUCTS_GT812C)
     switch_init();
 #endif
-
+#else
+    cs_printf("mrv_switch_init\r\n");
+    mrv_switch_init();
+    cs_printf("mrv_switch_init end\r\n");
+#endif
 }
 void mbox_init()
 {
@@ -364,5 +368,4 @@ extern void gwd_portstats_thread(cyg_addrword_t p);
 #endif
 
 }
-
 

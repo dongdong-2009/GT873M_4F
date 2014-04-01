@@ -236,6 +236,7 @@ static void startup_config_restore(unsigned int inst_id)
 
 static int startup_config_write_to_flash(void *addr , int len)
 {
+	cs_printf("come in startup_config_write_to_flashL!!!\r\n");
 #ifdef HAVE_SCFG_PROTECTION
     unsigned int part_index = IROS_FLASH_PARTITION_INDEX_ANY;
 #endif
@@ -377,6 +378,11 @@ void startup_cfg_rebuild(unsigned int *inst_id)
         return;
     }
     startup_config_restore(new_instid);
+#if 1
+    cs_uint8 port_uni =0 ;
+    startup_config_read(CFG_ID_SWITCH_PORT_NUM, 1, &port_uni);
+    cs_printf("port_uni is %d!!!!!\r\n",port_uni);
+#endif
     rsvd_flag = rsvd_flag|TLV_CFG_ENC_FLAG;
     tlv_write_flag(new_instid, rsvd_flag);
     tlv_write_version(new_instid, gScfgVer);
@@ -445,7 +451,6 @@ void startup_config_init()
     int ver_invalid = 0;
     cs_int32 load_backup_flag = 0;
     cs_uint8 active_cnt = 0;
-    cs_uint8 port_uni =0 ;
 #ifdef HAVE_SCFG_PROTECTION
     unsigned int part_index1 = IROS_FLASH_PARTITION_INDEX_ANY;
     tlv_header_t tlv_header1;
@@ -528,7 +533,7 @@ LOAD_ACTIVE_SCFG:
                     goto CFG_INIT_ERROR;
             }
         }
-        
+
         rsvd_flag = tlv_header.reserved;
         if(rsvd_flag&TLV_CFG_ENC_FLAG)
             startup_cfg_enc_enable(1);
@@ -566,7 +571,7 @@ LOAD_ACTIVE_SCFG:
                 goto CFG_INIT_ERROR;
         }
 #if 0
-
+        cs_uint8 port_uni =0 ;
     startup_config_read(CFG_ID_SWITCH_PORT_NUM, 1, &port_uni);
     cs_printf("99port_uni is %d!!!!!\r\n",port_uni);
     port_uni = 8;
@@ -645,6 +650,7 @@ static void startup_config_save(cs_uint32 inst_id)
     scfg_autosave_flag = 1;
     if(pInst->store)
     {
+    	cs_printf("startup_config_save store is not NULL!!!\r\n");
         pHeader = (tlv_header_t *)pInst->base_address;
         pInst->store(pInst->base_address , pInst->max_tlv_len);
     }

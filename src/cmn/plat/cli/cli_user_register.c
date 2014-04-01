@@ -436,12 +436,12 @@ extern int show_port_statistic(struct cli_def * cli, int portid)
 	oam_port_uni_stats_t uni_stats; 
 	cs_uint64 rxrate = 0,txrate = 0;
 	
-	if ((portid > uni_max_port_num)|| (portid < 1) ) 
-	{
-		cli_print(cli, "%% Invalid input.");
-		return CLI_ERROR;
-	}
-	
+//	if ((portid > uni_max_port_num)|| (portid < 1) )
+//	{
+//		cli_print(cli, "%% Invalid input.");
+//		return CLI_ERROR;
+//	}
+//
 	if(CS_E_OK != app_onu_port_stats_get(portid, &uni_stats))
 	{
 		return CS_E_ERROR;
@@ -1491,10 +1491,10 @@ cs_printf("uni_max_port_num is %d\r\n",uni_max_port_num);
 #if 1
 typedef struct device_ip
 {
-	cs_uint32	device_ip;		//²ÉÓÃ±¾µØ×Ö½ÚÐò
-	cs_uint32	device_mask;	//²ÉÓÃ±¾µØ×Ö½ÚÐò
-	cs_uint32	device_gateway;	//²ÉÓÃ±¾µØ×Ö½ÚÐò
-	cs_uint16	device_vlan;	//²ÉÓÃ±¾µØ×Ö½ÚÐò
+	cs_uint32	device_ip;		//ï¿½ï¿½ï¿½Ã±ï¿½ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½
+	cs_uint32	device_mask;	//ï¿½ï¿½ï¿½Ã±ï¿½ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½
+	cs_uint32	device_gateway;	//ï¿½ï¿½ï¿½Ã±ï¿½ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½
+	cs_uint16	device_vlan;	//ï¿½ï¿½ï¿½Ã±ï¿½ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½
 }device_ip_t;
 
 extern char *inet_ntoa(struct in_addr ina);
@@ -2321,17 +2321,17 @@ extern int cmd_onu_uart_ip_set(struct cli_def *cli, char *command, char *argv[],
 
 
 /**********************************************************************************************************************************************
-*º¯ÊýÃû£ºcmd_onu_uart_ip_save
-*º¯Êý¹¦ÄÜÃèÊö£º½«´®¿Úip ÐÅÏ¢±£´æ
-*º¯Êý²ÎÊý£º
-*º¯Êý·µ»ØÖµ£ºint ,³É¹¦·µ»Ø0
-*×÷Õß£ºÖìÏþ»Ô
-*º¯Êý´´½¨ÈÕÆÚ£º2013.5.27
-*º¯ÊýÐÞ¸ÄÈÕÆÚ£ºÉÐÎ´ÐÞ¸Ä
-*ÐÞ¸ÄÈË£ºÉÐÎ´ÐÞ¸Ä
-*ÐÞ¸ÄÔ­Òò£ºÉÐÎ´ÐÞ¸Ä
-*°æ±¾£º1.0
-*ÀúÊ·°æ±¾£ºÎÞ
+*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½cmd_onu_uart_ip_save
+*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ip ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½
+*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+*ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½int ,ï¿½É¹ï¿½ï¿½ï¿½ï¿½ï¿½0
+*ï¿½ï¿½ï¿½ß£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú£ï¿½2013.5.27
+*ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½Ú£ï¿½ï¿½ï¿½Î´ï¿½Þ¸ï¿½
+*ï¿½Þ¸ï¿½ï¿½Ë£ï¿½ï¿½ï¿½Î´ï¿½Þ¸ï¿½
+*ï¿½Þ¸ï¿½Ô­ï¿½ï¿½ï¿½ï¿½Î´ï¿½Þ¸ï¿½
+*ï¿½æ±¾ï¿½ï¿½1.0
+*ï¿½ï¿½Ê·ï¿½æ±¾ï¿½ï¿½ï¿½ï¿½
 **********************************************************************************************************************************************/
 extern int cmd_onu_uart_ip_save(struct cli_def *cli, char *command, char *argv[], int argc)
 {

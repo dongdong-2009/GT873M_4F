@@ -544,7 +544,6 @@ GT_STATUS gvlnSetPortIsolate
 	{
 		wanPort = dev->cpuPortNum;
 	}
-	
     if(GT_OK == retVal)
     {
         switch (mode)

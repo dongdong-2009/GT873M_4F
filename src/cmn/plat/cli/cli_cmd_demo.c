@@ -251,6 +251,74 @@ int cmd_laser(struct cli_def *cli, char *command, char *argv[], int argc)
 }
 
 #endif
+extern int mrv_reg_read(unsigned char dev_addr, unsigned char reg_addr, unsigned short *data);
+extern int mrv_reg_write(unsigned char dev_addr, unsigned char reg_addr, unsigned short data);
+extern void mrv_switch_init_t();
+int mrv_sw_R_W(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+    if(CLI_HELP_REQUESTED)
+    {
+        switch(argc)
+        {
+        case 1:
+            return cli_arg_help(cli, 0,
+                "r | w", "read or write sw reg",
+                 NULL);
+        case 2:
+            return cli_arg_help(cli, 0,
+                "dev_addr", "device address",
+                 NULL);
+        case 3:
+            return cli_arg_help(cli, 0,
+                "reg_addr", "register address",
+                 NULL);
+        case 4:
+            return cli_arg_help(cli, 0,
+                "data", "data",
+                 NULL);
+        default:
+            return cli_arg_help(cli, argc > 1, NULL);
+        }
+    }
+    if(1)
+    {
+    	cs_uint32 dev_addr = 0;
+    	cs_uint32 reg_addr = 0;
+
+//    	dev_addr = atoi(argv[1]);
+//    	reg_addr = atoi(argv[2]);
+    	sscanf(argv[1],"%x",&dev_addr);
+    	sscanf(argv[2],"%x",&reg_addr);
+    	/*if all args legacy*/
+    	if(argv[0][0] == 'r')
+    	{
+    		cs_uint16 reg_data;
+    		mrv_reg_read(dev_addr, reg_addr, &reg_data);
+            cli_print(cli, "Read mrv switch dev_addr 0x%x reg_addr 0x%x data is 0x%x\r\n",dev_addr, reg_addr, reg_data);
+    	}
+    	else if(argv[0][0] == 'w')
+    	{
+    		cs_uint32 reg_data;
+    		sscanf(argv[3],"%x",&reg_data);
+    		mrv_reg_write(dev_addr, reg_addr, reg_data);
+    		cli_print(cli, "Read mrv switch dev_addr 0x%x reg_addr 0x%x data is 0x%x\r\n",dev_addr, reg_addr, reg_data);
+    	}
+    	else if(argv[0][0] == 'i')
+    	{
+    		mrv_switch_init_t();
+    	}
+    	else
+    	{
+            cli_print(cli, "%% Invalid input.");
+    	}
+    }
+    else
+	{
+        cli_print(cli, "%% Invalid input.");
+	}
+    return CLI_OK;
+}
+
 
 int cmd_pon_mac(struct cli_def *cli, char *command, char *argv[], int argc)
 {

@@ -1352,7 +1352,7 @@ static int GwOamInformationRequest(GWTT_OAM_MESSAGE_NODE *pRequest )
                 break;
             }
             
-            if(0 == *pReq)/*ï¿½ï¿½ï¿½Î?ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½Ö¹×´Ì¬*/
+            if(0 == *pReq)/*ï¿½ï¿½ï¿½ï¿½?ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½Ö¹×´Ì¬*/
             {
                 if (0 == g_DHCP_OPTION82_Relay)
                 {
@@ -3714,7 +3714,7 @@ typedef struct
 } uni_ingress_t;
 
 
-/*Íâ²¿Ìá¹©µÄ½Ó¿Ú*/
+/*ï¿½â²¿ï¿½á¹©ï¿½Ä½Ó¿ï¿½*/
 cs_status uni_port_check(cs_port_id_t port);
 
 cs_status ctc_oam_eth_ds_rate_limit_set_adapt(
@@ -3743,7 +3743,7 @@ cs_status ctc_oam_eth_port_policing_set_adapt(
         cs_uint32  ebs);
 
 
-/*ÄÚ²¿ÊµÏÖµÄ½Ó¿Ú*/
+/*ï¿½Ú²ï¿½Êµï¿½ÖµÄ½Ó¿ï¿½*/
 cs_status port_egress_rate_get(cs_port_id_t port, cs_uint8 *enable, cs_uint32 *rate);
 cs_status port_egress_rate_set(cs_port_id_t port, cs_uint32 rate);
 int cmd_port_egress_rate_arg_check(char *argv[], int argc);
@@ -3758,7 +3758,7 @@ extern int uni_ingress_rate_config_recover(uni_ingress_t *uni_ingress_p);
 
 
 
-/*ÏòÍâÌá¹©µÄ½Ó¿Ú*/
+/*ï¿½ï¿½ï¿½ï¿½ï¿½á¹©ï¿½Ä½Ó¿ï¿½*/
 int cmd_port_egress_rate(struct cli_def *cli, char *command, char *argv[], int argc);
 int cmd_port_ingress_rate(struct cli_def *cli, char *command, char *argv[], int argc);
 extern int uni_egress_rate_tlv_infor_handle(int len, char *data, int opcode);
@@ -4005,13 +4005,13 @@ int cmd_port_ingress_rate(struct cli_def *cli, char *command, char *argv[], int 
 	
 	if(CLI_HELP_REQUESTED)
 	{
-		/*²ÎÊýÊý¾ÝµÄºÏ·¨ÐÔ¼ì²é*/
+		/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÝµÄºÏ·ï¿½ï¿½Ô¼ï¿½ï¿½*/
 		if(cmd_port_ingress_rate_arg_check(argv, argc-1) != CLI_OK)
 		{
 			return CLI_ERROR;
 		}
 
-		/*ÏÔÊ¾°ïÖúÐÅÏ¢*/
+		/*ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢*/
 		switch (argc)
 		{
 			case 1:
@@ -4061,7 +4061,7 @@ int cmd_port_ingress_rate(struct cli_def *cli, char *command, char *argv[], int 
 		}
 	}
 
-	/*²ÎÊýÊý¾ÝµÄºÏ·¨ÐÔ¼ì²é*/
+	/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÝµÄºÏ·ï¿½ï¿½Ô¼ï¿½ï¿½*/
 	if(cmd_port_ingress_rate_arg_check(argv, argc) != CLI_OK)
 	{
 		return CLI_ERROR;
@@ -4541,6 +4541,7 @@ int cmd_onu_uart_ip_set(struct cli_def *cli, char *command, char *argv[], int ar
 #if 1
 extern int cmd_laser(struct cli_def *cli, char *command, char *argv[], int argc);
 #endif
+extern int mrv_sw_R_W(struct cli_def *cli, char *command, char *argv[], int argc);
 void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 {
 	extern void cli_reg_rcp_cmd(struct cli_command **cmd_root);
@@ -4599,6 +4600,7 @@ void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 //		mtodo: cmd_oam_port_isolate modify
 
 		cli_register_command(cmd_root, 0, 		"laser", 		cmd_laser,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "Laser on/off");
+		cli_register_command(cmd_root, 0, 		"mrvReg", 		mrv_sw_R_W,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "mrv register R or W");
 		#endif
 	
 	#if 1
