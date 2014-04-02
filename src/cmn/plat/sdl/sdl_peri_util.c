@@ -311,6 +311,76 @@ cs_status cs_plat_ssp_slic_write(
     return ret;
 }
 
+/* CPLD using slaveid 2 */
+cs_status cs_plat_ssp_cpld_read(
+    CS_IN       cs_callback_context_t    context,
+    CS_IN       cs_dev_id_t              device,
+    CS_IN       cs_llid_t                llidport,
+    CS_OUT      cs_uint8                 *data
+    )
+{
+    cs_uint32 rdata;
+    cs_status ret = CS_E_OK;
+    
+    if(NULL == data){
+        return CS_E_PARAM;
+    }
+
+    cs_plat_ssp_transaction_begin(context,device,llidport,SSP_SLAVE_ID_2);
+        /* set clock at 1MHz */
+    ret = cs_plat_ssp_init_cfg_set(context,device,llidport,
+        SSP_SLAVE_ID_2,1024,SSP_STANDARD_SPI,SSP_TDAT_CPHA_END,
+        SSP_IDAT_MODE_CENTER,SSP_DATIN_CMD_PHASE,SSP_EDGE_ALIGN);
+
+    if(CS_E_OK == ret){
+        ret = cs_plat_ssp_frame_cfg_set(context,device,llidport,
+                        SSP_SLAVE_ID_2,0x7,0,SSP_NORMAL);
+    }
+    else{
+        cs_plat_ssp_transaction_end(context,device,llidport,SSP_SLAVE_ID_2);
+        return ret;
+        
+    }
+    
+    ret = cs_plat_ssp_read(context,device,llidport,SSP_SLAVE_ID_2,0,0,0,&rdata);
+
+    *data = rdata & 0xFF;
+    cs_plat_ssp_transaction_end(context,device,llidport,SSP_SLAVE_ID_2);
+    
+    return ret;
+}
+
+cs_status cs_plat_ssp_cpld_write(
+    CS_IN       cs_callback_context_t    context,
+    CS_IN       cs_dev_id_t              device,
+    CS_IN       cs_llid_t                llidport,
+    CS_IN       cs_uint8                 data
+    )
+{
+    cs_status ret = CS_E_OK;
+
+    cs_plat_ssp_transaction_begin(context,device,llidport,SSP_SLAVE_ID_2);
+    /* set clock at 1MHz */
+    ret = cs_plat_ssp_init_cfg_set(context,device,llidport,
+        SSP_SLAVE_ID_2,1024,SSP_STANDARD_SPI,SSP_TDAT_CPHA_END,
+        SSP_IDAT_MODE_CENTER,SSP_DATIN_DATA_PHASE,SSP_EDGE_ALIGN);
+
+    if(CS_E_OK == ret){
+        ret = cs_plat_ssp_frame_cfg_set(context,device,llidport,
+                        SSP_SLAVE_ID_2,0,0x7,SSP_CMD_ONLY);
+    }
+    else{
+        cs_plat_ssp_transaction_end(context,device,llidport,SSP_SLAVE_ID_2);
+        return ret;
+        
+    }
+    
+    ret = cs_plat_ssp_write(context,device,llidport,SSP_SLAVE_ID_2,(data<<24),0,0,0);
+    cs_plat_ssp_transaction_end(context,device,llidport,SSP_SLAVE_ID_2);
+    
+    return ret;
+}
+
 /* Switch */
 cs_status cs_plat_ssp_switch_read(
     CS_IN       cs_callback_context_t    context,
