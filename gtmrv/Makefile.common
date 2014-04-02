@@ -1,5 +1,5 @@
 
-CROSS_COMPILE_DIR?=/opt/toolchains/iros-tools/gnutools/bin/
+CROSS_COMPILE_DIR?=$(TOOLSHOME)/gnutools/bin/
 CROSS_COMPILE ?= $(CROSS_COMPILE_DIR)/arm-elf-
 
 AR              = $(CROSS_COMPILE)ar

@@ -1,12 +1,18 @@
 
 ECOS_REPOSITORY=${SWHOME}/ecos/ecos-2.1/packages
 export ECOS_REPOSITORY
+ifeq ($(PRODUCT),GT812C)
+	RAM_CONFIG=${SWHOME}/targets/onu/arm9/asic/config-onu-arm9-asic-ram-32m-malloc-448k-lwip
+else
+	RAM_CONFIG=${SWHOME}/targets/onu/arm9/asic/config-onu-arm9-asic-ram-2m-malloc-448k-lwip
+endif
 include ../makefile.rc
 all: force
 	 rm -rf devs ecos.ecc hal infra install io isoinfra language makefile\
          make.out net default services compat  error  kernel fs
 	 ecosconfig new immenstar posix
-	 ecosconfig import ${SWHOME}/targets/onu/arm9/asic/config-onu-arm9-asic-ram-2m-malloc-448k-lwip
+	 ecosconfig import ${RAM_CONFIG}
+	 echo "${RAM_CONFIG}" > $(SWHOME)/ram_cfg.h
 	 ecosconfig tree
 	 make 2>&1 | tee make.out
 clean: force

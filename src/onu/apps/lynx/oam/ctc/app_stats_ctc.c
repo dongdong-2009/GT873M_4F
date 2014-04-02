@@ -804,11 +804,11 @@ void onu_tmfunc_port_stats_get(void*date)
 void gwd_portstats_thread(cyg_addrword_t p)
 {
 	ptr_gwd_portstats_ctrl_t pctrl = g_ps_ctrl;
-	cs_uint8 uni_num = 4;
+	cs_uint8 uni_num = CS_UNI_NUMBER;
 	cyg_uint64 time_ticks = 0,time1_ticks =0;
 	cs_callback_context_t     context;
 	cs_uint64 rxrate=0,txrate =0;
-//cs_printf("int port thread\n");
+//cs_printf("uni_num is %d\n",uni_num);
 	if(pctrl)
 	{
 		//cs_printf("pctrl is not null\n");
@@ -876,7 +876,7 @@ void gwd_portstats_thread(cyg_addrword_t p)
 cs_boolean gwd_portstats_init()
 {
 	cs_boolean ret = EPON_FALSE;
-	cs_uint8 uni_num = 4;
+	cs_uint8 uni_num = CS_UNI_NUMBER;
 
 	if(uni_num > 0)
 	{
