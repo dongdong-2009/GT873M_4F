@@ -3292,7 +3292,7 @@ int cmd_stat_port_show(struct cli_def *cli, char *command, char *argv[], int arg
 	}
 	else
 	{		
-		for (i = NUM_PORTS_MINIMUM_SYSYTEM; i <= 11; i++)
+		for (i = NUM_PORTS_MINIMUM_SYSYTEM; i <= 8; i++)
 			{
 				cli_print(cli,"===========================port %d stat===========================",i);
 				show_port_statistic(cli, i);

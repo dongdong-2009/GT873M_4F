@@ -262,7 +262,7 @@ void allocate_bridge_mac(GT_ETHERADDR * mac)
 void switch_reset()
 {
     cs_callback_context_t context;
-    cs_uint8 status = 0;
+//    cs_uint8 status = 0;
 
 //    cs_plat_gpio_read(context, 0, 0, 4, &status);
 //    cs_printf("The status of GPIO 4 is %d\r\n",status);
