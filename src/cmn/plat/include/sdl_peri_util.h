@@ -129,6 +129,22 @@ cs_status cs_plat_ssp_slic_write(
     CS_IN       cs_uint8                 data
 );
 
+/* CPLD */
+cs_status cs_plat_ssp_cpld_read(
+    CS_IN       cs_callback_context_t    context,
+    CS_IN       cs_dev_id_t              device,
+    CS_IN       cs_llid_t                llidport,
+    CS_OUT      cs_uint8                 *data
+);
+
+cs_status cs_plat_ssp_cpld_write(
+    CS_IN       cs_callback_context_t    context,
+    CS_IN       cs_dev_id_t              device,
+    CS_IN       cs_llid_t                llidport,
+    CS_IN       cs_uint8                 data
+);
+
+
 /* Switch */
 cs_status cs_plat_ssp_switch_read(
     CS_IN       cs_callback_context_t    context,

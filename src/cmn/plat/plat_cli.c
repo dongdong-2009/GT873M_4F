@@ -39,6 +39,10 @@ cs_uint32 rev_uart_msg_two = 0;
 cs_uint32 rev_uart_msg_thr = 0;
 cs_uint32 rev_uart_msg_for = 0;
 #endif
+
+#define CPLD_OP_READ 0x03
+#define CPLD_OP_WRITE 0x02
+
 typedef struct
 {
     cs_node node;
@@ -208,7 +212,8 @@ static int ssp_cmd_proc(int argc, char **argv)
     cs_callback_context_t    context;
     
     if (!(cmd_cmp(argv[0], "eeprom") || cmd_cmp(argv[0], "sflash")
-          || cmd_cmp(argv[0], "serdes") || cmd_cmp(argv[0], "switch")))
+          || cmd_cmp(argv[0], "serdes") || cmd_cmp(argv[0], "switch")
+          || cmd_cmp(argv[0], "cpld")))
         return 0;
 
     if (argc == 1)
@@ -216,6 +221,7 @@ static int ssp_cmd_proc(int argc, char **argv)
         cs_printf("per eeprom [read addr |write addr data] - EEPROM access\n");
         cs_printf("per serdes [read addr |write addr data] - serdes access\n");
         cs_printf("per switch [read addr |write addr data ] - switch access\n");
+        cs_printf("per cpld   [read addr count|write addr data] - cpld access\n");
         cs_printf("per sflash [erase addr | write src dest len | read src dest len] - SFLASH access\n");
         cs_printf("           [brd src dest len | bwr src dest len]  - SFLASH access\n");
         cs_printf("           [test 0|1]  - SFLASH r/w perfermance test\n");
@@ -413,11 +419,49 @@ static int ssp_cmd_proc(int argc, char **argv)
             }
         }
 #endif
+        else if(cmd_cmp(argv[0], "cpld"))
+        {
+            if(cmd_cmp(argv[1], "write"))
+            {
+                cs_printf("CPLD write: 0x%02x -> 0x%x\n", iros_strtol(argv[2]), iros_strtol(argv[3]));
+                cs_plat_ssp_cpld_write(context, 0, 0, CPLD_OP_WRITE);
+                cs_plat_ssp_cpld_write(context,0,0,iros_strtol(argv[2]));
+                cs_plat_ssp_cpld_write(context,0,0,iros_strtol(argv[3]));
+                cs_printf("CPLD write done\n");
+            }
+            else if(cmd_cmp(argv[1], "read"))
+            {
+                cs_uint8 rdata = 0;
+                cs_uint8 loop;
+                cs_uint32 raddr;
+                cs_uint32 data_cnt;
+
+                raddr = iros_strtol(argv[2]);
+                data_cnt = iros_strtol(argv[3]);
+                cs_printf("CPLD read from 0x%02x\n", raddr);
+
+                cs_plat_ssp_cpld_write(context, 0, 0, CPLD_OP_READ);
+                cs_plat_ssp_cpld_write(context,0,0,raddr);
+
+                cs_printf("Data read: ");
+                for(loop = 0; loop < data_cnt; loop++)
+                {
+                    cs_plat_ssp_cpld_read(context,0,0,&rdata);
+                    cs_printf("0x%02x ", rdata);
+                }
+                cs_printf("\n");
+            }
+            else
+            {
+                cs_printf("\nInvalid parameter!\n");
+            }
+        }        
         else
         {
            cs_printf("per eeprom [read addr |write addr data] - EEPROM access\n");
            cs_printf("per serdes [read addr |write addr data] - serdes access\n");
            cs_printf("per switch [read addr |write addr data ] - switch access\n");
+           cs_printf("per cpld   [read addr count|write addr data] - cpld access\n");
            cs_printf("per sflash [clear addr | write src dest len | read src dest len] - SFLASH access\n");
            cs_printf("           [brd src dest len | bwr src dest len]  - SFLASH access\n");
            cs_printf("           [test 0|1]  - SFLASH r/w perfermance test\n");
