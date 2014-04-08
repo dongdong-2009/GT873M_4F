@@ -195,6 +195,7 @@ cs_uint32 ctc_trunk_vlan_ds_untag_enable_get()
 }
 
 extern void storm_rate_init();
+extern void switch_reset();
 void plat_init(void)
 {
     /* osal init */
@@ -235,6 +236,9 @@ void plat_init(void)
     onu_hw_version();
 #endif
     cs_gpio_init();
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+    switch_reset();
+#endif
     cs_mdio_init(); //mdio speed 4Mhz
     cs_i2c_init();
     

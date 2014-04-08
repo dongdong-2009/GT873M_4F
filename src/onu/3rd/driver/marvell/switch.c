@@ -29,6 +29,9 @@
 #include "MARVELL_BSP_expo.h"
 #include "switch_expo.h"
 #include "switch_drv.h"
+#include "cs_cmn.h"
+#include "sdl_gpio.h"
+#include <cyg/kernel/kapi.h>
 
 /*
 #define MULTI_ADDR_MODE
@@ -254,6 +257,24 @@ void allocate_bridge_mac(GT_ETHERADDR * mac)
 #endif
 
 	memcpy(&mac, &new_bridge_mac, sizeof (*mac));
+}
+
+void switch_reset()
+{
+    cs_callback_context_t context;
+    cs_uint8 status = 0;
+
+//    cs_plat_gpio_read(context, 0, 0, 4, &status);
+//    cs_printf("The status of GPIO 4 is %d\r\n",status);
+    cs_plat_gpio_mode_set(context, 0, 0, 4, GPIO_MODE_OUTPUT);
+    cs_plat_gpio_write(context, 0, 0, 4, 0);
+//    cs_plat_gpio_read(context, 0, 0, 4, &status);
+//    cs_printf("The status of GPIO 4 is %d\r\n",status);
+    cyg_thread_delay(50);
+    cs_plat_gpio_write(context, 0, 0, 4, 1);
+//    cs_plat_gpio_read(context, 0, 0, 4, &status);
+//    cs_printf("The status of GPIO 4 is %d\r\n",status);
+	return;
 }
 
 extern void mrv_switch_init(IN  GT_QD_DEV    *dev);
@@ -1931,6 +1952,7 @@ GT_STATUS switch_ge_port_init(GT_QD_DEV * dev, GT_LPORT port)
 		MSG_OUT(( "gpcsSetForcedLink return Failed(%d)\r\n", result));
 		l_ret_val = result;
 	}
+
 	return l_ret_val;
 }
 
