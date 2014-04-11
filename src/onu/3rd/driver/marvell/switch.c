@@ -1410,7 +1410,7 @@ GT_STATUS switch_default_config(GT_QD_DEV * dev)
 	/* Restore default value of each port */
 	gtEgressRateType.definedRate = GT_NO_LIMIT;
 	MSG_OUT(( "Stage 2\r\n"));
-	for(phyPort=0; phyPort<NUM_PORTS_PER_SWITCH; phyPort++)
+	for(phyPort=0; phyPort<8; phyPort++)
 	{
 		/* UserPri more importent than ip dscp */
         if ((result = gqosSetPrioMapRule(dev, phyPort, GT_TRUE)) != GT_OK)

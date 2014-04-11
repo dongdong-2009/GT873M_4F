@@ -547,6 +547,7 @@ cs_status gwd_loopdetect_pkt_parser(cs_pkt_t *pPkt)
 /* $rtn_hdr_end                                                              */
 /*****************************************************************************/
 {
+#if 0
     oam_pdu_hdr_t *hdr = NULL;
 
     hdr = (oam_pdu_hdr_t*)(pPkt->data + pPkt->offset + pPkt->tag_num * sizeof(cs_vlan_hdr_t ));
@@ -556,6 +557,46 @@ cs_status gwd_loopdetect_pkt_parser(cs_pkt_t *pPkt)
         pPkt->pkt_type = CS_PKT_GWD_LOOPDETECT; 
         return CS_E_OK;
     }
+#else
+	epon_ether_header_lb_t *hdr = NULL;
+
+	LOOP_DETECT_FRAME_DATA * pdata = NULL;
+
+	int offset = 0;
+#ifdef __loop_debug__
+    unsigned char testmac[6] = {0x00,0x0f,0xe9,0x04,0x8e,0xdf};
+    int i =0;
+#endif
+    hdr = (epon_ether_header_lb_t*)(pPkt->data + pPkt->offset);
+#ifdef __loop_debug__
+    if(!memcmp(testmac,hdr->dst,6))
+    {
+       diag_printf("=============================================================\n");
+       for(i = 0; i < 64; i++)
+       {
+            if(i % 16 == 0)
+                diag_printf("\n");
+            diag_printf("0x%02x ",pPkt->data[i]);
+       }
+       diag_printf("\n");
+       diag_printf("=============================================================\n");
+       diag_printf("\n");
+    }
+#endif
+    if(ntohs(hdr->ethertype) == EPON_ETHERTYPE_DOT1Q)
+    	offset = 16;
+    else
+    	offset = 12;
+
+	pdata = (LOOP_DETECT_FRAME_DATA*)(pPkt->data+pPkt->offset+offset);
+
+	if(ntohs(pdata->Ethtype) == ETH_TYPE_LOOP_DETECT &&
+			ntohs(pdata->LoopFlag) == LOOP_DETECT_CHECK)
+	{
+		pPkt->eth_type = CS_PKT_GWD_LOOPDETECT;
+		return CS_E_OK;
+	}
+#endif
 
     return CS_E_NOT_SUPPORT;
 }

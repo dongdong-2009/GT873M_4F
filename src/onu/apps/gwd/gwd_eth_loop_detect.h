@@ -30,6 +30,29 @@ typedef struct{
 	unsigned long int loopstatus;
 }gwd_ethloop_msg_t;
 
+/* ethernet frame header */
+typedef struct {
+        epon_macaddr_t          dst;
+        epon_macaddr_t          src;
+        cs_uint16           ethertype;
+        cs_uint32           lb_port;
+        cs_uint8            reserved[60];
+} __attribute__((packed)) epon_ether_header_lb_t;
+
+/* ethernet frame header with vlan */
+typedef struct {
+        epon_macaddr_t          dst;
+        epon_macaddr_t          src;
+        cs_uint16           tpid;
+        cs_uint16           vlan;
+        cs_uint16           ethertype;
+        cs_uint32           lb_port;
+        cs_uint8            flag;
+        cs_uint8            reserved[59];
+} __attribute__((packed)) epon_ether_header_lb_vlan_t;
+
+
+
 /* type of OLT/ONU ports */
 typedef enum {
         /* OLT NNI physical port */
