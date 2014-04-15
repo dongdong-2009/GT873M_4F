@@ -1196,7 +1196,7 @@ cs_int32 lpbDetectTransFrames(cs_uint16 usVid)
     }
 
     DevId = 1;
-    for(i=0; i < 4; i++)
+    for(i=0; i < UNI_PORT_MAX; i++)
     {
         //epon_onu_sw_read_port_admin_status(i+1, &lb_port_admin_status);
         epon_request_onu_port_link_status_get(context, ONU_DEVICEID_FOR_API,
