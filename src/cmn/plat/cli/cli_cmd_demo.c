@@ -1615,6 +1615,25 @@ int cmd_erase_config(struct cli_def *cli, char *command, char *argv[], int argc)
 
 #endif
 
+
+extern cs_ulong32   gulDebugLoopBackDetect;
+int loopdetcet_debug(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	if(0 == gulDebugLoopBackDetect)
+	{
+		gulDebugLoopBackDetect = 1;
+		cli_print(cli,"loopdetect debug on\n");
+	}
+	else
+	{
+		gulDebugLoopBackDetect = 0;
+		cli_print(cli,"loopdetect debug off\n");
+	}
+
+    return CLI_OK;
+}
+
+
 void cli_reg_usr_cmd(struct cli_command **cmd_root)
 {
     struct cli_command *c;
@@ -1699,6 +1718,11 @@ void cli_reg_usr_cmd(struct cli_command **cmd_root)
 	cli_register_command(cmd_root,  erase, "config", cmd_erase_config,PRIVILEGE_PRIVILEGED, MODE_ANY, "Erase saved config");
 	#endif
     cli_register_command(cmd_root, NULL, "onu-mac",   cmd_pon_mac,   PRIVILEGE_PRIVILEGED,   MODE_CONFIG,     "ONU PON mac");
+
+    c = cli_register_command(cmd_root, NULL, "dbg",   NULL,   PRIVILEGE_PRIVILEGED,   MODE_DEBUG,     "debug module");
+    cli_register_command(cmd_root, c, "loopdetect",   loopdetcet_debug,   PRIVILEGE_PRIVILEGED,   MODE_CONFIG,     "debug loopdetect");
+
+
 
   //  cli_register_command(cmd_root, NULL, "debug",    cmd_debug_mode_int, PRIVILEGE_PRIVILEGED,   MODE_CONFIG,    "Enter debug mode");
    // cli_register_command(cmd_root, NULL, "regular",  cmd_debug_regular,  PRIVILEGE_PRIVILEGED,   MODE_DEBUG,     "Switch for regular callback");
