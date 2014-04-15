@@ -286,7 +286,8 @@ extern cs_ulong32   gulDebugOamFileOp;
 #define DEVICE_TYPE_GT870                       0x002C
 #define DEVICE_TYPE_GT811D						0x002D
 #define DEVICE_TYPE_GT811G                      0x002E
-#define DEVICE_TYPE_VALID_MAX		DEVICE_TYPE_GT870
+#define DEVICE_TYPE_GT812C						0x002F
+#define DEVICE_TYPE_VALID_MAX		DEVICE_TYPE_GT812C
 #define DEVICE_TYPE_VALID_MIN		DEVICE_TYPE_GT811
 
 

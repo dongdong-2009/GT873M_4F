@@ -1179,7 +1179,7 @@ cs_int32 lpbDetectTransFrames(cs_uint16 usVid)
     packet_head->Ethtype = htons(ETH_TYPE_LOOP_DETECT);
     packet_head->LoopFlag = htons(LOOP_DETECT_CHECK);
     packet_head->OltType = type;
-    packet_head->OnuType = (cs_uint8)DEVICE_TYPE_GT811G;
+    packet_head->OnuType = (cs_uint8)DEVICE_TYPE_GT812C;
     memset(packet_head->OnuLocation, 0, 4);
     memset(&packet_head->OnuLocation[1], (cs_uint8)ulSlot, 1);
     memset(&packet_head->OnuLocation[2], (cs_uint8)ulPon, 1);
