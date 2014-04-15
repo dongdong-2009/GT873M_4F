@@ -157,6 +157,9 @@ cs_int32 gtGetSrcPortForMac(cs_int8 *mac, cs_uint16 vid, cs_ulong32 *pLogicPort)
 			{
 				if(epon_onu_sw_get_port_pvid(context, 0, 0, i, &pvid ) != CS_E_OK)
 						return GWD_RETURN_ERR;
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+			    memset(&entry, 0, sizeof(cs_sdl_fdb_entry_t));
+#endif
 				while(epon_request_onu_fdb_entry_get_byindex_per_port(context, 0, 0, i, SDL_FDB_ENTRY_GET_MODE_ALL,
 							idx, &entry, &nextidx) == CS_OK)
 					{
@@ -199,7 +202,6 @@ cs_int32 gtGetSrcPortForMac(cs_int8 *mac, cs_uint16 vid, cs_ulong32 *pLogicPort)
 						LOOPBACK_DETECT_DEBUG(("\r\nMac NOT found in vlan %d", vid));
 						//gtRet = GWD_RETURN_ERR;
 					}
-
 			}
 #if 0
 				if (EPON_TRUE == gtFound)

@@ -1363,25 +1363,26 @@ cs_status epon_request_onu_fdb_entry_get_byindex_per_port(
 )
 {
 	GT_ATU_ENTRY l2_data;
-    GT_U32 count = 0, i, hwport = 0, lunit, lport;
+    GT_U32 count = 0, i, hwport = 0,db = 0, lunit, lport, loffset = offset;
     GT_STATUS gt_ret = GT_OK;
     cs_status ret =  CS_E_OK;
-    //cs_printf("address:%d\n",address);
+    GT_BOOL found = GT_FALSE, getnext = 0;
+
+    GT_U8 maczero[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
     if((NULL==next) || (NULL==entry)) {
         SDL_MIN_LOG("null pointer\n");
         return CS_E_PARAM;
     }
-    
+
     if(mode>SDL_FDB_ENTRY_GET_MODE_ALL) {
         SDL_MIN_LOG("Mode is not supported\n");
         return CS_E_PARAM;
     }  
-    
     if(offset>__FDB_ENTRY_HW_INDEX_MAX) {
         SDL_MIN_LOG("Offset is beyond max value\n");
         return CS_E_PARAM;
     }     
-    
     UNI_PORT_CHECK(port_id);
     
     if(gt_getswitchunitbylport(port_id, &lunit, &lport) != GT_OK)
@@ -1390,10 +1391,8 @@ cs_status epon_request_onu_fdb_entry_get_byindex_per_port(
     FOR_UNIT_START(GT_U32, unit)
 
     GT_QD_DEV *dev = QD_DEV_PTR;
-
     gfdbGetAtuAllCount(QD_DEV_PTR, &count);
     hwport = GT_LPORT_2_PORT(lport);
-
     if(mode == SDL_FDB_ENTRY_GET_MODE_STATIC){
 		cs_printf("into statuc\n");
         for(i=offset; i<__FDB_STATIC_ENTRY_MAC_MAX; i++){
@@ -1447,28 +1446,61 @@ cs_status epon_request_onu_fdb_entry_get_byindex_per_port(
     
     *next = address + 1;
 #endif
+    if(memcmp(entry->mac.addr, maczero, 6))
+    	getnext = 1;
 
+    i = 0;
+    count = 0;
+
+    GT_VTU_ENTRY ve;
+    GT_32 vnum = 0;
+
+    if( gvtuGetEntryCount(QD_DEV_PTR, &vnum) != GT_OK)
+    	continue;
+
+	if(getnext)
+	{
+		db = entry->vlan_id;
+		ve.DBNum = entry->vlan_id;
+		ve.vid = entry->vlan_id;
+		memcpy(l2_data.macAddr.arEther, entry->mac.addr, 6);
+	}
+	else
+	{
+		memset(&l2_data, 0, sizeof(l2_data));
+	    if(vnum > 0)
+	    {
+	    	ve.DBNum = 1;
+	    	ve.vid = 1;
+	    }
+	    else
+	    {
+	    	if( gvtuGetEntryFirst(QD_DEV_PTR, &ve) != GT_OK )
+	    		continue;
+	    }
+	}
+#if 0
     for(i=0; i<count; i++)
     {
     	if(i == 0)
     		gt_ret = gfdbGetAtuEntryFirst(QD_DEV_PTR, &l2_data);
     	else
     		gt_ret = gfdbGetAtuEntryNext(QD_DEV_PTR, &l2_data);
-
+    	cs_printf("into statuc gt_ret is %d\n",gt_ret);
     	if(gt_ret != GT_OK)
     	{
     		ret = CS_E_ERROR;
     		break;
     	}
-
+    	cs_printf("into statuc11\n");
     	if(i < offset)
     		continue;
-
+    	cs_printf("into statuc22\n");
     	if((l2_data.entryState.ucEntryState != GT_UC_DYNAMIC && mode == SDL_FDB_ENTRY_DYNAMIC) ||
     			(l2_data.entryState.ucEntryState != GT_UC_STATIC && mode == SDL_FDB_ENTRY_STATIC) ||
     			(!(l2_data.portVec & (1<<hwport))))
     		continue;
-
+    	cs_printf("into statuc33\n");
     	memset(entry, 0, sizeof(cs_sdl_fdb_entry_t));
     	memcpy(&entry->mac, &l2_data.macAddr.arEther[0], sizeof(cs_mac_t));
     	entry->vlan_id = l2_data.DBNum;
@@ -1477,9 +1509,61 @@ cs_status epon_request_onu_fdb_entry_get_byindex_per_port(
     	*next = i+1;
     	break;
     }
+#else
+	do
+    {
+		while(1)
+		{
+			l2_data.DBNum = ve.DBNum;
+			if( db != ve.DBNum )
+			{
+				gt_ret = gfdbGetAtuEntryFirst(QD_DEV_PTR, &l2_data);
+				db = ve.DBNum;
+			}
+			else
+				gt_ret = gfdbGetAtuEntryNext(QD_DEV_PTR, &l2_data);
 
+			if(gt_ret != GT_OK)
+			{
+				SDL_MIN_LOG("gfdbGetAtuEntryNext fail(%d)\r\n", gt_ret);
+				break;
+			}
+
+			if((!getnext) && (i < loffset))
+			{
+				i++;
+				continue;
+			}
+
+			if((l2_data.entryState.ucEntryState != GT_UC_DYNAMIC && mode == SDL_FDB_ENTRY_DYNAMIC) ||
+					(l2_data.entryState.ucEntryState != GT_UC_STATIC && mode == SDL_FDB_ENTRY_STATIC) )
+				continue;
+			if(port_id !=getlportfromucportvec(QD_DEV_PTR, l2_data.portVec)+1)
+				continue;
+			memset(entry, 0, sizeof(cs_sdl_fdb_entry_t));
+			memcpy(&entry->mac, &l2_data.macAddr.arEther[0], sizeof(cs_mac_t));
+			entry->vlan_id = l2_data.DBNum;
+			entry->port = getlportfromucportvec(QD_DEV_PTR, l2_data.portVec)+1;
+			entry->type = l2_data.entryState.ucEntryState == GT_UC_DYNAMIC ? SDL_FDB_ENTRY_DYNAMIC : SDL_FDB_ENTRY_STATIC;
+			found = GT_TRUE;
+			break;
+		}
+
+		if(found == GT_TRUE)
+			break;
+    }while(gvtuGetEntryNext(QD_DEV_PTR, &ve) == GT_OK);
+	if(found == GT_TRUE)
+		break;
+#endif
+	cs_printf("into statuc88\n");
     FOR_UNIT_END
+#if 1
+    if(found == GT_TRUE)
+    	*next = offset+1;
+    else
+    	ret = CS_E_ERROR;
 
+#endif
 	//cs_printf("addess end:%d\n",address);
  	//cs_printf("next:%d",*next);
     return ret;
