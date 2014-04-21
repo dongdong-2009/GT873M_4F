@@ -595,7 +595,7 @@ cs_status gwd_loopdetect_pkt_parser(cs_pkt_t *pPkt)
 	if(ntohs(pdata->Ethtype) == ETH_TYPE_LOOP_DETECT &&
 			ntohs(pdata->LoopFlag) == LOOP_DETECT_CHECK)
 	{
-		pPkt->eth_type = CS_PKT_GWD_LOOPDETECT;
+		pPkt->pkt_type = CS_PKT_GWD_LOOPDETECT;
 		return CS_E_OK;
 	}
 #endif
