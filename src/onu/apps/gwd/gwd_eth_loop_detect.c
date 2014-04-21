@@ -791,7 +791,7 @@ static void reportPortsLpbStatus( cs_uint16 vid, cs_int8 *session )
             if(timeCounter == LPB_OAM_SEND_INTERVAL)
             {
             //	cs_printf("report send:\n");
-            	sendOamLpbDetectNotifyMsg(i, 1, 1, session, &(pCtrl->alarmInfo[i]));
+            	sendOamLpbDetectNotifyMsg(i, 1, vid, session, &(pCtrl->alarmInfo[i]));
                 LOOPBACK_DETECT_DEBUG(("\r\nReport vlan(%d)port(%d)Looped", vid, i));
             }
 		}
