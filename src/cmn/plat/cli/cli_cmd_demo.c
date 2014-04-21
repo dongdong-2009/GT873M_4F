@@ -5,7 +5,7 @@
 #include "sdl_api.h"
 #include "cs_utils.h"
 #include "mc_type.h"
-
+#include "aal_util.h"
 #ifdef HAVE_TELNET_CLI
 #define DFT_ENABLE_PASSWD           "enable"
 
@@ -319,6 +319,58 @@ int mrv_sw_R_W(struct cli_def *cli, char *command, char *argv[], int argc)
     return CLI_OK;
 }
 
+int pon_reg_R_W(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+    if(CLI_HELP_REQUESTED)
+    {
+        switch(argc)
+        {
+        case 1:
+            return cli_arg_help(cli, 0,
+                "r | w", "read or write pon reg",
+                 NULL);
+        case 2:
+            return cli_arg_help(cli, 0,
+                "reg_addr", "register address",
+                 NULL);
+        case 3:
+            return cli_arg_help(cli, 0,
+                "data", "data",
+                 NULL);
+        default:
+            return cli_arg_help(cli, argc > 1, NULL);
+        }
+    }
+    if(1)
+    {
+    	cs_uint32 reg_addr = 0;
+
+    	sscanf(argv[1],"%x",&reg_addr);
+    	/*if all args legacy*/
+    	if(argv[0][0] == 'r')
+    	{
+    		cs_uint32 reg_data;
+    		REG_READ(reg_addr, reg_data);
+            cli_print(cli, "Read mrv switch reg_addr 0x%x data is 0x%x\r\n",reg_addr, reg_data);
+    	}
+    	else if(argv[0][0] == 'w')
+    	{
+    		cs_uint32 reg_data;
+    		sscanf(argv[2],"%x",&reg_data);
+    		REG_WRITE(reg_addr, reg_data);
+    		cli_print(cli, "Read mrv switch reg_addr 0x%x data is 0x%x\r\n", reg_addr, reg_data);
+    	}
+    	else
+    	{
+            cli_print(cli, "%% Invalid input.");
+    	}
+    }
+    else
+	{
+        cli_print(cli, "%% Invalid input.");
+	}
+    return CLI_OK;
+}
 
 int cmd_pon_mac(struct cli_def *cli, char *command, char *argv[], int argc)
 {
