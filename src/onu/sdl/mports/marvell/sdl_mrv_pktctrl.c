@@ -206,11 +206,11 @@ static cs_status __l2_pon_lpd_state_set( CS_IN cs_sdl_pkt_dst_t state )
     /* set udf2 ethtype 0xffff */
     spe_udf_cfg.udf0_etype = 0x0800;
 	spe_udf_cfg.udf0_da.addr[0]=0x00;
-	spe_udf_cfg.udf0_da.addr[0]=0x0f;
-	spe_udf_cfg.udf0_da.addr[0]=0xe9;
-	spe_udf_cfg.udf0_da.addr[0]=0x04;
-	spe_udf_cfg.udf0_da.addr[0]=0x8e;
-	spe_udf_cfg.udf0_da.addr[0]=0xdf;
+	spe_udf_cfg.udf0_da.addr[1]=0x0f;
+	spe_udf_cfg.udf0_da.addr[2]=0xe9;
+	spe_udf_cfg.udf0_da.addr[3]=0x04;
+	spe_udf_cfg.udf0_da.addr[4]=0x8e;
+	spe_udf_cfg.udf0_da.addr[5]=0xdf;
 	spe_udf_cfg.udf0_chk_da = 1;
     spe_udf_msk.u32 = 0;
     spe_udf_msk.s.udf0_etype = 1;
@@ -967,7 +967,7 @@ cs_status epon_request_onu_spec_pkt_dst_set(
     if(CS_DOWN_STREAM==direction)
     {
         /* set PON(lynxd) chip */              
-        ret = __l2_pon_spec_pkt_state_set(pkt_type, state);          
+        ret = __l2_pon_spec_pkt_state_set(pkt_type, state);
     }
     else 
     {
@@ -976,7 +976,7 @@ cs_status epon_request_onu_spec_pkt_dst_set(
         ret = __l2_sw_uni_set(pkt_type, state);
         // set management port
         ret +=__l2_mii_port_set(pkt_type, state);
-#else
+
     	cs_aal_port_id_t port;
     	cs_aal_pkt_type_t pkt;
         cs_aal_spec_pkt_ctrl_msk_t  pkt_msk;
