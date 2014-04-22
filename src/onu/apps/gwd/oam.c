@@ -742,7 +742,7 @@ void Gwd_Oam_Handle(unsigned int port, unsigned char *frame, unsigned int len)
 		case ALARM_RESP:
 			if(GWD_RETURN_OK != GwOamAlarmResponse(pMessage))
 			{
-				IROS_LOG_MAJ(IROS_MID_OAM, "Deal with OLT Alarm response Error!");
+				//IROS_LOG_MAJ(IROS_MID_OAM, "Deal with OLT Alarm response Error!");
 			}
 			GwOamMessageListNodeFree(pMessage);
 			pMessage = NULL;
