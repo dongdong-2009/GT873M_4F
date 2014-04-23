@@ -976,7 +976,7 @@ cs_status epon_request_onu_spec_pkt_dst_set(
         ret = __l2_sw_uni_set(pkt_type, state);
         // set management port
         ret +=__l2_mii_port_set(pkt_type, state);
-
+#else
     	cs_aal_port_id_t port;
     	cs_aal_pkt_type_t pkt;
         cs_aal_spec_pkt_ctrl_msk_t  pkt_msk;
