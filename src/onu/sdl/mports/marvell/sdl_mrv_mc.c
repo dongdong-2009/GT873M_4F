@@ -231,7 +231,9 @@ static cs_status __mc_vlan_clr()
     
     return CS_E_OK;    
 }
-
+/* if enable is 0 unknown mc forward enable
+ * else enable is 1 unknown mc forward disable
+*/
 cs_status epon_request_onu_unknown_mc_forward_set(
     CS_IN cs_callback_context_t     context,
     CS_IN cs_int32                  device_id,
@@ -253,6 +255,7 @@ cs_status epon_request_onu_unknown_mc_forward_set(
 		GT_EGRESS_FLOOD mode;
 		if(gprtGetEgressFlood(QD_DEV_PTR, port, &mode) == GT_OK)
 		{
+#if 0
 			switch(mode)
 			{
 			case GT_BLOCK_EGRESS_NONE:
@@ -271,6 +274,38 @@ cs_status epon_request_onu_unknown_mc_forward_set(
 				if(!enable)
 					mode = GT_BLOCK_EGRESS_UNKNOWN_MULTICAST;
 				break;
+#else
+				switch(mode)
+				{
+				case GT_BLOCK_EGRESS_NONE:
+					if(enable)
+					{
+						mode = GT_BLOCK_EGRESS_UNKNOWN_MULTICAST;
+					}
+					break;
+				case GT_BLOCK_EGRESS_UNKNOWN:
+					if(!enable)
+					{
+						mode = GT_BLOCK_EGRESS_NONE;
+					}
+					break;
+				case GT_BLOCK_EGRESS_UNKNOWN_MULTICAST:
+					if(!enable)
+					{
+						mode = GT_BLOCK_EGRESS_NONE;
+					}
+					break;
+				case GT_BLOCK_EGRESS_UNKNOWN_UNICAST:
+					if(!enable)
+					{
+						mode = GT_BLOCK_EGRESS_NONE;
+					}
+					else
+					{
+						mode = GT_BLOCK_EGRESS_UNKNOWN_MULTICAST;
+					}
+					break;
+#endif
 			}
 
 			if(gprtSetEgressFlood(QD_DEV_PTR, port, mode) == GT_OK)
