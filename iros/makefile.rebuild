@@ -12,7 +12,7 @@ all: force
          make.out net default services compat  error  kernel fs
 	 ecosconfig new immenstar posix
 	 ecosconfig import ${RAM_CONFIG}
-	 echo "${RAM_CONFIG}" > $(SWHOME)/ram_cfg.h
+	# echo "${RAM_CONFIG}" > $(SWHOME)/ram_cfg.h
 	 ecosconfig tree
 	 make 2>&1 | tee make.out
 clean: force

@@ -3292,7 +3292,7 @@ int cmd_stat_port_show(struct cli_def *cli, char *command, char *argv[], int arg
 	}
 	else
 	{		
-		for (i = NUM_PORTS_MINIMUM_SYSYTEM; i <= 8; i++)
+		for (i = NUM_PORTS_MINIMUM_SYSYTEM; i < NUM_PORTS_PER_SYSTEM; i++)
 			{
 				cli_print(cli,"===========================port %d stat===========================",i);
 				show_port_statistic(cli, i);
@@ -3714,7 +3714,7 @@ typedef struct
 } uni_ingress_t;
 
 
-/*锟解部锟结供锟侥接匡拷*/
+/*外部提供的接口*/
 cs_status uni_port_check(cs_port_id_t port);
 
 cs_status ctc_oam_eth_ds_rate_limit_set_adapt(
@@ -3743,7 +3743,7 @@ cs_status ctc_oam_eth_port_policing_set_adapt(
         cs_uint32  ebs);
 
 
-/*锟节诧拷实锟街的接匡拷*/
+/*内部实现的接口*/
 cs_status port_egress_rate_get(cs_port_id_t port, cs_uint8 *enable, cs_uint32 *rate);
 cs_status port_egress_rate_set(cs_port_id_t port, cs_uint32 rate);
 int cmd_port_egress_rate_arg_check(char *argv[], int argc);
@@ -3758,7 +3758,7 @@ extern int uni_ingress_rate_config_recover(uni_ingress_t *uni_ingress_p);
 
 
 
-/*锟斤拷锟斤拷锟结供锟侥接匡拷*/
+/*向外提供的接口*/
 int cmd_port_egress_rate(struct cli_def *cli, char *command, char *argv[], int argc);
 int cmd_port_ingress_rate(struct cli_def *cli, char *command, char *argv[], int argc);
 extern int uni_egress_rate_tlv_infor_handle(int len, char *data, int opcode);
@@ -4005,13 +4005,13 @@ int cmd_port_ingress_rate(struct cli_def *cli, char *command, char *argv[], int 
 	
 	if(CLI_HELP_REQUESTED)
 	{
-		/*锟斤拷锟斤拷锟斤拷莸暮戏锟斤拷约锟斤拷*/
+		/*参数数据的合法性检查*/
 		if(cmd_port_ingress_rate_arg_check(argv, argc-1) != CLI_OK)
 		{
 			return CLI_ERROR;
 		}
 
-		/*锟斤拷示锟斤拷锟斤拷锟斤拷息*/
+		/*显示帮助信息*/
 		switch (argc)
 		{
 			case 1:
@@ -4061,7 +4061,7 @@ int cmd_port_ingress_rate(struct cli_def *cli, char *command, char *argv[], int 
 		}
 	}
 
-	/*锟斤拷锟斤拷锟斤拷莸暮戏锟斤拷约锟斤拷*/
+	/*参数数据的合法性检查*/
 	if(cmd_port_ingress_rate_arg_check(argv, argc) != CLI_OK)
 	{
 		return CLI_ERROR;
