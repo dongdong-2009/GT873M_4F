@@ -1218,7 +1218,11 @@ static cs_int32 mrv_cpu_tx_parse(cs_uint8 *pkt_in, cs_uint16 in_len, cs_uint8 *p
 
 	if(pkt_in && pkt_out && out_len && in_len > 8)
 	{
+#if 0
 		*out_len = in_len-8;
+#else
+		*out_len = in_len;
+#endif
 		memcpy(pkt_out, pkt_in, *out_len);
 		ret = CS_E_OK;
 	}
