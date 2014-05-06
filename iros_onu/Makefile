@@ -89,12 +89,13 @@ MOD_LDFLAGS= -u imst_cli_start -u netdev_eth0 -u flash_hwr_init \
 
 ifeq ($(strip $(USING_SW_TYPE)),RTK)
 MOD_LDFLAGS += -L../libswitch -lswitch
-endif
-
+else
 ifeq ($(strip $(USING_SW_TYPE)),MRV)
 MOD_LDFLAGS += -L../gtmrv/lib -lgtmrv
+else
+$(error USING NONSUPPORT SWITCH TYPE !!!)
 endif
-
+endif
 
 
 TARGET=$(MOD_TMPHOME)/$(MOD_NAME).zblob $(MOD_TMPHOME)/$(MOD_NAME).wfs $(MOD_TMPHOME)/$(MOD_NAME).wlb

@@ -65,8 +65,7 @@ $(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_int_cmd.c \
 $(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_qos_cmd.c \
 $(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_glb_cmd.c \
 $(SWHOME)/src/onu/cmd/aal/3rd/realtek/rtk_acl_cmd.c 
-endif
-
+else
 ifeq ($(strip $(USING_SW_TYPE)),MRV)
 CFILES += $(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_fdb.c \
 $(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_ptp.c \
@@ -78,8 +77,10 @@ $(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_mc.c \
 $(SWHOME)/src/onu/sdl/mports/marvell/sdl_mrv_classify.c \
 $(SWHOME)/src/onu/cmd/aal/3rd/marvell/mrv_l2_cmd.c \
 $(SWHOME)/src/onu/cmd/aal/3rd/marvell/mrv_cmd.c
+else
+$(error USING NONSUPPORT SWITCH TYPE !!! error in $(PWD)/libsdl/Makefile)
 endif
-
+endif
 MOD_INCLUDES=-I$(ECOS_INSTALL_HOME)/include \
 -I$(SWHOME)/src/cmn/plat/include \
 -I$(SWHOME)/src/cmn/plat/osal/ecos \
