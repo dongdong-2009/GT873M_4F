@@ -1555,7 +1555,6 @@ cs_status epon_request_onu_fdb_entry_get_byindex_per_port(
 	if(found == GT_TRUE)
 		break;
 #endif
-	cs_printf("into statuc88\n");
     FOR_UNIT_END
 #if 1
     if(found == GT_TRUE)
