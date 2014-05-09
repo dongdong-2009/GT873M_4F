@@ -258,7 +258,7 @@ void allocate_bridge_mac(GT_ETHERADDR * mac)
 
 	memcpy(&mac, &new_bridge_mac, sizeof (*mac));
 }
-
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
 void switch_reset()
 {
     cs_callback_context_t context;
@@ -276,7 +276,7 @@ void switch_reset()
 //    cs_printf("The status of GPIO 4 is %d\r\n",status);
 	return;
 }
-
+#endif
 extern void mrv_switch_init(IN  GT_QD_DEV    *dev);
 /*******************************************************************************************
   Description   : This function will initialize the 88E6095 switch chip.
@@ -1384,7 +1384,6 @@ GT_STATUS switch_default_config(GT_QD_DEV * dev)
     }
 #endif	
 #ifndef _SIMPLEST_
-	MSG_OUT(( "Stage 1\r\n"));
 	for(i=0; i<NUM_PORTS_PER_SWITCH; i++)
 	{
 		/* Disable Energydetect function of the integated PHY */

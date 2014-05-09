@@ -201,7 +201,7 @@ cdl_option IMST_RAM_EXT_START {
 };
 
 cdl_option IMST_RAM_EXT_LEN {
-    user_value 0x1000000
+    user_value 0x120000
 };
 
 # application start location (not including fixed_vectors)
@@ -210,7 +210,7 @@ cdl_option IMST_RAM_APP_START {
 };
 
 cdl_option IMST_RAM_APP_LEN {
-    user_value 0x1e0000
+    user_value 0x1fe0000
 };
 
 
@@ -254,7 +254,7 @@ cdl_component CYGSEM_KERNEL_SCHED_BITMAP {
 
 
 cdl_option CYGNUM_MEMALLOC_FALLBACK_MALLOC_POOL_SIZE {
-	user_value 0x60000
+	user_value 0x70000
 };
 
 cdl_option CYGNUM_LIBC_MAIN_DEFAULT_STACK_SIZE {

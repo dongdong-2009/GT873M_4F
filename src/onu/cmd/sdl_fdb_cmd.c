@@ -189,7 +189,7 @@ static const char *fdb_cmd_usage_clr[] =
     "mode:"
     "   0: clear fdb table for all entries",
     "   1: clear fdb table for dynamic entries",
-    "   2: clear fdb table for static entries"
+    "   2: clear fdb table for static entries",
     "port num:",
     "   0: Pon port",
     "   1: UNI port 0 <if only 1 UNI port, use this value>",
