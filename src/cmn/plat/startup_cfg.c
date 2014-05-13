@@ -236,7 +236,6 @@ static void startup_config_restore(unsigned int inst_id)
 
 static int startup_config_write_to_flash(void *addr , int len)
 {
-	cs_printf("come in startup_config_write_to_flashL!!!\r\n");
 #ifdef HAVE_SCFG_PROTECTION
     unsigned int part_index = IROS_FLASH_PARTITION_INDEX_ANY;
 #endif
@@ -379,9 +378,9 @@ void startup_cfg_rebuild(unsigned int *inst_id)
     }
     startup_config_restore(new_instid);
 #if 1
-    cs_uint8 port_uni =0 ;
-    startup_config_read(CFG_ID_SWITCH_PORT_NUM, 1, &port_uni);
-    cs_printf("port_uni is %d!!!!!\r\n",port_uni);
+    cs_uint8 uni_port =0 ;
+    startup_config_read(CFG_ID_SWITCH_PORT_NUM, 1, &uni_port);
+    cs_printf("UNI_PORT_NUM is %d \r\n",uni_port);
 #endif
     rsvd_flag = rsvd_flag|TLV_CFG_ENC_FLAG;
     tlv_write_flag(new_instid, rsvd_flag);

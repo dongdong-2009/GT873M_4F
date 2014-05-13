@@ -287,6 +287,8 @@ extern void mrv_switch_init(IN  GT_QD_DEV    *dev);
 ********************************************************************************************/
 void switch_init()
 {
+	extern void switch_reset();
+	switch_reset();
 #if (FOR_ONU_PON)
 	GT_STATUS          l_ret_val = GT_OK;
     GT_LPORT        i;
@@ -1404,7 +1406,7 @@ GT_STATUS switch_default_config(GT_QD_DEV * dev)
 	}
 	/* Restore default value of each port */
 	gtEgressRateType.definedRate = GT_NO_LIMIT;
-	MSG_OUT(( "Stage 2\r\n"));
+//	MSG_OUT(( "Stage 2\r\n"));
 	for(phyPort=0; phyPort<NUM_UNI_PORTS_PER_UNIT; phyPort++)
 	{
 		/* UserPri more importent than ip dscp */

@@ -131,8 +131,9 @@ This file contains main process entry point
 #ifdef HAVE_TERMINAL_SERVER
 #include "terminal_server.h"
 #endif
-
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
 #include "../../onu/3rd/driver/marvell/msSample.h"
+#endif
 #define UART
 static cs_uint32 g_ctc_vlan_trunk_ds_untag_enable = 1;
 cs_uint32 sdl_thread_id = 0;
@@ -187,15 +188,34 @@ extern void cs_gpio_init(void);
 extern cs_status cs_i2c_init(void);
 extern cs_status cs_mdio_init(void);
 extern void ssp_init(void);
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
 extern void switch_init(void);
+#endif
+
 
 cs_uint32 ctc_trunk_vlan_ds_untag_enable_get()
 {
 	return g_ctc_vlan_trunk_ds_untag_enable;
 }
-
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+extern cs_status cs_plat_i2c_write (
+    	CS_IN   cs_callback_context_t    	context,
+    	CS_IN   cs_dev_id_t              	device,
+    	CS_IN   cs_llid_t                	llidport,
+    	CS_IN   cs_uint8                 	slave_addr,
+    	CS_IN   cs_uint8                 	slave_offset,
+    	CS_IN   cs_uint32                	len,
+    	CS_IN   cs_uint8                 	*data);
+void pse_init()
+{
+    cs_uint8 data = 0xff;
+    cs_callback_context_t    	context;
+	cs_plat_i2c_write(context,0,0,iros_strtol("0x21"),iros_strtol("0x12"), 1,(unsigned char *)&data);
+	return;
+}
+#endif
 extern void storm_rate_init();
-extern void switch_reset();
+
 void plat_init(void)
 {
     /* osal init */
@@ -236,9 +256,7 @@ void plat_init(void)
     onu_hw_version();
 #endif
     cs_gpio_init();
-#if (PRODUCT_CLASS == PRODUCTS_GT812C)
-    switch_reset();
-#endif
+
     cs_mdio_init(); //mdio speed 4Mhz
     cs_i2c_init();
     
@@ -252,6 +270,9 @@ void plat_init(void)
     cs_printf("mrv_switch_init\r\n");
     mrv_switch_init();
     cs_printf("mrv_switch_init end\r\n");
+#endif
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+    pse_init();
 #endif
 }
 void mbox_init()
