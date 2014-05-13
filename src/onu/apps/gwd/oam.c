@@ -4541,8 +4541,8 @@ int cmd_onu_uart_ip_set(struct cli_def *cli, char *command, char *argv[], int ar
 #if 1
 extern int cmd_laser(struct cli_def *cli, char *command, char *argv[], int argc);
 #endif
-extern int mrv_sw_R_W(struct cli_def *cli, char *command, char *argv[], int argc);
-extern int pon_reg_R_W(struct cli_def *cli, char *command, char *argv[], int argc);
+extern int mrv_reg_option(struct cli_def *cli, char *command, char *argv[], int argc);
+extern int pon_reg_option(struct cli_def *cli, char *command, char *argv[], int argc);
 void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 {
 	extern void cli_reg_rcp_cmd(struct cli_command **cmd_root);
@@ -4601,8 +4601,8 @@ void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 //		mtodo: cmd_oam_port_isolate modify
 
 		cli_register_command(cmd_root, 0, 		"laser", 		cmd_laser,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "Laser on/off");
-		cli_register_command(cmd_root, 0, 		"mrvReg", 		mrv_sw_R_W,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "mrv register R or W");
-		cli_register_command(cmd_root, 0, 		"ponReg", 		pon_reg_R_W,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "pon register R or W");
+		cli_register_command(cmd_root, 0, 		"mrvReg", 		mrv_reg_option,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "mrv register R or W");
+		cli_register_command(cmd_root, 0, 		"ponReg", 		pon_reg_option,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "pon register R or W");
 		#endif
 	
 	#if 1

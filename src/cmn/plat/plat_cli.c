@@ -707,6 +707,29 @@ static int i2c_cmd_proc(int argc, char **argv)
                     cs_printf("i2c write slave_address offset data\n");
             }
         }
+        else if(cmd_cmp(argv[1], "all"))
+        {
+        	cyg_uint8 data;
+        	cyg_uint8 i = 0;
+
+        	cs_printf("\n0x21\n");
+        	for(i = 0;i< 0x1f;i++)
+        	{
+        		if(i%10 == 0)
+        			cs_printf("\n0x%2x    ",i);
+        		cs_plat_i2c_read(context,0,0,iros_strtol("0x21"),i,1,&data);
+        		cs_printf("0x%2x     ",data);
+        	}
+        	cs_printf("\n\n0x22\n");
+        	for(i = 0;i< 0x1f;i++)
+        	{
+        		if(i%10 == 0)
+        			cs_printf("\n0x%2x    ",i);
+        		cs_plat_i2c_read(context,0,0,iros_strtol("0x22"),i,1,&data);
+        		cs_printf("0x%2x     ",data);
+        	}
+        	cs_printf("\n\n");
+        }
         else
         {
                 cs_printf("Invalid Command\n");

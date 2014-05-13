@@ -101,20 +101,20 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 static cs_uint8 packet_buf[CS_ETHER_MTU];
 extern cs_uint32 PTY_ENABLE;
 
-static cs_boolean app_ipintf_send_need_check_vlan()
-{
-
-#if FOR_ONU_PON
-#if( PRODUCT_CLASS == PRODUCTS_GT812C )
-	return FALSE;
-#else
-	return TRUE;
-#endif
-#elif( 1 )
-#else
-#error "PRODUCT_CLASS must be set!!!"
-#endif
-}
+//static cs_boolean app_ipintf_send_need_check_vlan()
+//{
+//
+//#if FOR_ONU_PON
+//#if( PRODUCT_CLASS == PRODUCTS_GT812C )
+//	return FALSE;
+//#else
+//	return TRUE;
+//#endif
+//#elif( 1 )
+//#else
+//#error "PRODUCT_CLASS must be set!!!"
+//#endif
+//}
 
 /*
 *   PROTOTYPE    void app_ipintf_build_arp_packet(cs_pkt_t *pkt)
@@ -273,13 +273,14 @@ cs_status app_ipintf_arp_pre_process(cs_pkt_t* pkt)
     
     macHdr = (epon_macaddr_header_t*)ptr;
     if(app_ipintf_my_ipaddr_equal(targetip)) {
-	//	cs_printf("................................1\n");
+		cs_printf("................................1\n");
         if(app_ipintf_arp_rx_filter) {
             if(app_ipintf_arp_rx_filter(pkt) == IPINTF_DROP) {
-			//	cs_printf("....................................drop\n");
+				cs_printf("....................................drop\n");
                 return CS_E_ERROR;
             }
         }
+        cs_printf("not drop!!!\n");
         if(!((app_ipintf_macaddr_equal(macHdr->dst, app_ipintf_get_my_macaddr(), 6))||
             (app_ipintf_macaddr_equal(macHdr->dst, bc_mac, 6)))) {
                 APP_IPINTF_LOG(IROS_LOG_LEVEL_DBG3,"Drop due to invalid mac\n");
@@ -293,7 +294,7 @@ cs_status app_ipintf_arp_pre_process(cs_pkt_t* pkt)
         * For upstream, forward packets to PON port only.
         * For downstream, forward packets to all active UNI ports.
         */	
-     //   cs_printf(".............................................2\n");
+        cs_printf(".............................................2\n");
         ret = vlan_ingress_filter(pkt);
         if(ret != CS_E_OK) {
             APP_IPINTF_LOG(IROS_LOG_LEVEL_DBG3,"Drop due to invalid vlan\n");
@@ -333,7 +334,7 @@ cs_status app_ipintf_arp_pre_process(cs_pkt_t* pkt)
                 
                 APP_IPINTF_LOG(IROS_LOG_LEVEL_DBG3, "RX to TX len %d,sport %d, dport %d\n", 
                                                                                       pkt->len,pkt->port, PTABLE[i].port);
-                if(app_ipintf_send_need_check_vlan())
+                if(1)
                     ret |= app_ipintf_send_pkt_with_vlan_check(PTABLE[i].port, pkt, packet_buf);
                 else
                 	ret |= app_ipintf_send_pkt(PTABLE[i].port, pkt);

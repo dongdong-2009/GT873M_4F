@@ -101,7 +101,7 @@ int RevPkt_Marvel_Handler(char *org, char *out, int *len )
 #if (FOR_MRV_INDUSTRY_SW)
         if (MRVTAG_HEAD == ulMrvTagtype)
         {
-       		memcpy(out,org+2,*len-2);/*两字节头*/
+       		memcpy(out,org+2,*len-2);/*锟斤拷锟街斤拷头*/
                *len -= 2;
 			return 0;		
 			
@@ -1827,7 +1827,7 @@ GT_STATUS switch_default_config(GT_QD_DEV * dev)
 	        gtAtuEntryBc.macAddr.arEther[i] = 0xFF;
 	    gtAtuEntryBc.portVec = 0;
 	  	for ( phyPort=0; phyPort<dev->maxPorts; phyPort++ )
-	  	{/* zhangxinhui 加入这两个端口后，PON与IAD很快失去联系，原因不明 */
+	  	{/* zhangxinhui 锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟剿口猴拷PON锟斤拷IAD锟杰匡拷失去锟斤拷系锟斤拷原锟斤拷锟斤拷 */
 	  	/*if ((phyPort != 8) && (phyPort != 9))*/
 	    	gtAtuEntryBc.portVec |= 1<<phyPort;
 	  	}
@@ -1850,7 +1850,7 @@ GT_STATUS switch_default_config(GT_QD_DEV * dev)
 	        gtAtuEntryMcLn.macAddr.arEther[i] = Mc_LocalNetwork[i];
 	    gtAtuEntryMcLn.portVec = 0;
 	  	for ( phyPort=0; phyPort<dev->maxPorts; phyPort++ )
-	  	{ /* zhangxinhui 加入这两个端口后，PON与IAD很快失去联系，原因不明 */
+	  	{ /* zhangxinhui 锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟剿口猴拷PON锟斤拷IAD锟杰匡拷失去锟斤拷系锟斤拷原锟斤拷锟斤拷 */
 	  	/*if ((phyPort != 8) && (phyPort != 9))*/
 	    	gtAtuEntryMcLn.portVec |= 1<<phyPort;
 	  	}
@@ -2397,7 +2397,7 @@ GT_STATUS smiChannelSemGive(void)
 	return gtRet;
 }
 
-#if 0 //mtodo 暂时关闭多芯片连接方式的端口模式设置
+#if 0 //mtodo 锟斤拷时锟截闭讹拷芯片锟斤拷锟接凤拷式锟侥端匡拷模式锟斤拷锟斤拷
 
 GT_STATUS setDSAMode(GT_BOOL mode)
 {

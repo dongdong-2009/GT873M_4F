@@ -220,6 +220,7 @@ cs_boolean app_ipintf_my_ipaddr_equal(cs_uint32 target_ip)
 
 	eth0_ip_get(&eth0_ip);
 	eth1_ip_get(&eth1_ip);
+	cs_printf("eth0ip is %x eht1_ip is %x targetip is %x\r\n",eth0_ip,eth1_ip,target_ip);
 
 #if 0
 	cs_printf("target_ip :0x%x, eth0_ip: 0x%x, eth1_ip :0x%x\n", target_ip, eth0_ip, eth1_ip);
@@ -584,7 +585,7 @@ cs_uint8 app_ipintf_pkt_recv(cs_pkt_t* pkt)
     else { 
         rc = app_ipintf_ip_pre_process(pkt);
     }
-
+cs_printf("rc is %d\n",rc);
     if(rc != 0) {
         APP_IPINTF_LOG(IROS_LOG_LEVEL_DBG3,"%s, does not send to IP stack, 0x%x\n", __func__, (int)pkt);
         IPINTF_STATIS_INC(DROP, pkt->port);
