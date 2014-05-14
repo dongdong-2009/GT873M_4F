@@ -2,8 +2,11 @@
 #define _MC_CORE_H
 
 #include "mc_pkt.h"
-
-#define MC_MAX_PORT    32
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+#define MC_MAX_PORT    10
+#else
+#define MC_MAX_PORT    8
+#endif
 #define MC_MAX_VLAN     4095
 
 #define         MC_PORT_DEFAULT_GROUP           32
