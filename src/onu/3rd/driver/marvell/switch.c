@@ -101,7 +101,7 @@ int RevPkt_Marvel_Handler(char *org, char *out, int *len )
 #if (FOR_MRV_INDUSTRY_SW)
         if (MRVTAG_HEAD == ulMrvTagtype)
         {
-       		memcpy(out,org+2,*len-2);/*ï¿½ï¿½ï¿½Ö½ï¿½Í·*/
+       		memcpy(out,org+2,*len-2);/*Á½×Ö½ÚÍ·*/
                *len -= 2;
 			return 0;		
 			
@@ -1828,7 +1828,7 @@ GT_STATUS switch_default_config(GT_QD_DEV * dev)
 	        gtAtuEntryBc.macAddr.arEther[i] = 0xFF;
 	    gtAtuEntryBc.portVec = 0;
 	  	for ( phyPort=0; phyPort<dev->maxPorts; phyPort++ )
-	  	{/* zhangxinhui ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë¿Úºï¿½PONï¿½ï¿½IADï¿½Ü¿ï¿½Ê§È¥ï¿½ï¿½Ïµï¿½ï¿½Ô­ï¿½ï¿½ï¿½ï¿½ */
+	  	{/* zhangxinhui ¼ÓÈëÕâÁ½¸ö¶Ë¿Úºó£¬PONÓëIADºÜ¿ìÊ§È¥ÁªÏµ£¬Ô­Òò²»Ã÷ */
 	  	/*if ((phyPort != 8) && (phyPort != 9))*/
 	    	gtAtuEntryBc.portVec |= 1<<phyPort;
 	  	}
@@ -1851,7 +1851,7 @@ GT_STATUS switch_default_config(GT_QD_DEV * dev)
 	        gtAtuEntryMcLn.macAddr.arEther[i] = Mc_LocalNetwork[i];
 	    gtAtuEntryMcLn.portVec = 0;
 	  	for ( phyPort=0; phyPort<dev->maxPorts; phyPort++ )
-	  	{ /* zhangxinhui ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë¿Úºï¿½PONï¿½ï¿½IADï¿½Ü¿ï¿½Ê§È¥ï¿½ï¿½Ïµï¿½ï¿½Ô­ï¿½ï¿½ï¿½ï¿½ */
+	  	{ /* zhangxinhui ¼ÓÈëÕâÁ½¸ö¶Ë¿Úºó£¬PONÓëIADºÜ¿ìÊ§È¥ÁªÏµ£¬Ô­Òò²»Ã÷ */
 	  	/*if ((phyPort != 8) && (phyPort != 9))*/
 	    	gtAtuEntryMcLn.portVec |= 1<<phyPort;
 	  	}
@@ -2398,7 +2398,7 @@ GT_STATUS smiChannelSemGive(void)
 	return gtRet;
 }
 
-#if 0 //mtodo ï¿½ï¿½Ê±ï¿½Ø±Õ¶ï¿½Ð¾Æ¬ï¿½ï¿½ï¿½Ó·ï¿½Ê½ï¿½Ä¶Ë¿ï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½
+#if 0 //mtodo ÔÝÊ±¹Ø±Õ¶àÐ¾Æ¬Á¬½Ó·½Ê½µÄ¶Ë¿ÚÄ£Ê½ÉèÖÃ
 
 GT_STATUS setDSAMode(GT_BOOL mode)
 {
@@ -3068,7 +3068,7 @@ void mrv_switch_init(IN  GT_QD_DEV    *dev)
 	unsigned short datatmp = 0;
 	unsigned short mask;
 	unsigned int numOfPorts;
-	unsigned int maxcopperPorts = 6;/*GIS2109ç³»åˆ—ç”µå£æœ€å¤š6ä¸ª*/
+	unsigned int maxcopperPorts = 6;/*GIS2109ÏµÁÐµç¿Ú×î¶à6¸ö*/
 	unsigned int cpuPortNum;
 	unsigned int   deviceId;
 	int i;
@@ -3107,7 +3107,7 @@ void mrv_switch_init(IN  GT_QD_DEV    *dev)
 	datatmp &= ~mask;
 	miiSmiIfWriteRegister(dev,0x1B,MRV_GLOBAL_CONTROL_REG,datatmp);
 	cs_printf("mrv_switch_init 33\r\n");
-	for(i=0; i<maxcopperPorts; i++)/*åªè®¾ç”µå£phyï¼Œé¿å…è®¾ç½®GIS2109-6T-3Gçš„cpuå£(7å£)çš„å¤–æŽ¥phyï¼Œå¦åˆ™bspä¸‹cpuä¸é€š*/
+	for(i=0; i<maxcopperPorts; i++)/*Ö»Éèµç¿Úphy£¬±ÜÃâÉèÖÃGIS2109-6T-3GµÄcpu¿Ú(7¿Ú)µÄÍâ½Óphy£¬·ñÔòbspÏÂcpu²»Í¨*/
 	{
 		miiSmiIfReadRegister(dev,i,MRV_PHY_SPEC_CONTROL_REG,&datatmp);/*disable Energydetect*/
 		mask = 1U << 14;
@@ -3122,7 +3122,7 @@ void mrv_switch_init(IN  GT_QD_DEV    *dev)
 		datatmp |= MRV_PHY_MODE_AUTO_AUTO;
 		miiSmiIfWriteRegister(dev,i,MRV_PHY_AUTONEGO_AD_REG,datatmp);
 
-		miiSmiIfReadRegister(dev,i,MRV_PHY_CONTROL_REG,&datatmp);/*enable autonegã€reatart autoneg*/
+		miiSmiIfReadRegister(dev,i,MRV_PHY_CONTROL_REG,&datatmp);/*enable autoneg restart autoneg*/
 		datatmp = (datatmp & (MRV_PHY_SPEED | MRV_PHY_DUPLEX)) | MRV_PHY_AUTONEGO;
 		if(datatmp & 1U<<11)
 			datatmp &= ~(1U<<11);

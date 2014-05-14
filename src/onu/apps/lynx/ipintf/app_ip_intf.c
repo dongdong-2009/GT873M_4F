@@ -454,16 +454,16 @@ void netdev_pkt_recv(cs_pkt_t * event_buf)
 			memcpy(w_buf,(frame_buf+26),8);
 		}
 	rcv_dip = ntohl(w_buf->d_ip);
-	cs_printf("ip:0x%08x\n",rcv_dip);
-	cs_printf("loip:0x%08x\n",ipintf_info.localip);
+//	cs_printf("ip:0x%08x\n",rcv_dip);
+//	cs_printf("loip:0x%08x\n",ipintf_info.localip);
 	if(ipintf_info.localip == rcv_dip)
 		{
-		    cs_printf("ip == loip\n");
+//		    cs_printf("ip == loip\n");
 			sc = &eth_drv_sc_eth1;
 		}
 	else
 		{
-			cs_printf("ip != loip\n");
+//			cs_printf("ip != loip\n");
 			sc = &eth_drv_sc_eth0;
 		}  
 	

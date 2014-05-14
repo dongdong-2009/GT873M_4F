@@ -220,7 +220,7 @@ cs_boolean app_ipintf_my_ipaddr_equal(cs_uint32 target_ip)
 
 	eth0_ip_get(&eth0_ip);
 	eth1_ip_get(&eth1_ip);
-	cs_printf("eth0ip is %x eht1_ip is %x targetip is %x\r\n",eth0_ip,eth1_ip,target_ip);
+//	cs_printf("eth0ip is %x eht1_ip is %x targetip is %x\r\n",eth0_ip,eth1_ip,target_ip);
 
 #if 0
 	cs_printf("target_ip :0x%x, eth0_ip: 0x%x, eth1_ip :0x%x\n", target_ip, eth0_ip, eth1_ip);
@@ -575,7 +575,16 @@ cs_uint8 app_ipintf_pkt_recv(cs_pkt_t* pkt)
 
     APP_IPINTF_LOG(IROS_LOG_LEVEL_DBG0,"%s, sport %d, len %d, vlan %d, type %d\n", 
         __func__, pkt->port, pkt->len, pkt->svlan, pkt->eth_type);
+#if 0
+    cs_uint8 i=0;
     
+    for(i=0;i<pkt->len;i++)
+    {
+    	if(0 ==i%16)
+    		cs_printf("\ni   ");
+    	cs_printf("0x%02x   ",*((cs_uint8*)pkt+i));
+    }
+#endif
     IPINTF_STATIS_INC(RECV, pkt->port);
    // app_ipintf_mac_learning(pkt);
     
@@ -585,7 +594,7 @@ cs_uint8 app_ipintf_pkt_recv(cs_pkt_t* pkt)
     else { 
         rc = app_ipintf_ip_pre_process(pkt);
     }
-cs_printf("rc is %d\n",rc);
+//cs_printf("rc is %d\n",rc);
     if(rc != 0) {
         APP_IPINTF_LOG(IROS_LOG_LEVEL_DBG3,"%s, does not send to IP stack, 0x%x\n", __func__, (int)pkt);
         IPINTF_STATIS_INC(DROP, pkt->port);

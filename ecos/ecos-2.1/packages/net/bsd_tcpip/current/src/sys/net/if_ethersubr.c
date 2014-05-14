@@ -601,14 +601,11 @@ ether_demux(ifp, eh, m)
 		break;
 
 	case ETHERTYPE_ARP:
-		cs_printf("In stack arp case...ifp->if_flags is %x\r\n",ifp->if_flags);
 		if (ifp->if_flags & IFF_NOARP) {
-			cs_printf("In stack arp case1...\r\n");
 			/* Discard packet if ARP is disabled on interface */
 			m_freem(m);
 			return;
 		}
-		cs_printf("In stack arp case2...\r\n");
 		schednetisr(NETISR_ARP);
 		inq = &arpintrq;
 		break;
