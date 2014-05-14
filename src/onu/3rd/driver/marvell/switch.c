@@ -272,6 +272,7 @@ void switch_reset()
 //    cs_printf("The status of GPIO 4 is %d\r\n",status);
     cyg_thread_delay(50);
     cs_plat_gpio_write(context, 0, 0, 4, 1);
+    cyg_thread_delay(50);
 //    cs_plat_gpio_read(context, 0, 0, 4, &status);
 //    cs_printf("The status of GPIO 4 is %d\r\n",status);
 	return;

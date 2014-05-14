@@ -707,11 +707,27 @@ static int i2c_cmd_proc(int argc, char **argv)
                     cs_printf("i2c write slave_address offset data\n");
             }
         }
+#if 0
         else if(cmd_cmp(argv[1], "all"))
         {
-        	cyg_uint8 data;
-        	cyg_uint8 i = 0;
+        	cs_printf("get stack 1M success\r\n");
+//        	cyg_uint8 data;
+//        	cyg_uint8 i = 0;
+        	cyg_uint8 *array;
 
+        	cs_printf("get stack 1M success\r\n");
+        	cs_printf("get stack 1M success\r\n");
+        	array=(cyg_uint8*)malloc(0x100000);
+        	if(array!=NULL)
+        	{
+        		cs_printf("Success!\r\n");
+
+        	}
+        	else
+        	{
+        		cs_printf("error\r\n");
+        	}
+#if 0
         	cs_printf("\n0x21\n");
         	for(i = 0;i< 0x1f;i++)
         	{
@@ -729,7 +745,9 @@ static int i2c_cmd_proc(int argc, char **argv)
         		cs_printf("0x%2x     ",data);
         	}
         	cs_printf("\n\n");
+#endif
         }
+#endif
         else
         {
                 cs_printf("Invalid Command\n");
