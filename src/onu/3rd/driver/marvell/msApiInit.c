@@ -13,7 +13,8 @@
 #include "msSample.h"
 
 #include "MARVELL_BSP_expo.h"
-
+#include "cs_types.h"
+#include "mdio.h"
 /*
 #define MULTI_ADDR_MODE
 #define MANUAL_MODE
@@ -117,7 +118,20 @@ GT_STATUS status;
 
 	return GT_OK;
 }
+//extern cs_status cs_mdio_speed_set(cs_uint8 	intf_addr, cs_uint32 freq_khz);
+int marvellMdioInit()
+{
+  cs_uint8 i = 0;
 
+  for(i=0; i<MDIO_MAX_DEVICE_NUM; i++)
+  {
+	  if(GT_OK != cs_mdio_speed_set(i, 4000))
+	  {
+		  cs_printf("init mdio %d error \r\n",i);
+	  }
+  }
+  return GT_OK;
+}
 /*******************************************************************************************
   Description   : init the Marvell switch driver for Passave ONU boards
   In params     : cfg       -   pointer to Marvell switch driver configuration structure
@@ -153,6 +167,7 @@ GT_STATUS Marvell_driver_initialize(GT_SYS_CONFIG * cfg, GT_QD_DEV * dev,
 	cfg->BSPFunctions.semTake   = NULL;
 	cfg->BSPFunctions.semGive   = NULL;
 #endif
+	marvellMdioInit();
 	gtBspMiiInit(dev);
 
 	if((status=qdLoadDriver(cfg, dev)) != GT_OK)

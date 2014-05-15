@@ -253,7 +253,6 @@ int cmd_laser(struct cli_def *cli, char *command, char *argv[], int argc)
 #endif
 extern int mrv_reg_read(unsigned char dev_addr, unsigned char reg_addr, unsigned short *data);
 extern int mrv_reg_write(unsigned char dev_addr, unsigned char reg_addr, unsigned short data);
-extern void mrv_switch_init_t();
 int mrv_reg_option(struct cli_def *cli, char *command, char *argv[], int argc)
 {
     if(CLI_HELP_REQUESTED)
@@ -302,10 +301,6 @@ int mrv_reg_option(struct cli_def *cli, char *command, char *argv[], int argc)
     		sscanf(argv[3],"%x",&reg_data);
     		mrv_reg_write(dev_addr, reg_addr, reg_data);
     		cli_print(cli, "Read mrv switch dev_addr 0x%x reg_addr 0x%x data is 0x%x\r\n",dev_addr, reg_addr, reg_data);
-    	}
-    	else if(argv[0][0] == 'i')
-    	{
-    		mrv_switch_init_t();
     	}
     	else
     	{

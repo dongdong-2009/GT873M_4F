@@ -364,6 +364,18 @@ cs_int32 IFM_GET_FIRST_PORTONVLAN(cs_ulong32 *ulport, cs_uint16 vid)
 
 	return GWD_RETURN_ERR;
 }
+cs_uint8 onu_product_ID_get()
+{
+#if (PRODUCT_CLASS == PRODUCTS_GT811D)
+    return DEVICE_TYPE_GT811D;
+#elif(PRODUCT_CLASS == PRODUCTS_GT811G)
+    return DEVICE_TYPE_GT811G;
+#elif(PRODUCT_CLASS == PRODUCTS_GT873_M_4F4S)
+    return DEVICE_TYPE_GT873_M_4F4S;
+#elif(PRODUCT_CLASS == PRODUCTS_GT812C)
+    return DEVICE_TYPE_GT812C;
+#endif
+}
 
 cs_uint8* onu_product_name_get(cs_uint8 productID)
 {
@@ -427,6 +439,8 @@ cs_uint8* onu_product_name_get(cs_uint8 productID)
 			return "GT811D";
 	    case DEVICE_TYPE_GT811G:
 			return "GT811G";
+	    case DEVICE_TYPE_GT812C:
+	    	return "GT812C";
 		default:
 			return "UNKNOWN";
 	}
@@ -460,7 +474,6 @@ cs_uint32 Onu_Loop_Detect_Set_FDB(cs_boolean  opr)
        // cs_int32 iRet; 
         cs_sdl_fdb_entry_t fdb_entry;
 		//cs_port_id_t i;
-        rtk_chip_id_t sw_chiptype;
 		//cs_callback_context_t context;
 #if 0 // commented by wangxy 2014-02-12
 		rtk_chip_id_get(&sw_chiptype);
@@ -477,38 +490,6 @@ cs_uint32 Onu_Loop_Detect_Set_FDB(cs_boolean  opr)
             memset(&fdb_entry, 0, sizeof(fdb_entry));
             memcpy(&fdb_entry.mac.addr, &loop_detect_mac, 6);
             fdb_entry.type = SDL_FDB_ENTRY_STATIC;
-            
-            if (sw_chiptype == RTK_CHIP_8305)
-            	{
-            	#if 0
-            		for(i = CS_UNI_PORT_ID1; i <= CS_UNI_PORT_ID4; i++)
-            			{
-            				fdb_entry.port = i;
-            				iRet = epon_request_onu_fdb_entry_add(context, 0, 0, &fdb_entry);
-						    if (iRet != EPON_RETURN_SUCCESS)
-				            {
-				                LOOPBACK_DETECT_DEBUG(("\r\nOnu_Loop_Detect_Set_FDB func fdb add error for port %d.",fdb_entry.port));
-				               // return 1;
-				            }
-            			}
-				#endif
-            	}
-			else
-				{
-				#if 0
-					 for(i = CS_UNI_PORT_ID1; i <= CS_UNI_PORT_ID4; i++)
-            			{
-            				fdb_entry.port = i;
-            				iRet = epon_request_onu_fdb_entry_add(context, 0, 0, &fdb_entry);
-						    if (iRet != EPON_RETURN_SUCCESS)
-				            {
-				                LOOPBACK_DETECT_DEBUG(("\r\nOnu_Loop_Detect_Set_FDB func fdb add error for port %d.",fdb_entry.port));
-				               // return 1;
-				            }
-            			}
-				#endif
-				}
-            
         }
 
         return 0;
@@ -1181,7 +1162,7 @@ cs_int32 lpbDetectTransFrames(cs_uint16 usVid)
     packet_head->Ethtype = htons(ETH_TYPE_LOOP_DETECT);
     packet_head->LoopFlag = htons(LOOP_DETECT_CHECK);
     packet_head->OltType = type;
-    packet_head->OnuType = (cs_uint8)DEVICE_TYPE_GT812C;
+    packet_head->OnuType = (cs_uint8)onu_product_ID_get();
     memset(packet_head->OnuLocation, 0, 4);
     memset(&packet_head->OnuLocation[1], (cs_uint8)ulSlot, 1);
     memset(&packet_head->OnuLocation[2], (cs_uint8)ulPon, 1);

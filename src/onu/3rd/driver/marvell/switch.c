@@ -278,7 +278,6 @@ void switch_reset()
 	return;
 }
 #endif
-extern void mrv_switch_init(IN  GT_QD_DEV    *dev);
 /*******************************************************************************************
   Description   : This function will initialize the 88E6095 switch chip.
   In params     : None.
@@ -3032,7 +3031,7 @@ int mrv_reg_write(unsigned char dev_addr, unsigned char reg_addr, unsigned short
 
 
 
-#if 1
+#if 0
 
 #define MRV_SWITCH_ID_REG	0x03
 #define MRV_PORT_CONTROL_REG 0x04

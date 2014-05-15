@@ -197,7 +197,7 @@ cs_uint32 ctc_trunk_vlan_ds_untag_enable_get()
 {
 	return g_ctc_vlan_trunk_ds_untag_enable;
 }
-#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+#if 0
 extern cs_status cs_plat_i2c_write (
     	CS_IN   cs_callback_context_t    	context,
     	CS_IN   cs_dev_id_t              	device,
@@ -209,6 +209,11 @@ extern cs_status cs_plat_i2c_write (
 void pse_init()
 {
     cs_uint8 data = 0xff;
+    /* Init PSE speed */
+    cs_i2c_speed_set(0x20,70);
+    cs_i2c_speed_set(0x21,70);
+    cs_i2c_speed_set(0x22,70);
+    cs_i2c_speed_set(0x23,70);
     cs_callback_context_t    	context;
 	cs_plat_i2c_write(context,0,0,iros_strtol("0x21"),iros_strtol("0x12"), 1,(unsigned char *)&data);
 	return;
@@ -262,16 +267,12 @@ void plat_init(void)
     
     /* register debug command */
     plat_cmd_init();
-#if 1
+
 #if (PRODUCT_CLASS == PRODUCTS_GT812C)
     switch_init();
 #endif
-#else
-    cs_printf("mrv_switch_init\r\n");
-    mrv_switch_init();
-    cs_printf("mrv_switch_init end\r\n");
-#endif
-#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+
+#if 0
     pse_init();
 #endif
 }

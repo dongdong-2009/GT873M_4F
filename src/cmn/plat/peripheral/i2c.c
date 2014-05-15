@@ -490,11 +490,6 @@ cs_status cs_i2c_init(void)
     cs_i2c_speed_set(0x50,70);
     cs_i2c_speed_set(0x51,70);
     
-    /* Init PSE speed */
-    cs_i2c_speed_set(0x20,70);
-    cs_i2c_speed_set(0x21,70);
-    cs_i2c_speed_set(0x22,70);
-    cs_i2c_speed_set(0x23,70);
     return CS_OK;
 }
 

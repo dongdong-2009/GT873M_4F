@@ -436,7 +436,6 @@ void startup_cfg_rebuild(unsigned int *inst_id)
     *inst_id = new_instid;
     return;
 }
-static void startup_config_save(cs_uint32 inst_id);
 static void startup_config_dump_hex();
 int init_flag = 0;
 void startup_config_init()
@@ -532,7 +531,6 @@ LOAD_ACTIVE_SCFG:
                     goto CFG_INIT_ERROR;
             }
         }
-
         rsvd_flag = tlv_header.reserved;
         if(rsvd_flag&TLV_CFG_ENC_FLAG)
             startup_cfg_enc_enable(1);
@@ -569,17 +567,6 @@ LOAD_ACTIVE_SCFG:
             else
                 goto CFG_INIT_ERROR;
         }
-#if 0
-        cs_uint8 port_uni =0 ;
-    startup_config_read(CFG_ID_SWITCH_PORT_NUM, 1, &port_uni);
-    cs_printf("99port_uni is %d!!!!!\r\n",port_uni);
-    port_uni = 8;
-    startup_config_write(CFG_ID_SWITCH_PORT_NUM, 1, &port_uni);
-    startup_config_save(gStartupInst);
-    port_uni =0 ;
-    startup_config_read(CFG_ID_SWITCH_PORT_NUM, 1, &port_uni);
-    cs_printf("aaport_uni is %d!!!!!\r\n",port_uni);
-#endif
         if(ver_invalid)
         {
             tlv_write_version(gStartupInst, gScfgVer);
@@ -595,11 +582,6 @@ LOAD_ACTIVE_SCFG:
         
         pInst = (tlv_instance_t *)gStartupInst;
         pInst->store = startup_config_write_to_flash;
-#if 0
-        port_uni = 8;
-        startup_config_write(CFG_ID_SWITCH_PORT_NUM, 1, &port_uni);
-        startup_config_save(gStartupInst);
-#endif
         gStartupInst_bak = tlv_inst_duplicate(pInst);
         init_flag = 1;
         return;
