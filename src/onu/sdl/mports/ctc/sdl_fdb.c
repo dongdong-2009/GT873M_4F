@@ -195,7 +195,7 @@ static void __onu_fdb_entry_clr_uplink_port (
     while(1){
         rtn = rtk_l2_addr_next_get(READMETHOD_NEXT_L2UCSPA, SWITCH_UPLINK_PORT, &address, &l2_data);   
         if (rtn != RT_ERR_OK){
-            SDL_MIN_LOG("pord: %d, address: %d.\n", portid, address);
+            SDL_MIN_LOG("pord: %d, address: %d.\n", llidport, address);
             break;
         }
         address++;

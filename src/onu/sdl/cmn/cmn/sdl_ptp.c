@@ -399,7 +399,7 @@ cs_status epon_request_onu_ptp_cfg_get(
     cs_status             rt = CS_E_OK;
 
     if((NULL==enable)||(NULL==msg_type)){
-        SDL_MIN_LOG("ERROR PARAM\n",);
+        SDL_MIN_LOG("ERROR PARAM\n");
         rt = CS_E_PARAM;
         goto END;
     }
@@ -460,7 +460,7 @@ cs_status epon_request_onu_ptp_asym_correction_set(
     cs_status             rt = CS_E_OK;
 
     if(direction>SDL_PTP_CORRECT_DIR_ADD){
-        SDL_MIN_LOG("ERROR PARAM\n",);
+        SDL_MIN_LOG("ERROR PARAM\n");
         rt = CS_E_PARAM;
         goto END;
     }
@@ -519,7 +519,7 @@ cs_status epon_request_onu_ptp_asym_correction_get(
     cs_status             rt = CS_E_OK;
 
     if((NULL==direction)||(NULL==value)){
-        SDL_MIN_LOG(" ERROR PARAM\n",);
+        SDL_MIN_LOG(" ERROR PARAM\n");
         rt = CS_E_PARAM;
         goto END;
     }
@@ -567,7 +567,7 @@ cs_status epon_request_onu_ptp_capture_eg_timestamp(
     cs_status           rt = CS_E_OK;
 
     if(NULL==timestamp){
-        SDL_MIN_LOG("ERROR PARAM\n",);
+        SDL_MIN_LOG("ERROR PARAM\n");
         rt = CS_E_PARAM;
         goto END;
     }
@@ -683,7 +683,7 @@ cs_status epon_request_onu_ptp_latch_ing_timestamp(
     cs_status           rt = CS_E_OK;
 
     if(NULL==timestamp){
-        SDL_MIN_LOG(" ERROR PARAM\n",);
+        SDL_MIN_LOG(" ERROR PARAM\n");
         rt = CS_E_PARAM;
         goto END;
     }

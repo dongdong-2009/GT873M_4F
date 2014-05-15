@@ -4606,7 +4606,9 @@ void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 //		mtodo: cmd_oam_port_isolate modify
 
 		cli_register_command(cmd_root, 0, 		"laser", 		cmd_laser,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "Laser on/off");
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
 		cli_register_command(cmd_root, 0, 		"mrvReg", 		mrv_reg_option,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "mrv register R or W");
+#endif
 		cli_register_command(cmd_root, 0, 		"ponReg", 		pon_reg_option,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "pon register R or W");
 		#endif
 	

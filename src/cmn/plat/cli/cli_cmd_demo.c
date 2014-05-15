@@ -251,6 +251,7 @@ int cmd_laser(struct cli_def *cli, char *command, char *argv[], int argc)
 }
 
 #endif
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
 extern int mrv_reg_read(unsigned char dev_addr, unsigned char reg_addr, unsigned short *data);
 extern int mrv_reg_write(unsigned char dev_addr, unsigned char reg_addr, unsigned short data);
 int mrv_reg_option(struct cli_def *cli, char *command, char *argv[], int argc)
@@ -313,7 +314,7 @@ int mrv_reg_option(struct cli_def *cli, char *command, char *argv[], int argc)
 	}
     return CLI_OK;
 }
-
+#endif
 int pon_reg_option(struct cli_def *cli, char *command, char *argv[], int argc)
 {
     if(CLI_HELP_REQUESTED)

@@ -254,7 +254,7 @@ cdl_component CYGSEM_KERNEL_SCHED_BITMAP {
 
 
 cdl_option CYGNUM_MEMALLOC_FALLBACK_MALLOC_POOL_SIZE {
-	user_value 0x70000
+	user_value 0x60000
 };
 
 cdl_option CYGNUM_LIBC_MAIN_DEFAULT_STACK_SIZE {
