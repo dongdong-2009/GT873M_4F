@@ -16,6 +16,7 @@
 #include "make_file.h"
 #include "sockets.h"
 #include "cs_cmn.h"
+#include "sdl.h"
 
 #if (GE_RATE_LIMIT == MODULE_YES)
 #include "../../sdl/cmn/cmn/sdl.h"
@@ -742,7 +743,7 @@ void Gwd_Oam_Handle(unsigned int port, unsigned char *frame, unsigned int len)
 		case ALARM_RESP:
 			if(GWD_RETURN_OK != GwOamAlarmResponse(pMessage))
 			{
-				//IROS_LOG_MAJ(IROS_MID_OAM, "Deal with OLT Alarm response Error!");
+				IROS_LOG_MAJ(IROS_MID_OAM, "Deal with OLT Alarm response Error!");
 			}
 			GwOamMessageListNodeFree(pMessage);
 			pMessage = NULL;
@@ -1517,6 +1518,10 @@ static int GwOamAlarmResponse(GWTT_OAM_MESSAGE_NODE *pRequest )
 	{
 		case ONU_TEMPRATURE_ALARM:
 		{	
+			break;
+		}
+		case ONU_PORT_LOOP_ALARM:
+		{
 			break;
 		}
 		case ONU_ETH_PORT_STATE:
@@ -3292,7 +3297,7 @@ int cmd_stat_port_show(struct cli_def *cli, char *command, char *argv[], int arg
 	}
 	else
 	{		
-		for (i = NUM_PORTS_MINIMUM_SYSYTEM; i < NUM_PORTS_PER_SYSTEM; i++)
+		for (i = CS_UNI_PORT_ID1; i <= UNI_PORT_MAX; i++)
 			{
 				cli_print(cli,"===========================port %d stat===========================",i);
 				show_port_statistic(cli, i);
