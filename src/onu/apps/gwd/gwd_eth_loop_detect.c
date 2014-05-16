@@ -91,6 +91,8 @@ log_phy_map_t log_phy_map[NUM_PORTS_PER_SYSTEM] = {
     ,{0, (PHY_PORT_FE0+7)}
     ,{0, (PHY_PORT_FE0+10)}
 };
+#else
+#error "undfined product type"
 #endif
 
 cs_int8 port_loop_back_session[8]="";
@@ -475,14 +477,6 @@ cs_uint32 Onu_Loop_Detect_Set_FDB(cs_boolean  opr)
         cs_sdl_fdb_entry_t fdb_entry;
 		//cs_port_id_t i;
 		//cs_callback_context_t context;
-#if 0 // commented by wangxy 2014-02-12
-		rtk_chip_id_get(&sw_chiptype);
-        if (sw_chiptype && (sw_chiptype != 1))
-        {
-               return 1;
-        }
-        LOOPBACK_DETECT_DEBUG(("\r\nOnu_Loop_Detect_Set_FDB func sw_chiptype is : %x", sw_chiptype));
-#endif
 
         if (opr)
         {

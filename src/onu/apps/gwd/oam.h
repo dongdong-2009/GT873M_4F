@@ -250,7 +250,8 @@ extern cs_ulong32   gulDebugOamFileOp;
 #define  IGMP_TVM_REQ                      0x16
 #define  IGMP_TVM_RESP                     0x17
 #endif
-
+//以下设备类型只有在GwOamInformationRequest()和环路检测中用到，已经与其他ONU
+//类型冲突，以后禁止使用
 #define DEVICE_TYPE_GT821			0x0005	/* GT821 */
 #define DEVICE_TYPE_GT831			0x0006	/* GT831 */
 #define DEVICE_TYPE_GT813			0x0008	/* GT813 */

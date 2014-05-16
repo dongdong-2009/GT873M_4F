@@ -3297,7 +3297,7 @@ int cmd_stat_port_show(struct cli_def *cli, char *command, char *argv[], int arg
 	}
 	else
 	{		
-		for (i = CS_UNI_PORT_ID1; i <= UNI_PORT_MAX; i++)
+		for (i = 1; i <= UNI_PORT_MAX; i++)
 			{
 				cli_print(cli,"===========================port %d stat===========================",i);
 				show_port_statistic(cli, i);
