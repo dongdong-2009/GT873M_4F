@@ -1000,6 +1000,23 @@ cs_status epon_request_onu_spec_pkt_dst_set(
         ret = aal_special_pkt_behavior_set(port, pkt, pkt_msk, &pkt_cfg);
 
 #endif
+        if(CS_PKT_GMP == pkt_type)
+        {
+        	cs_uint8 port_num = 0, per_port = 0;
+        	cs_long32 unit = 0, port = 0;
+            startup_config_read(CFG_ID_SWITCH_PORT_NUM, 1, &port_num);
+            for(per_port = 1; per_port < port_num+1; per_port++) {
+            	if(per_port == CS_PON_PORT_ID)
+            	{
+            		per_port = CS_UPLINK_PORT;
+            	}
+            	if(gt_getswitchunitbylport(L2P_PORT(per_port), &unit, &port) == GT_OK)
+            	{
+            		if(gprtSetIGMPSnoop(QD_DEV_PTR, port, (pkt_type == DST_CPU)?TRUE:FALSE) == GT_OK)
+            			ret = CS_E_OK;
+            	}
+            }
+        }
     }
     
     if(ret != CS_E_OK)

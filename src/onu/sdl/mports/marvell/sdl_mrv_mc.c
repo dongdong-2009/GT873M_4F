@@ -314,7 +314,7 @@ cs_status epon_request_onu_unknown_mc_forward_set(
 	}
     return ret;
 }
-
+#if 0
 cs_status epon_request_onu_igmpsnoop_set(
     CS_IN cs_callback_context_t     context,
     CS_IN cs_int32                  device_id,
@@ -338,7 +338,7 @@ cs_status epon_request_onu_igmpsnoop_set(
 
 	return ret;
 }
-
+#endif
 cs_status epon_request_onu_mc_l2_entry_add (
     CS_IN  cs_callback_context_t     context,
     CS_IN  cs_uint32                 device_id,

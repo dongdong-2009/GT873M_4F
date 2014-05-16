@@ -110,7 +110,7 @@ typedef struct {
     cs_uint32  bits[1];
 } cs_sdl_portmask_t;
 
-#if(PRODUCT_CLASS == PRODUCTS_GT812C)
+#if(0)
 cs_status epon_request_onu_igmpsnoop_set(
     CS_IN cs_callback_context_t     context,
     CS_IN cs_int32                  device_id,
