@@ -26,7 +26,7 @@
 #define MAX_WORDS_LEN           32
 #endif*/
 
-#if 0
+#if 1
 #define MAX_WORDS_LEN           128
 #else
 #define MAX_WORDS_LEN           32
@@ -61,6 +61,10 @@
 
 #define CHANNEL_SERIAL          1
 #define CHANNEL_TCP             2
+#if (OAM_PTY_SUPPORT == MODULE_YES)
+#define CHANNEL_PTY				3
+#define PTY_BANNER				"\r\nONU OAM PTY"
+#endif
 
 #define TELNETD_PORT            23
 #define DFT_SESSION_TIMEOUT     300 //in seconds for telnet

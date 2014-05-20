@@ -5340,8 +5340,6 @@ cs_int32 cli_int_set_switch(struct cli_def *cli, cs_int8 *command, cs_int8 *argv
       }
 	return CLI_OK;
 }
-#if 0
-#endif
 cs_int32 cmd_switch_show(struct cli_def *cli, cs_int8 *command, cs_int8 *argv[], cs_int32 argc)
 {
 	cs_int32 ulIndex, status;
@@ -6873,6 +6871,34 @@ int down_cpu_sent(struct cli_def *cli, char *command, char *argv[], int argc)
    return 1;
 }
 
+#if (GW_IGMP_TVM == MODULE_YES)
+extern void igmp_control_table_dump(void);
+cs_int32 gw_igmp_tvm_dump(struct cli_def *cli, cs_int8 *command, cs_int8 *argv[], cs_int32 argc)
+{
+	if(CLI_HELP_REQUESTED)
+	{
+		switch(argc)
+		{
+			case 1:
+				return cli_arg_help(cli, 0,
+				"<cr>", "show gw igmp tvm table",
+				NULL);
+			default:
+				return cli_arg_help(cli, argc > 3, NULL);
+		}
+	}
+	if(0 == argc)
+	{
+		igmp_control_table_dump();
+	}
+	else
+	{
+		cs_printf("no command!\n");
+	}
+	return CLI_OK;
+}
+#endif
+
 void cli_switch_gwd_cmd(struct cli_command **cmd_root)
 {
 	struct cli_command *inter,*show,*show_mgt;
@@ -6983,8 +7009,10 @@ void cli_debeg_gwd_cmd(struct cli_command **cmd_root)
 	 	cli_register_command(cmd_root, set,  "rcpeeprom",  cli_int_set_rcpeeprom ,   		PRIVILEGE_PRIVILEGED, MODE_DEBUG,     "Rcp eeprom");		
 	 	cli_register_command(cmd_root, set,  "rcpphy",  cli_int_set_rcpphy ,   		PRIVILEGE_PRIVILEGED, MODE_DEBUG,     "Set phy value");		
 	set_product=cli_register_command(cmd_root, set,  "product",  NULL ,   		PRIVILEGE_PRIVILEGED, MODE_DEBUG,     "Set product series");
-	 	cli_register_command(cmd_root,set_product,  "series", cli_int_set_product_series ,   		PRIVILEGE_PRIVILEGED, MODE_DEBUG,     "Product series");		
-	 	cli_register_command(cmd_root,set_product,  "type", cli_int_set_product_type ,   		PRIVILEGE_PRIVILEGED, MODE_DEBUG,     "Set product type");		
+	 	cli_register_command(cmd_root,set_product,  "series", cli_int_set_product_series ,   		PRIVILEGE_PRIVILEGED, MODE_DEBUG,     "Product series");
+		#if 0
+	 	cli_register_command(cmd_root,set_product,  "type", cli_int_set_product_type ,   		PRIVILEGE_PRIVILEGED, MODE_DEBUG,     "Set product type");
+		#endif
     set_board=cli_register_command(cmd_root,set,  "board", NULL,   		PRIVILEGE_PRIVILEGED, MODE_SWITCH,     "Set product type");
 	 	cli_register_command(cmd_root,set_board,  "type", cli_int_set_board_type,   		PRIVILEGE_PRIVILEGED, MODE_DEBUG,     "Set product type");		
 	 	cli_register_command(cmd_root, set,  "rcphw_version", cli_int_set_rcphw_version ,   		PRIVILEGE_PRIVILEGED, MODE_DEBUG,     "Set switch hardware version");		
@@ -6996,6 +7024,11 @@ void cli_debeg_gwd_cmd(struct cli_command **cmd_root)
 	 	 cli_register_command(cmd_root, show,  "authenKey", cli_int_show_authenkey,   		PRIVILEGE_PRIVILEGED, MODE_DEBUG,     "AuthenKey configuration");		
 	mgt=cli_register_command(cmd_root, NULL, "mgt",     NULL,	  PRIVILEGE_UNPRIVILEGED, MODE_DEBUG,   "Test throughput");
 	    cli_register_command(cmd_root, mgt, "thrput-test",     down_cpu_sent,	  PRIVILEGE_UNPRIVILEGED, MODE_DEBUG,   "Test throughput");
+	#if (GW_IGMP_TVM == MODULE_YES)
+	struct cli_command *gw_igmp_tvm = NULL;
+	gw_igmp_tvm = cli_register_command(cmd_root, NULL, "gw_igmp_tvm",    NULL, PRIVILEGE_PRIVILEGED,   MODE_DEBUG,    "gw igmp tvm debug");
+	cli_register_command(cmd_root, gw_igmp_tvm, "dump",    gw_igmp_tvm_dump, PRIVILEGE_PRIVILEGED,   MODE_DEBUG,    "gw igmp tvm debug");
+	#endif
 }
 
 #ifdef __cplusplus

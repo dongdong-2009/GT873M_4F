@@ -381,11 +381,11 @@ static void app_uni_stats_count()
         g_uni_stats[i].txstatsfrm1519_Max_cnt    += COUNT_STATS( uni_stats.txstatsfrm1519_Max_cnt  ,g_uni_stats_last[i].txstatsfrm1519_Max_cnt )  ;
         g_uni_stats[i].txbyte_cnt                += COUNT_STATS( uni_stats.txbyte_cnt              ,g_uni_stats_last[i].txbyte_cnt             )  ;
         g_uni_stats[i].txfrm_cnt                 += COUNT_STATS( uni_stats.txfrm_cnt               ,g_uni_stats_last[i].txfrm_cnt              )  ;
-        g_uni_stats[i].single_collision           += COUNT_STATS( uni_stats.single_collision        ,g_uni_stats_last[i].single_collision      )  ;
-        g_uni_stats[i].multiple_collision        += COUNT_STATS( uni_stats.multiple_collision       ,g_uni_stats_last[i].multiple_collision      )  ;
-        g_uni_stats[i].fcs_errors                 += COUNT_STATS( uni_stats.fcs_errors              ,g_uni_stats_last[i].fcs_errors      )  ;
-        g_uni_stats[i].late_collisions            += COUNT_STATS( uni_stats.late_collisions          ,g_uni_stats_last[i].late_collisions      )  ;
-        g_uni_stats[i].excessive_collisions     += COUNT_STATS( uni_stats.excessive_collisions   ,g_uni_stats_last[i].excessive_collisions    )  ;
+        g_uni_stats[i].single_collision          += COUNT_STATS( uni_stats.single_collision        ,g_uni_stats_last[i].single_collision       )  ;
+        g_uni_stats[i].multiple_collision        += COUNT_STATS( uni_stats.multiple_collision      ,g_uni_stats_last[i].multiple_collision     )  ;
+        g_uni_stats[i].fcs_errors                += COUNT_STATS( uni_stats.fcs_errors              ,g_uni_stats_last[i].fcs_errors             )  ;
+        g_uni_stats[i].late_collisions           += COUNT_STATS( uni_stats.late_collisions         ,g_uni_stats_last[i].late_collisions        )  ;
+        g_uni_stats[i].excessive_collisions      += COUNT_STATS( uni_stats.excessive_collisions    ,g_uni_stats_last[i].excessive_collisions   )  ;
 
         memcpy(&g_uni_stats_last[i],&uni_stats,sizeof(uni_stats));
         cs_mutex_unlock(g_app_uni_stats_mutex);

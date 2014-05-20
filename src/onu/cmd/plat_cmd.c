@@ -59,7 +59,6 @@ static sal_cmd_reg_struct_t app_cmd_list[] =
     {app_cmd_proc,  "pppoe",     "pppoe configure",     NULL, 0},
     {app_cmd_proc,  "dg",     "Set to force ONU to send dying gasp",     NULL, 0},
 #ifdef HAVE_DB_MANAGMENT
-
     {app_cmd_proc,  "db",     "db configuration ",     NULL, 0},
 #endif
     {app_cmd_proc,  "crtcevt",     "Set to force ONU to send critical event",     NULL, 0},

@@ -3,10 +3,47 @@
 #include "mc_adapter.h"
 #include "mc_mgmt.h"
 
+#if (GW_IGMP_TVM == MODULE_YES)
+#include "../../gwd/gw_igmp_tvm.h"
+#include "mc_api.h"
+extern void pkt_print(char *buf, cs_uint16 len);
+#endif
+
 void mc_pkt_proc(cs_pkt_t *pkt, mc_node_t *node)
 {    
     cs_status ret = CS_E_OK;
     cs_uint8   pkt_chg = 0;
+
+	#if (GW_IGMP_TVM == MODULE_YES)
+	GW_TVM_ENABLE_T enable;
+	igmp_tvm_enable_status_get(&enable);
+	if(GW_TVM_ENABLE == enable)
+	{
+		
+		//gw方式的跨vlan 组播工作在组播snooping 模式下
+		mc_mode_t mc_mode;
+		mc_mode_get(0, &mc_mode);
+		if(MC_SNOOPING == mc_mode)
+		{
+			char *eth_pkt = NULL;
+			int len = 0;
+			int port_id;
+			int vlan_oper = 0;
+			int vlan_id_cur =0;
+			eth_pkt = (char *)(pkt->data + pkt->offset);
+			len = pkt->len;
+			port_id = (int)(node->port[pkt->port]->portid);
+			gw_igmp_tvm_pkt_proc(eth_pkt, &len, port_id, &vlan_oper, &vlan_id_cur);
+			pkt->len = len;
+			pkt->tag_num += vlan_oper;
+			pkt->svlan = vlan_id_cur;			
+		}
+		else
+		{
+			cs_printf("gw igmp tvm must wort at igmp snooping mode!please set igmp snooping mode!\n");
+		}
+	}
+	#endif
 
     ret = mc_pkt_object_build(node, pkt, &node->message);
     if(ret) {
@@ -161,6 +198,7 @@ cs_status mc_flood_msg(mc_node_t *mc_node, mc_object_t *pObj)
 extern void pkt_print(char *buf, cs_uint16 len)
 {
     int i;
+	cs_printf("pkt len :%d\n", len);
     cs_printf("---------------------------------------------------------");
     for(i = 0; i<len; ++i)
     {

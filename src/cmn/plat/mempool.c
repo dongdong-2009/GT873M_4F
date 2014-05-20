@@ -922,13 +922,6 @@ ALLOCATE_FOR_ECOS:
 #endif
     real_size = size + sizeof(cs_mem_rsvd_header);
     pBuf = (cs_uint8 *)malloc(real_size);
-////    cs_printf("real_size is %d\r\n",real_size);
-//    if(NULL == pBuf)
-//    {
-//    	cs_printf("pBuf is NULL\r\n");
-//    }
-//    else
-//    	cs_printf("pBuf is not NULL\r\n");
     if(pBuf != NULL)
     {
         pHeader = (cs_mem_rsvd_header *)pBuf;

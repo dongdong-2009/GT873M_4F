@@ -35,7 +35,11 @@ cs_uint32  g_onu_alarm_led_timer;
 cs_uint32 led_cout = 0;
 #define LPB_OAM_SEND_INTERVAL 1
 #define LOOP_DETECT_THREAD_STACKSIZE     (6 * 1024)
+#if 0
 #define __VLAN_MAX                      (8*UNI_PORT_MAX)
+#else
+#define __VLAN_MAX                      (9*UNI_PORT_MAX)	/*一个端口有8个tag vlan加上一个untag vlan(default vlan)*/
+#endif
 //extern  __vlan_t __s_vlan_table[__VLAN_MAX];
 extern __vlan_t __c_vlan_table[__VLAN_MAX];
 LPB_CTRL_LIST *g_lpb_detect_ctrl_head = NULL, *g_lpb_detect_ctrl_tail = NULL;
@@ -1027,10 +1031,14 @@ cs_int32 sendOamLpbDetectNotifyMsg(cs_uint8 port, cs_uint8 state, cs_uint16 uvid
 	
 	return ret;	
 }
-void lpbDetectWakeupPorts(cs_uint16 usVid)
+void lpbDetectWakeupPorts(cs_uint16 usVid, int *wake_up_port_exist)
 {
     cs_int32 portnum, ret;
 	cs_callback_context_t context;
+	if(NULL != wake_up_port_exist)
+	{
+		*wake_up_port_exist = 0;
+	}
 	OAM_ONU_LPB_DETECT_CTRL *pCtrl = getVlanLpbStasNode(usVid);
         if(pCtrl != NULL)
         {
@@ -1062,7 +1070,9 @@ void lpbDetectWakeupPorts(cs_uint16 usVid)
 		                if(((!local_onu_lpb_detect_frame.enable)&&( pCtrl->lpbportwakeupcounter[portnum] < oam_onu_lpb_detect_frame.maxwakeup ) && 
 		                    ((++(pCtrl->slpcounter[portnum])) >= oam_onu_lpb_detect_frame.waitforwakeup))
 		                ||((local_onu_lpb_detect_frame.enable)&&(pCtrl->lpbportwakeupcounter[portnum] < local_onu_lpb_detect_frame.maxwakeup)&&
-		                    ((++(pCtrl->slpcounter[portnum])) >= local_onu_lpb_detect_frame.waitforwakeup)))
+		                    ((++(pCtrl->slpcounter[portnum])) >= local_onu_lpb_detect_frame.waitforwakeup))
+							|| (((cs_uint16)(-1) == oam_onu_lpb_detect_frame.maxwakeup)&&(local_onu_lpb_detect_frame.enable)&&((++(pCtrl->slpcounter[portnum])) >= local_onu_lpb_detect_frame.waitforwakeup))
+							)
 		                {
 		                //	cs_printf(".............................................4\n");
 							//IFM_admin_up(ethIfIndex, NULL, NULL);
@@ -1071,6 +1081,10 @@ void lpbDetectWakeupPorts(cs_uint16 usVid)
 															ONU_LLIDPORT_FOR_API, portnum, SDL_PORT_ADMIN_UP);
 							//diag_printf("portnum:%d\n",portnum);
 						//	diag_printf("lus @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+							if(NULL != wake_up_port_exist)
+							{
+								*wake_up_port_exist = 1;
+							}
 							if(GWD_RETURN_OK != (ret = sendOamLpbDetectNotifyMsg(portnum, 2, usVid, port_loop_back_session, &(pCtrl->alarmInfo[portnum]))))
 							{
 								LOOPBACK_DETECT_DEBUG(("sendOamLpbDetectNotifyMsg failed!"));		
@@ -1553,7 +1567,7 @@ long ethLoopBackDetectActionCall( cs_int32 enable, cs_int8 * oamSession)
 		{
 		/*detect loopback in the specific vlan, wakeup the shutdown ports which have not reached wakeup threshold in the specfic vlan*/
 			LOOPBACK_DETECT_DEBUG(("\r\nOLT config detect in unique vlan(%d)",oam_onu_lpb_detect_frame.vid));
-			lpbDetectWakeupPorts(oam_onu_lpb_detect_frame.vid);
+			lpbDetectWakeupPorts(oam_onu_lpb_detect_frame.vid, NULL);
 			/*Send detect packet in specific vlan*/
 			if(GWD_RETURN_OK != (ret = lpbDetectTransFrames(oam_onu_lpb_detect_frame.vid)))
 			LOOPBACK_DETECT_DEBUG(("\r\nlpbDetectTransFrames failed(%d).", ret));
@@ -1564,7 +1578,7 @@ long ethLoopBackDetectActionCall( cs_int32 enable, cs_int8 * oamSession)
 		else if((local_onu_lpb_detect_frame.enable)&&(local_onu_lpb_detect_frame.vid != 0))
 		{
 			LOOPBACK_DETECT_DEBUG(("\r\nONU config detect in unique vlan(%d)", local_onu_lpb_detect_frame.vid));
-			lpbDetectWakeupPorts(local_onu_lpb_detect_frame.vid);
+			lpbDetectWakeupPorts(local_onu_lpb_detect_frame.vid, NULL);
 			/*Send detect packet in specific vlan*/
 			if(GWD_RETURN_OK != (ret = lpbDetectTransFrames(local_onu_lpb_detect_frame.vid)))
 			LOOPBACK_DETECT_DEBUG(("\r\nlpbDetectTransFrames failed(%d).", ret));
@@ -1592,8 +1606,15 @@ long ethLoopBackDetectActionCall( cs_int32 enable, cs_int8 * oamSession)
 				        		vid = (i==vnum-1)?vdef.vid:vcfg[i].c_vlan.vid;
 				        		if(vid != 0)
 				        		{
-				        	  	  	lpbDetectWakeupPorts(vid);
-										
+				        			static int wake_up_port_exist = 0;
+				        	  	  	lpbDetectWakeupPorts(vid, &wake_up_port_exist);
+									if(wake_up_port_exist != 0)
+									{
+										/*************************************************************************************************
+										*发现有环路端口唤醒，需要做延时2S，用于同步软件和硬件端口状态
+										**************************************************************************************************/
+										cs_thread_delay(2000);
+									}
 									need_to_send = 0;
 
 									epon_request_onu_port_link_status_get(context, 0, 0, uni_port, &status);
@@ -1689,7 +1710,15 @@ void onu_tmfunc_run_led(void*date)
     		cs_gpio_write(13, (unsigned char)0);
 			led_cout = 0;
 		}
+	
+	if (alarm_led_start != 0)
+	{
 		cs_timer_add(300, onu_tmfunc_run_led, NULL);
+	}
+	else
+	{
+		//do nothing
+	}
 }
 
 #if 0
@@ -1716,7 +1745,7 @@ void epon_onu_start_alarm_led()
 			if ( CS_E_OK == cs_gpio_mode_set(13, GPIO_OUTPUT))
 			{	
 				alarm_led_start = 1;
-				g_onu_alarm_led_timer = cs_timer_add(10, onu_tmfunc_run_led, NULL);	
+				onu_tmfunc_run_led((void *)NULL);
 			}	
 		}
 }
@@ -1726,29 +1755,19 @@ void epon_onu_start_alarm_led()
 void epon_onu_stop_alarm_led()
 {
 	if(alarm_led_start)
-		{
-			alarm_led_start = 0;
-			LED_TAXT = 1;
-			if ( CS_E_OK == cs_gpio_mode_set(13, GPIO_OUTPUT))
-			{	
-				if(g_onu_alarm_led_timer)
-					{
-						cs_timer_del(g_onu_alarm_led_timer);
-					}
-				cs_gpio_write(13, (unsigned char)0);								
-			}
-		}
+	{
+		alarm_led_start = 0;
+		LED_TAXT = 1;
+	}
 	else
-		{
-			if ( CS_E_OK == cs_gpio_mode_set(13, GPIO_OUTPUT))
-				{	
-					if(g_onu_alarm_led_timer)
-						{
-							cs_timer_del(g_onu_alarm_led_timer);
-						}
-					cs_gpio_write(13, (unsigned char)0);								
-				}
-		}
+	{
+		//do nothing
+	}
+	
+	if ( CS_E_OK == cs_gpio_mode_set(13, GPIO_OUTPUT))
+	{
+		cs_gpio_write(13, (unsigned char)0);								
+	}
 }
 void
 onu_event_port_loop(gwd_ethloop_msg_t *msg)

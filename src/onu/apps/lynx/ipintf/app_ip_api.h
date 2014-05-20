@@ -95,7 +95,6 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "cs_cmn.h"
 #include "app_ip_types.h"
 
-extern cs_uint32 app_ip_changed ;
 extern cs_status epon_request_onu_ip_config_set(
                                                         cs_uint32 local_ip, 
                                                         cs_uint32 ip_mask, 

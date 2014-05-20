@@ -9,7 +9,6 @@
 #define perror(s) cs_printf(s)
 cyg_uint8  g_SetIP_Telnet = 0;
 void telnet_diag_print_unregister(void);
-extern cs_uint32 app_ip_changed;
 externC void (*_putc)(char c, void **param);
 static void (*_putcFunc)(char c, void **param) = NULL;
 
@@ -1141,6 +1140,10 @@ static int telnet_cli_raw_output(struct cli_def *cli, char* s, int len)
 #endif
 
 #if 1
+#if (OAM_PTY_SUPPORT == MODULE_YES)
+extern int write_to_oam_pty(char *str,int length);
+#endif
+
 static int cli_raw_output(struct cli_def *cli, char* s, int len)
 {
 	if (!cli) return 0;
@@ -1153,6 +1156,13 @@ static int cli_raw_output(struct cli_def *cli, char* s, int len)
 
          return len;
     }
+	#if (OAM_PTY_SUPPORT == MODULE_YES)
+	else if(CHANNEL_PTY == cli->channel)
+	{
+		int real_len = write_to_oam_pty(s, len);
+    	return real_len;
+	}
+	#endif
     else
     {
         mon_write_chars(s, len);
@@ -1263,6 +1273,11 @@ static int show_prompt(struct cli_def *cli)
 
     return len + cli_raw_output(cli, cli->promptchar, strlen(cli->promptchar));
 }
+
+#if (OAM_PTY_SUPPORT == MODULE_YES)
+extern int read_from_oam_pty(char *str,int length);
+extern void oam_pty_shell_close(void);
+#endif
 
 int cli_loop(struct cli_def *cli)
 {
@@ -1392,15 +1407,7 @@ int cli_loop(struct cli_def *cli)
             fd_set r;
 
             if(CHANNEL_TCP == cli->channel)
-            {
-                 if (app_ip_changed==1)
-                 {
-                    app_ip_changed=0;
-                    cli_error(cli, "IP change");
-                    strcpy(cmd, "quit");
-                    break;
-                }
-			
+            {		
                 FD_ZERO(&r);
                 FD_SET(cli->sockfd, &r);
 
@@ -1501,6 +1508,17 @@ int cli_loop(struct cli_def *cli)
             }
             else
 #endif
+			#if (OAM_PTY_SUPPORT == MODULE_YES)
+			if(CHANNEL_PTY == cli->channel)
+			{
+				n = read_from_oam_pty(&c,1);			
+				if(n < 0)
+				{
+					continue;
+				}
+			}
+			else
+			#endif
             {
                 // read from console
                 while(1)
@@ -1992,7 +2010,14 @@ int cli_loop(struct cli_def *cli)
 
         if (l < 0) break;
 
+		#if 0
         if (!strcasecmp(cmd, "quit") && CHANNEL_TCP == cli->channel) break;
+		#else
+		if (!strcasecmp(cmd, "quit") && CHANNEL_SERIAL != cli->channel)
+		{
+			break;
+		}	
+		#endif
 
         if (cli->state == STATE_LOGIN)
         {
@@ -2048,6 +2073,12 @@ int cli_loop(struct cli_def *cli)
                 cli->state = STATE_NORMAL;
                 if(CHANNEL_TCP == cli->channel)
                     cur_chan = CHANNEL_TCP;
+				#if (OAM_PTY_SUPPORT == MODULE_YES)
+				if(CHANNEL_PTY == cli->channel)
+				{
+					cur_chan = CHANNEL_PTY;
+				}
+				#endif
             }
             else
             {
@@ -2135,9 +2166,15 @@ int cli_loop(struct cli_def *cli)
 #endif
 
 
-			
+			#if 0
             if (CLI_QUIT == cli_run_command(cli, cmd) && CHANNEL_TCP == cli->channel)
                 break;
+			#else
+			if (CLI_QUIT == cli_run_command(cli, cmd) && CHANNEL_SERIAL != cli->channel)
+			{
+				break;
+			}   
+			#endif
         }
 		
 		
@@ -2170,6 +2207,17 @@ int cli_loop(struct cli_def *cli)
 		telnet_cli = NULL; 
     }
 #endif
+	#if (OAM_PTY_SUPPORT == MODULE_YES)
+	if(CHANNEL_PTY == cli->channel)
+	{
+		//关闭oam pty 模式
+		oam_pty_shell_close();
+		
+		//进入shell 模式
+		cli->channel = CHANNEL_SERIAL;
+		cur_chan = CHANNEL_SERIAL;
+	}
+	#endif
 
     return CLI_OK;
 }
@@ -2276,6 +2324,13 @@ void _print(struct cli_def *cli, int print_mode, const char *format, va_list ap)
                     console_put_char('\n');
                 }
 #endif
+				#if (OAM_PTY_SUPPORT == MODULE_YES)
+				else if(CHANNEL_PTY == cli->channel)
+				{
+					write_to_oam_pty(p, strlen(p));
+					write_to_oam_pty("\r\n", 2);
+				}
+				#endif
                 else
                     fprintf(stderr, "Invalid channel %d", cli->channel);
             }
@@ -2737,14 +2792,6 @@ int do_telnet_legacy_cmd(struct cli_def *cli,char * p)
 
         while (1)
         {
-            if (app_ip_changed==1)
-            {
-                app_ip_changed=0;
-                cli_error(cli, "IP change");
-                strcpy(cmd, "quit");
-                 break;
-            }
-
             if (cli->showprompt)
             {
     			/*cli_print(cli,"%s", p);*/
@@ -2752,7 +2799,8 @@ int do_telnet_legacy_cmd(struct cli_def *cli,char * p)
             	cli->showprompt = 0;
             }
 
-
+			if(CHANNEL_TCP == cli->channel)
+			{
                 FD_ZERO(&r);
                 FD_SET(cli->sockfd, &r);
 
@@ -2822,6 +2870,18 @@ int do_telnet_legacy_cmd(struct cli_def *cli,char * p)
                     free_z(cmd);
     			return CLI_QUIT;
                 }
+			}
+			#if (OAM_PTY_SUPPORT == MODULE_YES)
+			else if(CHANNEL_PTY == cli->channel)
+			{
+				n = read_from_oam_pty(&c, 1);
+				if(0 == n)
+				{
+					cs_printf("read 0\n");
+					return CLI_QUIT;
+				}
+			}
+			#endif
 
                 if (c == 255 && !is_telnet_option)
                 {
@@ -3258,7 +3318,11 @@ int do_telnet_legacy_cmd(struct cli_def *cli,char * p)
 
         if (l < 0) break;
 
+		#if 0
         if (!strcasecmp(cmd, "quit") && CHANNEL_TCP == cli->channel) break;
+		#else
+		if (!strcasecmp(cmd, "quit") && CHANNEL_SERIAL != cli->channel) break;
+		#endif
      
 	if (l == 0) continue;
 	if (cmd[l - 1] != '?' && strcasecmp(cmd, "history") != 0)
@@ -3269,6 +3333,7 @@ int do_telnet_legacy_cmd(struct cli_def *cli,char * p)
 	}
 
 	parse_cmd(&cmd, &cli_argc, &cli_argv[0]);
+	#if 0
 	if (CLI_OK != cmd_exe(cli_argc, cli_argv) && CHANNEL_TCP == cli->channel)
 		{
                 break;
@@ -3280,6 +3345,20 @@ int do_telnet_legacy_cmd(struct cli_def *cli,char * p)
         	{
             	time(&cli->last_action);
         	}
+	#else
+	if(CLI_OK != cmd_exe(cli_argc, cli_argv) && CHANNEL_SERIAL != cli->channel)
+	{
+		break;
+	}
+	
+	if(CHANNEL_TCP == cli->channel)
+	{
+		if (cli->idle_timeout)
+		{
+			time(&cli->last_action);
+		}
+	}
+    #endif
     } // end of cmd process
 
     if(strcmp(cmd, "quit") == 0)
@@ -3290,6 +3369,40 @@ int do_telnet_legacy_cmd(struct cli_def *cli,char * p)
     free_z(cmd);
     return CLI_OK;
 }
+
+#if (OAM_PTY_SUPPORT == MODULE_YES)
+extern int write_to_oam_pty(char *str,int length);
+
+static void _oam_pty_write_char(char c, void **param)
+{
+	/* Translate LF into CRLF */
+	char ch = '\0';
+	if(c == '\n')
+	{
+		ch = '\r';
+		write_to_oam_pty(&ch, 1);
+	}
+	write_to_oam_pty(&c, 1);
+}
+
+extern void oam_pty_diag_print_register(void)
+{
+   _putcFunc = _putc;
+   _putc = _oam_pty_write_char;
+}
+
+extern void oam_pty_diag_print_unregister(void)
+{
+   if(_putcFunc != NULL)
+   _putc  = _putcFunc;
+}
+extern int do_oam_pty_legacy_cmd(struct cli_def *cli,char *p)
+{
+	return do_telnet_legacy_cmd(cli, p);
+}
+
+#endif
+
 
 #endif
 

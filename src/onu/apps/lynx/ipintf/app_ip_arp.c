@@ -273,14 +273,13 @@ cs_status app_ipintf_arp_pre_process(cs_pkt_t* pkt)
     
     macHdr = (epon_macaddr_header_t*)ptr;
     if(app_ipintf_my_ipaddr_equal(targetip)) {
-		cs_printf("................................1\n");
+	//	cs_printf("................................1\n");
         if(app_ipintf_arp_rx_filter) {
             if(app_ipintf_arp_rx_filter(pkt) == IPINTF_DROP) {
-				cs_printf("....................................drop\n");
+			//	cs_printf("....................................drop\n");
                 return CS_E_ERROR;
             }
         }
-        cs_printf("not drop!!!\n");
         if(!((app_ipintf_macaddr_equal(macHdr->dst, app_ipintf_get_my_macaddr(), 6))||
             (app_ipintf_macaddr_equal(macHdr->dst, bc_mac, 6)))) {
                 APP_IPINTF_LOG(IROS_LOG_LEVEL_DBG3,"Drop due to invalid mac\n");
@@ -294,7 +293,7 @@ cs_status app_ipintf_arp_pre_process(cs_pkt_t* pkt)
         * For upstream, forward packets to PON port only.
         * For downstream, forward packets to all active UNI ports.
         */	
-        cs_printf(".............................................2\n");
+     //   cs_printf(".............................................2\n");
         ret = vlan_ingress_filter(pkt);
         if(ret != CS_E_OK) {
             APP_IPINTF_LOG(IROS_LOG_LEVEL_DBG3,"Drop due to invalid vlan\n");

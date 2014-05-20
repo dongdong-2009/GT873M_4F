@@ -22,11 +22,17 @@
 #include "../../sdl/cmn/cmn/sdl.h"
 #endif
 
+#if (OAM_PTY_SUPPORT == MODULE_YES)
+#include "oam_pty.h"
+#endif
 
+#if (GW_IGMP_TVM == MODULE_YES)
+#include "gw_igmp_tvm.h"
+#endif
 #if (PRODUCT_CLASS == PRODUCTS_GT811D)
 	const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
 	const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
-	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 8;
+	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 14;
 	const unsigned char SYS_SOFTWARE_DEBUG_VERSION_NO = 1;
 
 	const unsigned char SYS_HARDWARE_MAJOR_VERSION_NO = 2;
@@ -38,7 +44,7 @@
 #if (PRODUCT_CLASS == PRODUCTS_GT811G)
 	const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
 	const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
-	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 8;
+	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 15;
 	const unsigned char SYS_SOFTWARE_DEBUG_VERSION_NO = 1;
 
 	const unsigned char SYS_HARDWARE_MAJOR_VERSION_NO = 2;
@@ -50,7 +56,7 @@
 #if (PRODUCT_CLASS == PRODUCTS_GT873_M_4F4S)
 	const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
 	const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
-	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 12;
+	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 16;
 	const unsigned char SYS_SOFTWARE_DEBUG_VERSION_NO = 1;
 
 	const unsigned char SYS_HARDWARE_MAJOR_VERSION_NO = 2;
@@ -748,6 +754,14 @@ void Gwd_Oam_Handle(unsigned int port, unsigned char *frame, unsigned int len)
 			GwOamMessageListNodeFree(pMessage);
 			pMessage = NULL;
 			break;
+		
+		#if (GW_IGMP_TVM == MODULE_YES)
+		case IGMP_TVM_REQ:
+			GwOamTvmRequestRecv((void *)pMessage);
+			GwOamMessageListNodeFree(pMessage);
+			pMessage = NULL;
+			break;
+		#endif
 
 		case FILE_READ_WRITE_REQ:
 		case FILE_TRANSFER_DATA:
@@ -757,6 +771,11 @@ void Gwd_Oam_Handle(unsigned int port, unsigned char *frame, unsigned int len)
 		case IGMP_AUTH_TRAN_REQ:
 	    case IGMP_AUTH_TRAN_RESP:
 		case CLI_PTY_TRANSMIT:
+			#if (OAM_PTY_SUPPORT == MODULE_YES)
+			gwd_oam_pty_trans(pMessage);
+			GwOamMessageListNodeFree(pMessage);
+			break;
+			#endif
 		default:
 			GWDOAMTRC("Gwd_Oam_Handle - unknown opcode(%d) received.\n", pMessage->GwOpcode);
 			IROS_LOG_MAJ(IROS_MID_OAM, "Received an unknown packet(0x%x), drop it!\r\n", pMessage->GwOpcode);
@@ -1204,7 +1223,7 @@ static int GwOamInformationRequest(GWTT_OAM_MESSAGE_NODE *pRequest )
                 break;
             }
             
-            if(PPPOE_RELAY_DISABLE == *pReq)/*����?����ʾ��ֹ״̬*/
+            if(PPPOE_RELAY_DISABLE == *pReq)/*����?����ʾ��ֹ״̬*/
             {
                 if (PPPOE_RELAY_DISABLE == g_PPPOE_relay)
                 {
@@ -1353,7 +1372,7 @@ static int GwOamInformationRequest(GWTT_OAM_MESSAGE_NODE *pRequest )
                 break;
             }
             
-            if(0 == *pReq)/*����?����ʾ��ֹ״̬*/
+            if(0 == *pReq)/*����?����ʾ��ֹ״̬*/
             {
                 if (0 == g_DHCP_OPTION82_Relay)
                 {
@@ -2621,8 +2640,8 @@ int cmd_onu_mgt_config_product_sn(struct cli_def *cli, char *command, char *argv
 int cmd_onu_mgt_config_device_name(struct cli_def *cli, char *command, char *argv[], int argc)
 {
 	int  len, i;
-	unsigned char tmpStr[129];
-
+	unsigned char tmpStr[129] = {0};
+	
         
     // deal with help
     if(CLI_HELP_REQUESTED)
@@ -2631,7 +2650,7 @@ int cmd_onu_mgt_config_device_name(struct cli_def *cli, char *command, char *arg
         {
         case 1:
             return cli_arg_help(cli, 0,
-                "<string>", "Device name(length<=128)",
+                "<string>", "Device name(length<=126)",
                  NULL);
         default:
             return cli_arg_help(cli, argc > 1, NULL);
@@ -2640,9 +2659,9 @@ int cmd_onu_mgt_config_device_name(struct cli_def *cli, char *command, char *arg
 
     if(1 == argc)
     {   
-		if((len = strlen(argv[0])) > 128)
+		if((len = strlen(argv[0])) > 126)
 		{
-			cli_print(cli, "  The length of device name cannot be more than %d.\r\n", 128);
+			cli_print(cli, "  The length of device name cannot be more than %d.\r\n", 126);
 			return CLI_OK;
 		}
 
@@ -2659,7 +2678,8 @@ int cmd_onu_mgt_config_device_name(struct cli_def *cli, char *command, char *arg
 		}
 
 		return CLI_OK;
-    } else
+    } 
+	else
     {
         cli_print(cli, "%% Invalid input.");
     }
@@ -3378,6 +3398,167 @@ int cmd_oam_port_isolate(struct cli_def *cli, char *command, char *argv[], int a
 	return CLI_OK;
 }
 
+#if (PORT_ISOLATE_MODE_SAVE == MODULE_YES)
+#define PORT_ISOLATE_MODE_DEFAULT	1
+extern int port_isolate_mode_config_recover(int en)
+{
+	int ret = 0;
+	if(port_aal_isolation_set(en) != CS_E_OK)
+	{
+		cs_printf("set all port isolate %s fail!\r\n", en?"enabled":"disabled");
+	}
+	else
+	{
+		cs_printf("set all port isolate %s success\r\n", en?"enable":"disable");	
+	}
+	return ret;
+}
+extern int port_isolate_mode_config_show(int en)
+{
+	int ret = 0;
+
+	cs_printf("\n-----------------------------------\n");
+	cs_printf("all port isolate is %s\r\n", en?"disabled":"disabled");
+	cs_printf("-----------------------------------\n");
+	
+	return ret;
+}
+
+extern int port_isolate_mode_tlv_infor_get(int *len, char **value, int *free_need)
+{
+	int ret = 0;
+	int buf_len = 0;
+	int *port_isolate_mode = NULL;
+	
+	if(NULL == len)
+	{
+		goto error;
+	}
+	else
+	{
+		*len = 0;
+	}
+
+	if(NULL == value)
+	{
+		goto error;
+		
+	}
+	else
+	{
+		*value = NULL;
+	}
+	
+	if(NULL == free_need)
+	{
+		goto error;
+	}
+	else
+	{
+		*free_need = 0;
+	}
+
+	*free_need = 1;
+	buf_len = sizeof(int);
+	port_isolate_mode = (int *)iros_malloc(IROS_MID_APP, buf_len);
+	if(port_aal_isolation_get(port_isolate_mode) != CS_E_OK)
+	{
+		cs_printf("%s\r\n", "get port isolate fail!");
+	}
+	else
+	{
+		if (PORT_ISOLATE_MODE_DEFAULT == *port_isolate_mode)
+		{
+			goto end;
+		}
+		else
+		{
+			*len = buf_len;
+			*value = (char *)port_isolate_mode;
+		}
+	}
+	ret = 0;
+	goto end;
+	
+error:
+	ret = -1;
+	
+end:
+	return ret;
+}
+extern int port_isolate_mode_tlv_infor_handle(int len, char *data, int opcode)
+{
+	int ret = 0;
+	int port_isolate_mode = 0;
+	
+	if(0 != len)
+	{
+		//do nothing
+	}
+	else
+	{
+		goto error;
+	}
+	
+	if(NULL != data)
+	{
+		//do nothing
+	}
+	else
+	{
+		goto error;
+	}
+
+	memcpy(&port_isolate_mode, data, sizeof(int));
+	if(DATA_RECOVER == opcode)
+	{
+		port_isolate_mode_config_recover(port_isolate_mode);
+	}
+	else if(DATA_SHOW == opcode)
+	{
+		port_isolate_mode_config_show(port_isolate_mode);
+	}
+	else
+	{
+		cs_printf("in %s, unknown opcode :%d\n", __func__, opcode);
+	}
+	
+	ret = 0;
+	goto end;
+	
+error:
+	ret = -1;
+	
+end:	
+	return ret;
+}
+extern int port_isolate_mode_running_config_show(void)
+{
+	int ret = 0;
+	int en = 0;
+
+	if(port_aal_isolation_get(&en) != CS_E_OK)
+	{
+		cs_printf("\n-----------------------------------\n");
+		cs_printf("get port isolate fail!\r\n");
+		cs_printf("-----------------------------------\n");
+	}
+	else
+	{
+		if (PORT_ISOLATE_MODE_DEFAULT == en)
+		{
+			//do nothing
+		}
+		else
+		{
+			port_isolate_mode_config_show(en);
+		}
+	}
+	
+	
+	return ret;
+}
+#endif
 
 #endif
 
@@ -4569,7 +4750,7 @@ void cli_reg_gwd_cmd(struct cli_command **cmd_root)
     set = cli_register_command(cmd_root, NULL, "set", NULL, PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "Set system information");
     	cli_register_command(cmd_root, set, "date",    cmd_onu_mgt_config_product_date,     PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "Manufacture date");
     	cli_register_command(cmd_root, set, "serial",    cmd_onu_mgt_config_product_sn,     PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "Manufacture serial number(<16)");
-    	cli_register_command(cmd_root, set, "devicename",    cmd_onu_mgt_config_device_name,     PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "Device name(<=128)");
+    	cli_register_command(cmd_root, set, "devicename",    cmd_onu_mgt_config_device_name,     PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "Device name(<=126)");
     	cli_register_command(cmd_root, set, "hw-version",    cmd_onu_mgt_config_product_hw_version,     PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "Hardware version");
 		cli_register_command(cmd_root, set, "mon_id",cmd_set_mod_id,PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "set mode id");
 
@@ -4639,6 +4820,7 @@ static oam_vendor_handlers_t gwd_oam_handlers = {
 		NULL, NULL, NULL, NULL, Gwd_Oam_Handle
 };
 
+extern cs_status all_port_bc_storm_no_limit(void);
 extern broadcast_storm_s broad_storm;
 #define ENABLE	1
 #define DISABLE	0
@@ -4646,6 +4828,7 @@ void gw_broadcast_storm_init()
 {
 	broad_storm.gulBcStormThreshold = 1000;
 	broad_storm.gulBcStormStat = DISABLE;
+	all_port_bc_storm_no_limit();
 	return;
 }
 

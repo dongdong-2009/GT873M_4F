@@ -1015,7 +1015,7 @@ extern int igmp_mode_show(mc_mode_t mc_mode)
             break;
 
         case MC_MANUAL:
-            strncpy(mode, "manual", sizeof(mode));
+            strncpy(mode, "auth", sizeof(mode));
             break;
 
 		case MC_PROXY:
@@ -1051,7 +1051,7 @@ extern int igmp_mode_config_recover(mc_mode_t mc_mode)
 	return ret;
 }
 
-#define IGMP_MODE_DEFAULT	MC_DISABLE
+#define IGMP_MODE_DEFAULT	MC_SNOOPING
 
 extern int igmp_mode_tlv_infor_get(int *len, char **value, int *free_need)
 {
@@ -1207,7 +1207,7 @@ extern int cmd_igmp_mode(struct cli_def *cli, char *command, char *argv[], int a
 				"1", "set igmp auth mode",
 				NULL);
 				cli_arg_help(cli, 0,
-				"2", "set igmp disable mode",
+				"2", "set igmp transparent mode",
 				NULL);
 				return CLI_OK;
 			case 2:
@@ -1267,12 +1267,11 @@ extern int cmd_igmp_mode(struct cli_def *cli, char *command, char *argv[], int a
 		ret = mc_mode_set(0, mc_mode);
 		if(CS_E_OK == ret)
 		{
-			cs_printf("mode :0x%x\n", mc_mode);
-			cs_printf("mc_mode_set success\n");
+			cs_printf("igmp mode set success\n");
 		}
 		else
 		{
-			cs_printf("mc_mode_set failed\n");
+			cs_printf("igmp mode set failed\n");
 		}
 	}
 	else
@@ -1513,6 +1512,10 @@ int cmd_debug_regular(struct cli_def *cli, char *command, char *argv[], int argc
 extern void do_help(void);
 extern int imst_cli_start(char *p);
 
+#if (OAM_PTY_SUPPORT == MODULE_YES)
+extern int do_oam_pty_legacy_cmd(struct cli_def *cli,char *p);
+#endif
+
 int cmd_debug_legacy(struct cli_def *cli, char *command, char *argv[], int argc)
 {
     if (CLI_HELP_REQUESTED)
@@ -1549,6 +1552,19 @@ int cmd_debug_legacy(struct cli_def *cli, char *command, char *argv[], int argc)
 			}
 		}
 #endif /* HAVE_TELNET_CLI */
+#if (OAM_PTY_SUPPORT == MODULE_YES)
+	else if(CHANNEL_PTY == cli->channel)
+	{
+		cli_print(cli, "go to legacy CLI menu...");
+
+		do_help();
+		
+		if(CLI_QUIT == do_oam_pty_legacy_cmd(cli,"onu->"))
+		{
+			return CLI_QUIT;
+		}
+	}
+#endif
     return CLI_OK;
 }
 
@@ -1680,7 +1696,500 @@ int loopdetcet_debug(struct cli_def *cli, char *command, char *argv[], int argc)
 
     return CLI_OK;
 }
+#if (QINQ_SUPPORT == MODULE_YES)
+#define VLAN_MIN	2
+#define VLAN_MAX	4094
+#define ADD		1
+#define DEL		0
+#define QINQ_NUM_MAX	16
 
+extern qinq_list_t *pVlan_qinq_list_running;
+static int vlan_pas_rule_arg_help(struct cli_def *cli, char *argv[], int argc)
+{
+	switch(argc)
+	{
+		case 1:
+			cli_arg_help(cli, 0,
+			"vlan-id", "Based on vlan id",
+			NULL);
+			cli_arg_help(cli, 0,
+			"clear", "clear table",
+			NULL);
+			cli_arg_help(cli, 0,
+			"<cr>", "display vlan table",
+			NULL);
+			break;
+		case 2:
+			cli_arg_help(cli, 0,
+			"<vid>", "Vlan id (eg. 100,200 (NOT in HEX))",
+			NULL);
+			cli_arg_help(cli, 0,
+			"<cr>", "clear table",
+			NULL);
+			break;
+		case 3:
+			cli_arg_help(cli, 0,
+			"down", "Downstream",
+			NULL);
+			cli_arg_help(cli, 0,
+			"up", "Upstream",
+			NULL);
+			break;
+		case 4:
+			cli_arg_help(cli, 0,
+			"exchange", "For vlan translation and force vlan priority",
+			NULL);
+			cli_arg_help(cli, 0,
+			"attach", "For vlan stacking",
+			NULL);
+			break;
+		case 5:
+			cli_arg_help(cli, 0,
+			"<2-4094>", "New Vlan id",
+			NULL);
+			break;
+		case 6:
+			cli_arg_help(cli, 0,
+			"8100", "Vlan type field in tag = 0x8100",
+			NULL);
+			break;
+		case 7:
+			cli_arg_help(cli, 0,
+			"original", "Priority in new vlan tag copied from original tag",
+			NULL);
+			break;
+		case 8:
+			cli_arg_help(cli, 0,
+			"0", "Disable",
+			NULL);
+			cli_arg_help(cli, 0,
+			"1", "Enable",
+			NULL);
+			break;
+		default:
+			cli_arg_help(cli, argc > 1, NULL);
+			break;
+	}
+	
+	return CLI_OK;
+}
+
+
+static int vlan_pas_rule_arg_check(char *argv[], int argc)
+{
+	int ret = 0;
+	int vlan_old = 0;
+	int vlan_new = 0;
+
+	char *str_rule_opt = NULL;
+	char *str_vlan_old = NULL;
+	char *str_vlan_new = NULL;
+	char *str_direction = NULL;
+	char *str_vlan_oper = NULL;
+	char *str_tpid = NULL;
+	char *str_priority = NULL;
+	char *str_enable = NULL;
+	switch(argc)
+	{
+		case 8:
+			str_enable = argv[7];
+			if(0 == strcmp("0", str_enable))
+			{
+				//do nothing
+			}
+			else if(0 == strcmp("1", str_enable))
+			{
+				//do nothing
+			}
+			else
+			{
+				ret = CLI_ERROR;
+				break;
+			}
+		case 7:
+			str_priority = argv[6];
+			if(0 == strcmp("original", str_priority))
+			{
+				//do nothing
+			}
+			else
+			{
+				ret = CLI_ERROR;
+				break;
+			}
+			
+		case 6:
+			str_tpid = argv[5];
+			if(0 == strcmp("8100", str_tpid))
+			{
+				//do nothing
+			}
+			else
+			{
+				ret = CLI_ERROR;
+				break;
+			}
+		case 5:
+			str_vlan_new = argv[4];
+			vlan_new = atoi(str_vlan_new);
+			if((vlan_new>=VLAN_MIN)&&(vlan_new<=VLAN_MAX))
+			{
+				//do nothing
+			}
+			else
+			{
+				ret = CLI_ERROR;
+				break;
+			}
+		case 4:
+			str_vlan_oper = argv[3];
+			if(0 == strcmp("exchange", str_vlan_oper))
+			{
+				//do nothing
+			}
+			else if(0 == strcmp("attach", str_vlan_oper))
+			{
+				
+			}
+			else
+			{
+				ret = CLI_ERROR;
+				break;
+			}
+		case 3:
+			str_direction = argv[2];
+			if(0 == strcmp("up", str_direction))
+			{
+				//do nothing
+			}
+			else if(0 == strcmp("down", argv[2]))
+			{
+				//do nothing
+			}
+			else
+			{
+				ret = CLI_ERROR;
+				break;
+			}
+		case 2:
+			str_vlan_old = argv[1];
+			vlan_old = atoi(str_vlan_old);
+			if((vlan_old>=VLAN_MIN)&&(vlan_old<=VLAN_MAX))
+			{
+				//do nothing
+			}
+			else
+			{
+				ret = CLI_ERROR;
+				break;
+			}
+		case 1:
+			str_rule_opt = argv[0];
+			if(0 == strcmp("vlan-id", str_rule_opt))
+			{
+				//do nothing
+			}
+			else if(0 == strcmp("clear", str_rule_opt))
+			{
+				//do nothing
+			}
+			else
+			{
+				ret = CLI_ERROR;
+				break;
+			}
+		case 0:
+			ret = CLI_OK;
+			break;
+		default:
+			ret = CLI_ERROR;
+			break;
+	}
+	
+	return ret;
+}
+
+int vlan_pas_rule_dump_proc(void)
+{
+	vlan_qinq_sw_table_dump(pVlan_qinq_list_running);
+	return CLI_OK;
+}
+
+int vlan_pas_rule_clear_proc(void)
+{
+	//清空硬件表项
+	if(CS_E_OK == vlan_qinq_hw_table_clear(pVlan_qinq_list_running))
+	{
+		cs_printf("clear vlan qinq hardware table success!\n");
+	}
+	else
+	{
+		cs_printf("clear vlan qinq hardware table failed!\n");
+	}
+	
+	//清空软件表项
+	if(CS_E_OK == vlan_qinq_sw_table_clear(pVlan_qinq_list_running))
+	{
+		cs_printf("clear vlan qinq software table success!\n");
+	}
+	else
+	{
+		cs_printf("clear vlan qinq software table failed!\n");
+	}
+	return CLI_OK;
+}
+
+int vlan_pas_rule_add_del_proc(char *argv[], int argc)
+{
+	//参数解析
+	int ret = 0;
+	int old_vid = 0;
+	int new_vid = 0;
+	QINQ_DIRECTION direction;
+	QINQ_ACTION action;
+	vlan_qinq_infor_t vlan_qinq_infor;
+	int oper = 0;
+	char *str_rule_opt = NULL;
+	char *str_vlan_old = NULL;
+	char *str_vlan_new = NULL;
+	char *str_direction = NULL;
+	char *str_vlan_oper = NULL;
+	char *str_tpid = NULL;
+	char *str_priority = NULL;
+	char *str_enable = NULL;
+	int cvid = 0;
+
+	str_rule_opt = argv[0];
+	str_vlan_old = argv[1];
+	str_direction = argv[2];
+	str_vlan_oper = argv[3];
+	str_vlan_new = argv[4];
+	str_tpid = argv[5];
+	str_priority = argv[6];
+	str_enable = argv[7];
+	
+	
+	if(0 == strcmp("vlan-id", str_rule_opt))
+	{
+	}
+	else
+	{
+		ret = CS_E_ERROR;
+		goto end;
+	}
+	
+	old_vid = atoi(str_vlan_old);
+	
+	if(0 == strcmp("up", str_direction))
+	{
+		direction = UP;
+	}
+	else if(0 == strcmp("down", str_direction))
+	{
+		direction = DOWN;
+	}
+	else
+	{
+		ret = CS_E_ERROR;
+		goto end;
+	}
+	
+	if(0 == strcmp("exchange", str_vlan_oper))
+	{
+		action = EXCHANGE;
+	}
+	else if(0 == strcmp("attach", str_vlan_oper))
+	{
+		action = ATTACH;
+	}
+	else
+	{
+		ret = CS_E_ERROR;
+		goto end;
+	}
+	
+	new_vid = atoi(str_vlan_new);
+
+	if(0 == strcmp("8100", str_tpid))
+	{
+	}
+	else
+	{
+		ret = CS_E_ERROR;
+		goto end;
+	}
+
+	if(0 == strcmp("original", str_priority))
+	{
+	}
+	else
+	{
+		ret = CS_E_ERROR;
+		goto end;
+	}
+		
+	if(UP == direction)
+	{
+		cvid = old_vid;
+	}
+	else if(DOWN == direction)
+	{
+		cvid = new_vid;
+	}
+	else
+	{
+		goto end;
+	}
+	
+	vlan_qinq_infor.old_vid = old_vid;
+	vlan_qinq_infor.direction = direction;
+	vlan_qinq_infor.action = action;
+	vlan_qinq_infor.new_vid = new_vid;
+		
+	oper = atoi(str_enable);
+	if(ADD == oper)
+	{
+		int num = 0;
+		vlan_qinq_sw_table_get_length(pVlan_qinq_list_running, &num);
+		if(num < QINQ_NUM_MAX)
+		{
+			if(CS_E_OK == vlan_qinq_sw_table_add(pVlan_qinq_list_running, vlan_qinq_infor))
+			{
+				cs_printf("%s\n", "add software table success");
+				if(CS_E_OK == vlan_qinq_hw_table_add(vlan_qinq_infor))
+				{
+					cs_printf("add update hardware success\n");
+				}
+				else
+				{
+					cs_printf("add update hardware failed\n");
+				}
+			}
+			else
+			{
+				cs_printf("%s\n", "add software table failed");
+			}
+		}
+		else
+		{
+			cs_printf("Connot add, QinQ table is full!\n");
+		}
+	}
+	else if(DEL == oper)
+	{
+		//先删硬件表
+		if(CS_E_OK == vlan_qinq_hw_table_del(vlan_qinq_infor))
+		{
+			cs_printf("del update hardware success\n");
+			if(CS_E_OK == vlan_qinq_sw_table_del(pVlan_qinq_list_running, vlan_qinq_infor))
+			{
+				cs_printf("%s\n", "del software table success");
+			}
+			else
+			{
+				cs_printf("%s\n", "del software table failed");
+			}
+		}
+		else
+		{
+			cs_printf("del update hardware failed\n");
+		}
+	}
+	else
+	{
+		//do nothing
+		cs_printf("in %s\n", __func__);
+		cs_printf("wrong oper :%d\n", oper);
+	}
+
+end:
+	return ret;
+}
+int cmd_vlan_pas_rule(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+    // deal with help
+    if(CLI_HELP_REQUESTED)
+    {
+    	if(CLI_OK == vlan_pas_rule_arg_check(argv, argc-1))
+    	{
+    		return vlan_pas_rule_arg_help(cli, argv, argc);
+    	}
+		else
+		{
+			cs_printf("%s\n", "wrong command");
+			return CLI_ERROR;
+		}
+        
+    }
+
+	if(CLI_OK == vlan_pas_rule_arg_check(argv, argc))
+	{
+		switch(argc)
+		{
+			case 0:
+				vlan_pas_rule_dump_proc();
+				break;
+			case 1:
+				if(0 == strcmp(argv[0], "clear"))
+				{
+					vlan_pas_rule_clear_proc();
+				}
+				else
+				{
+					cs_printf("%s\n", "wrong command");
+				}
+				break;
+			case 8:
+				vlan_pas_rule_add_del_proc(argv, argc);
+				break;
+			default:
+				cs_printf("%s\n", "wrong command");
+				break;
+		}
+		
+	}
+	else
+	{
+		cs_printf("%s\n", "wrong command");
+	}
+	
+    return CLI_OK;
+}
+
+
+int cmd_vlan_pas_rule_debug(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	// deal with help
+    if(CLI_HELP_REQUESTED)
+    {
+    	switch(argc)
+    	{
+			case 1:
+				return cli_arg_help(cli, 0,
+				"<cr>", "show Hardware QinQ table",
+				NULL);
+				break;
+			default:
+				return cli_arg_help(cli, argc > 1, NULL);
+				break;
+    	}
+    	
+    }
+
+	switch(argc)
+	{
+		case 0:
+			vlan_qinq_hw_table_dump();
+			break;
+		default:
+			cs_printf("wrong command\n");
+			break;
+	}
+	return CLI_OK;
+}
+
+
+#endif
 
 void cli_reg_usr_cmd(struct cli_command **cmd_root)
 {
@@ -1699,6 +2208,10 @@ void cli_reg_usr_cmd(struct cli_command **cmd_root)
   struct cli_command * show_igmp ;
 #endif
 
+	#if (QINQ_SUPPORT == MODULE_YES)
+	struct cli_command *vlan = NULL;
+	struct cli_command *vlan_debug = NULL;
+	#endif
 
     c = cli_register_command(cmd_root, 0, "configure", NULL,                         PRIVILEGE_PRIVILEGED, MODE_EXEC, "Enter configuration mode");
         cli_register_command(cmd_root, c, "terminal", cli_int_configure_terminal,    PRIVILEGE_PRIVILEGED, MODE_EXEC, "Configure from the terminal");
@@ -1775,6 +2288,12 @@ void cli_reg_usr_cmd(struct cli_command **cmd_root)
   //  cli_register_command(cmd_root, NULL, "debug",    cmd_debug_mode_int, PRIVILEGE_PRIVILEGED,   MODE_CONFIG,    "Enter debug mode");
    // cli_register_command(cmd_root, NULL, "regular",  cmd_debug_regular,  PRIVILEGE_PRIVILEGED,   MODE_DEBUG,     "Switch for regular callback");
   //  cli_register_command(cmd_root, NULL, "legacy",   cmd_debug_legacy,   PRIVILEGE_PRIVILEGED,   MODE_DEBUG,     "Switch to legacy console CLI");
+	#if (QINQ_SUPPORT == MODULE_YES)
+	vlan = cli_register_command(cmd_root, NULL, "vlan", NULL, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "Config onu vlan translation table");
+	cli_register_command(cmd_root, vlan, "pas-rule", cmd_vlan_pas_rule, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "Config onu vlan translation table");
+	vlan_debug = cli_register_command(cmd_root, NULL, "vlan", NULL, PRIVILEGE_PRIVILEGED, MODE_DEBUG, "debug onu vlan translation table");
+	cli_register_command(cmd_root, vlan_debug, "pas-rule-debug", cmd_vlan_pas_rule_debug, PRIVILEGE_PRIVILEGED, MODE_DEBUG, "debug onu vlan translation table");
+	#endif
   
     return;
 }

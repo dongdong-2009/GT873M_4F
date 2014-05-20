@@ -413,6 +413,46 @@ cs_int32 cs_thread_create(cs_uint32 *thread_id,  const cs_int8 *thread_name,
     return CS_E_OSAL_OK;
 }
 
+#if 1
+/*
+ *added by zhuxiaohui
+ */
+cs_int32 cs_thread_delete(cs_int32 thread_id)
+{
+	//进入资源保护
+	cyg_mutex_lock(&osal_task_table_mutex);
+	
+	//入口规则检查
+	if((CS_OSAL_MAX_THREAD <= thread_id) || (osal_thread_table[thread_id].free != FALSE))
+	{
+		//退出线程保护
+		cyg_mutex_unlock(&osal_task_table_mutex);
+		return CS_E_OSAL_ERR_INVALID_ID;
+	}
+	
+	/* Delete VxWorks Task */
+	cyg_thread_kill(osal_thread_table[thread_id].id);
+
+	//释放内存
+	iros_free(osal_thread_table[thread_id].stack_buf);
+
+	//删除线程的操作
+	memset(osal_thread_table[thread_id].name, 0, CS_OSAL_MAX_API_NAME);
+	osal_thread_table[thread_id].free  = TRUE;
+	osal_thread_table[thread_id].creator = 0;
+	osal_thread_table[thread_id].stack_size = 0;
+	osal_thread_table[thread_id].priority = 0;
+	osal_thread_table[thread_id].stack_buf = NULL;
+	
+	//退出线程保护
+	cyg_mutex_unlock(&osal_task_table_mutex);
+	//退出
+	return CS_E_OSAL_OK;
+}
+
+#endif
+
+
 /*---------------------------------------------------------------------------------------
    Name: cs_thread_delay
 

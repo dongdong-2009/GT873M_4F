@@ -436,6 +436,7 @@ void startup_cfg_rebuild(unsigned int *inst_id)
     *inst_id = new_instid;
     return;
 }
+
 static void startup_config_dump_hex();
 int init_flag = 0;
 void startup_config_init()
@@ -531,6 +532,7 @@ LOAD_ACTIVE_SCFG:
                     goto CFG_INIT_ERROR;
             }
         }
+        
         rsvd_flag = tlv_header.reserved;
         if(rsvd_flag&TLV_CFG_ENC_FLAG)
             startup_cfg_enc_enable(1);
@@ -567,6 +569,7 @@ LOAD_ACTIVE_SCFG:
             else
                 goto CFG_INIT_ERROR;
         }
+
         if(ver_invalid)
         {
             tlv_write_version(gStartupInst, gScfgVer);
@@ -574,10 +577,8 @@ LOAD_ACTIVE_SCFG:
 
         if(total_len != startup_cfg_default_cfg_len())
         {
-
             startup_cfg_rebuild(&gStartupInst);
             cs_printf("Startup-cfg rebuild\n");
-
         }
         
         pInst = (tlv_instance_t *)gStartupInst;

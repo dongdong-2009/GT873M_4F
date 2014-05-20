@@ -120,7 +120,6 @@ app_ipintf_ip_tx_filter_routine_t app_ipintf_ip_tx_filter = NULL;
 app_ipintf_arp_tx_filter_routine_t app_ipintf_arp_tx_filter = NULL;
 app_ipintf_enable_inband_routine_t app_ipintf_enable_inband = NULL;
 app_ipintf_enable_inband_routine_t app_ipintf_enable_outband = NULL;
-cs_uint32 app_ip_changed = 0;
 
 
 extern void netdev_pkt_recv(cs_pkt_t * event_buf);
@@ -676,7 +675,6 @@ cs_status app_ipintf_set_wan_cfg(
 
     APP_IPINTF_LOG(IROS_LOG_LEVEL_INF,"%s inband, pri %d, vlan %d - 0x%08x, 0x%08x\n", 
         enable==APP_IPINTF_INBNAD_MGNT?"enable":"disable", pri,vlanid,remote_subnet, subnet_mask);
-    app_ip_changed = 1;
     ipintf_info.inband = enable==APP_IPINTF_INBNAD_MGNT ? 1:0;
     ipintf_info.keepalive = ipintf_info.inband?(IPINTF_ARP_KEEPALIVE_ZTE):(IPINTF_ARP_KEEPALIVE_DFT);
     
@@ -985,7 +983,6 @@ cs_status app_ipintf_ip_config_set(cs_uint32 local_ip, cs_uint32 ip_mask, cs_uin
                                                         local_ip, ip_mask, gw_ip);
         return CS_E_ERROR;
     }
-    app_ip_changed = 1;
     return CS_E_OK;
 }
 cs_status app_ipintf_ping(char *host)

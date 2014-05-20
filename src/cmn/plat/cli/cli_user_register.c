@@ -409,16 +409,16 @@ int cmd_statistics_uni(struct cli_def *cli, char *command, char *argv[], int arg
 			return CLI_ERROR;
 		}
 		
-		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In bit rate", rxrate, "Out bit rate", txrate);
-		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In bytes", uni_stats.rxbyte_cnt, "Out bytes", uni_stats.rxbyte_cnt);
-		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In total pkts", uni_stats.rxfrm_cnt, "Out total pkts", uni_stats.txfrm_cnt);
-		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In unicast pkts", uni_stats.rxucfrm_cnt, "Out unicast pkts", uni_stats.txucfrm_cnt);
-		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In multicast pkts", uni_stats.rxmcfrm_cnt, "Out multicast pkts", uni_stats.txmcfrm_cnt);
-		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In broadcast pkts", uni_stats.rxbcfrm_cnt, "Out broadcast pkts", uni_stats.txbcfrm_cnt);
-		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In pause pkts", uni_stats.rxpausefrm_cnt, "Out pause pkts", uni_stats.txpausefrm_cnt);
-		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In crc error pkts", uni_stats.rxcrcerrfrm_cnt, "Out crc error pkts", uni_stats.txcrcerrfrm_cnt);
-		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In jumbo pkts", uni_stats.rxoversizefrm_cnt, "Out jumbo pkts", (cs_uint64)0);
-		cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In undersize pkts", uni_stats.rxundersizefrm_cnt, "Out undersize pkts", (cs_uint64)0);
+		cli_print(cli, "%-30s: %-20lld \t %-30s: %-20lld", "In bit rate", rxrate, "Out bit rate", txrate);
+		cli_print(cli, "%-30s: %-20lld \t %-30s: %-20lld", "In bytes", uni_stats.rxbyte_cnt, "Out bytes", uni_stats.rxbyte_cnt);
+		cli_print(cli, "%-30s: %-20lld \t %-30s: %-20lld", "In total pkts", uni_stats.rxfrm_cnt, "Out total pkts", uni_stats.txfrm_cnt);
+		cli_print(cli, "%-30s: %-20lld \t %-30s: %-20lld", "In unicast pkts", uni_stats.rxucfrm_cnt, "Out unicast pkts", uni_stats.txucfrm_cnt);
+		cli_print(cli, "%-30s: %-20lld \t %-30s: %-20lld", "In multicast pkts", uni_stats.rxmcfrm_cnt, "Out multicast pkts", uni_stats.txmcfrm_cnt);
+		cli_print(cli, "%-30s: %-20lld \t %-30s: %-20lld", "In broadcast pkts", uni_stats.rxbcfrm_cnt, "Out broadcast pkts", uni_stats.txbcfrm_cnt);
+		cli_print(cli, "%-30s: %-20lld \t %-30s: %-20lld", "In pause pkts", uni_stats.rxpausefrm_cnt, "Out pause pkts", uni_stats.txpausefrm_cnt);
+		cli_print(cli, "%-30s: %-20lld \t %-30s: %-20lld", "In crc error pkts", uni_stats.rxcrcerrfrm_cnt, "Out crc error pkts", uni_stats.txcrcerrfrm_cnt);
+		cli_print(cli, "%-30s: %-20lld \t %-30s: %-20lld", "In jumbo pkts", uni_stats.rxoversizefrm_cnt, "Out jumbo pkts", (cs_uint64)0);
+		cli_print(cli, "%-30s: %-20lld \t %-30s: %-20lld", "In undersize pkts", uni_stats.rxundersizefrm_cnt, "Out undersize pkts", (cs_uint64)0);
 		#endif
     } 
     else
@@ -511,6 +511,79 @@ int cmd_statistics_cpu(struct cli_def *cli, char *command, char *argv[], int arg
     return CLI_OK;
 }
 
+#if 1
+cs_status uni_port_check(cs_port_id_t port);
+cs_status uni_port_num_get(int *num);
+
+int cmd_statistics_uni_clear(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	cs_status ret = CS_E_OK;
+	int port = 0;
+	cs_port_id_t port_id;
+	if(CLI_HELP_REQUESTED)
+    {
+        switch(argc)
+        {
+        	case 1:
+				cli_arg_help(cli, 0,
+	                "all", "all uni port",
+	                 NULL);
+		#ifdef HAVE_MPORTS
+	            return cli_arg_help(cli, 0,
+	                "<uni id>", "value in  (1, 4)",
+	                 NULL);
+		#else
+	            return cli_arg_help(cli, 0,
+	                "<uni id>", "value in  (1, 1)",
+	                 NULL);
+		#endif
+			case 2:
+				return cli_arg_help(cli, 0,
+	                "<cr>", "Just Enter to execuse the command",
+	                 NULL);
+	        default:
+	            return cli_arg_help(cli, argc > 1, NULL);
+        }
+    }
+
+	if(1 == argc)
+	{
+		if (0 == strcmp(argv[0], "all"))
+		{
+			int port_num = 0;
+			int i = 0;
+			
+			uni_port_num_get(&port_num);
+			for(i=0;i<port_num;i++)
+			{
+				port_id  = CS_UNI_PORT_ID1 + i;
+				app_stats_reset_uni(port_id);
+			}
+		}
+		else
+		{
+			port = atoi(argv[0]);
+			port_id = port;
+			if (CS_E_OK != uni_port_check(port_id))
+			{
+				cs_printf("input wrong port:%d\n", port_id);
+			}
+			else
+			{
+				app_stats_reset_uni(port_id);
+			}
+		}
+		
+	}
+	else
+	{
+		cs_printf("wrong arg!\n");
+	}
+
+	return ret;
+}
+
+#endif
 
 int cmd_gpio_set(struct cli_def *cli, char *command, char *argv[], int argc)
 {
@@ -1434,6 +1507,10 @@ int cmd_port_stats_disable(struct cli_def *cli, char *command, char *argv[], int
 
 extern int cmd_if_config(struct cli_def *cli, char *command, char *argv[], int argc);
 
+#if (LOCAL_IP_NETWORK_CARD == MODULE_YES)
+extern int cmd_local_ip(struct cli_def *cli, char *command, char *argv[], int argc);
+#endif
+
 void user_register_command_entry(struct cli_command **cmd_root)
 {
 #ifdef HAVE_IP_STACK
@@ -1460,7 +1537,10 @@ cs_printf("uni_max_port_num is %d\r\n",uni_max_port_num);
     /*Ping*/
     ping = cli_register_command(cmd_root, NULL, "ping",  cmd_ping_host,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "Ping the specified host");
     ifconfig = cli_register_command(cmd_root, NULL, "ifconfig",  cmd_if_config,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "Set ONU device ip And Management");   
-
+	#if (LOCAL_IP_NETWORK_CARD == MODULE_YES)
+	cli_register_command(cmd_root, NULL, "local_ip",  cmd_local_ip,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "Set ONU device ip And Management");
+	#endif
+	
 #endif
 
     /*statistics*/
@@ -1472,6 +1552,7 @@ cs_printf("uni_max_port_num is %d\r\n",uni_max_port_num);
 		cli_register_command(cmd_root, portstats, "disable",cmd_port_stats_disable, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "disable command");
 		#endif
 		cli_register_command(cmd_root, portstats, "show", cmd_statistics_uni, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "show port statistics");
+		cli_register_command(cmd_root, portstats, "clear", cmd_statistics_uni_clear, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "clear port statistics");
 
     statistics_cpu = cli_register_command(cmd_root, statistics, "cpu",  cmd_statistics_cpu,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "Show cpu statistics");
 
@@ -1502,7 +1583,7 @@ extern cs_status app_ipintf_add_ip_address(cs_uint32 localIp, cs_uint32 gwIp, cs
 extern cs_status ip_mode_set(int mode);
 
 
-static int ip_mode = 1;		//0-uart,1-device, 2-pty
+static int ip_mode = 1;		//0-uart,1-device, 2-pty, 3-local
 extern cs_status ip_mode_set(int mode)
 {
 	cs_status ret = CS_E_OK;
@@ -1695,6 +1776,144 @@ extern cs_status ip_info_get_from_flash(cs_uint32 *ip, cs_uint32 *mask, cs_uint3
 
 }
 
+#if (LOCAL_IP_NETWORK_CARD == MODULE_YES)
+typedef struct
+{
+	cs_uint32	ip;		//采用本地字节序
+	cs_uint32	mask;	//采用本地字节序
+	cs_uint32	gateway;	//采用本地字节序
+	cs_uint16	vlan;	//采用本地字节序
+}eth_ip_t;
+
+static eth_ip_t local_ip;
+
+extern cs_status local_ip_info_save_to_global(cs_uint32 ip, cs_uint32 mask, cs_uint32	gateway, cs_uint16 vlan)
+{
+	cs_status ret = CS_E_OK;
+	
+	local_ip.ip = ip;
+	local_ip.mask = mask;
+	local_ip.gateway = gateway;
+	local_ip.vlan = vlan;
+	
+	return ret;	
+}
+
+extern cs_status local_ip_info_get_from_global(cs_uint32 *ip, cs_uint32 *mask, cs_uint32 *gateway, cs_uint16 *vlan)
+{
+	cs_status ret = CS_E_OK;
+	
+	if(NULL != ip)
+	{
+		*ip = local_ip.ip;
+	}
+	else
+	{
+		//do nothing
+	}
+
+	if(NULL != mask)
+	{	
+		*mask = local_ip.mask;
+	}
+	else
+	{
+		//do nothing
+	}
+
+	if(NULL != gateway)
+	{
+		*gateway = local_ip.gateway;
+	}
+	else
+	{
+		//do nothing
+	}
+
+	if(NULL != vlan)
+	{
+		*vlan = local_ip.vlan;
+	}
+	else
+	{
+		//do nothing
+	}
+	
+	return ret;	
+}
+
+
+
+extern cs_status local_ip_info_save_to_flash(cs_uint32 ip, cs_uint32 mask, cs_uint32	gateway, cs_uint16 vlan)
+{
+	cs_status ret = CS_E_OK;
+	onu_slow_path_cfg_cfg_t ip_cfg;
+	ret = get_userdata_from_flash((char *)&ip_cfg, GWD_PRODUCT_CFG_OFFSET_W, sizeof(ip_cfg));
+	if(0 != ret)
+	{
+		cs_printf("get ipdate fail..\n");
+	}
+	else
+	{
+		//do nothing
+		#if 0
+		cs_printf("get ip data success\n");
+		#endif
+	}
+
+	ip_cfg.uart_ip = ip;
+	ip_cfg.uart_mask = mask;
+	ip_cfg.uart_gateway = gateway;
+	ip_cfg.uart_vlan = vlan;
+
+	ret = save_userdata_to_flash((char *)&ip_cfg, GWD_PRODUCT_CFG_OFFSET_W, sizeof(ip_cfg));
+	if(0 != ret)
+	{
+		cs_printf("save_userdata_to_flash failed\n");
+	}
+	else
+	{
+		#if 0
+		cs_printf("save_userdata_to_flash success\n");
+		#endif
+	}
+
+	return ret;
+
+}
+
+
+
+extern cs_status local_ip_info_get_from_flash(cs_uint32 *ip, cs_uint32 *mask, cs_uint32 *gateway, cs_uint16 *vlan)
+{
+	cs_status ret = CS_E_OK;
+	onu_slow_path_cfg_cfg_t ip_cfg;
+	ret = get_userdata_from_flash((char *)&ip_cfg, GWD_PRODUCT_CFG_OFFSET_W, sizeof(ip_cfg));
+	if(0 != ret)
+	{
+		cs_printf("get ipdate fail..\n");
+	}
+	else
+	{
+		//do nothing
+		#if 0
+		cs_printf("get ip data success\n");
+		#endif
+	}
+
+	*ip = ip_cfg.uart_ip;
+	*mask = ip_cfg.uart_mask;
+	*gateway = ip_cfg.uart_gateway;
+	*vlan = ip_cfg.uart_vlan;
+
+	return ret;
+
+}
+
+
+#endif
+
+
 
 extern int cmd_if_config(struct cli_def *cli, char *command, char *argv[], int argc)
 {
@@ -1824,84 +2043,52 @@ extern int cmd_if_config(struct cli_def *cli, char *command, char *argv[], int a
 		cli_print(cli,"=========================================================================");
 		
 	}
-	else
+	else if(1 == argc)
 	{
-		//do nothing
-	}
+		if(0 == strcmp(argv[0], "save"))
+		{
+			cs_uint32	device_ip;
+			cs_uint32	device_mask;
+			cs_uint32	device_gateway;
+			cs_uint16	device_vlan;
 
-	if(1 == argc)
+			cs_status ret = CS_E_OK;
+			ret = ip_info_get_from_global(&device_ip, &device_mask, &device_gateway, &device_vlan);
+			if(CS_E_OK != ret)
+			{
+				cs_printf("ip_info_get_from_global fail\n");
+			}
+			else
+			{
+				//do nothing
+			}
+
+			ret = ip_info_save_to_flash(device_ip, device_mask, device_gateway, device_vlan);
+			if(CS_E_OK != ret)
+			{
+				cs_printf("ip_info_save_to_flash fail\n");
+			}
+			else
+			{
+				cs_printf("ip save to flash success\n");
+			}
+		}
+		else
+		{
+			cs_printf("input wrong!\n");
+		}	
+	}
+	else if(4 == argc)
 	{
-		#if 1
-		cs_printf("argv[0] :%s\n", argv[0]);
-		#endif
-		char str[] = "save";
-		strcmp(str, argv[0]);
 		cs_uint32	device_ip;
 		cs_uint32	device_mask;
 		cs_uint32	device_gateway;
 		cs_uint16	device_vlan;
 
-		cs_status ret = CS_E_OK;
-		ret = ip_info_get_from_global(&device_ip, &device_mask, &device_gateway, &device_vlan);
-		if(CS_E_OK != ret)
-		{
-			cs_printf("ip_info_get_from_global fail\n");
-		}
-		else
-		{
-			#if 0
-			cs_printf("ip_info_get_from_global success\n");
-			#endif
-		}
-
-		#if 1
-		ret = ip_info_save_to_flash(device_ip, device_mask, device_gateway, device_vlan);
-		if(CS_E_OK != ret)
-		{
-			cs_printf("ip_info_save_to_flash fail\n");
-		}
-		else
-		{
-			#if 0
-			cs_printf("ip_info_save_to_flash success\n");
-			#endif
-		}
-		#endif
-
-		
-	}
-	else
-	{
-		//do nothing
-	}
-
-	if(4 == argc)
-	{
-		#if 1
-		cs_printf("ip configure\n");
-		#endif
-		cs_uint32	device_ip;
-		cs_uint32	device_mask;
-		cs_uint32	device_gateway;
-		cs_uint16	device_vlan;
-		#if 1
 		device_ip = ntohl(inet_addr(argv[0]));
 		device_mask = ntohl(inet_addr(argv[1]));
 		device_gateway = ntohl(inet_addr(argv[2]));
 		device_vlan = (atoi(argv[3]));
-		#else
-		device_ip = htonl(inet_aton(argv[0], NULL));
-		device_mask = htonl(inet_aton(argv[1], NULL));
-		device_gateway = htonl(inet_aton(argv[2], NULL));
-		device_vlan = htons(atoi(argv[3]));
-		#endif
-
-		#if 1
-		cs_printf("device_ip :0x%x\n", device_ip);
-		cs_printf("device_mask :0x%x\n", device_mask);
-		cs_printf("device_gateway :0x%x\n", device_gateway);
-		cs_printf("device_vlan :0x%x\n", device_vlan);
-		#endif
 
 		if(CS_E_OK != ip_check(device_ip))
 		{
@@ -1960,17 +2147,15 @@ extern int cmd_if_config(struct cli_def *cli, char *command, char *argv[], int a
 		ret = app_ipintf_add_ip_address((device_ip), device_vlan, (device_mask));
 		if(CS_E_OK != ret)
 		{
-			cs_printf("***app_ipintf_add_ip_address fail\n");
+			cs_printf("app_ipintf_add_ip_address fail\n");
 		}
 		else
 		{
-			#if 1
-			cs_printf("***app_ipintf_add_ip_address success\n");
-			#endif
+			cs_printf("ip config success\n");
 		}
 		ip_mode_set(1);
 
-		#if 0
+		#if 1
 		ret = ip_info_save_to_global(device_ip, device_mask, device_gateway, device_vlan);
 		if(CS_E_OK != ret)
 		{
@@ -1978,7 +2163,7 @@ extern int cmd_if_config(struct cli_def *cli, char *command, char *argv[], int a
 		}
 		else
 		{
-			#if 1
+			#if 0
 			cs_printf("ip_info_save_to_global success\n");
 			#endif
 		}
@@ -1995,6 +2180,386 @@ extern int cmd_if_config(struct cli_def *cli, char *command, char *argv[], int a
 #endif
 
 
+#if (LOCAL_IP_NETWORK_CARD == MODULE_YES)
+extern cs_status ip_info_check(cs_uint32 ip, cs_uint32 mask, cs_uint32 gateway, cs_uint16 vlan);
+
+static cs_status local_ip_set_default(cs_uint32 *ip, cs_uint32 *mask, cs_uint32 *gateway, cs_uint16 *vlan)
+{
+	cs_status ret = CS_E_OK;
+	char ip_default[] = "192.168.0.1";
+	char mask_default[] = "255.255.255.0";
+	char gateway_default[] = "192.168.0.1";
+	
+	*ip =  ntohl(inet_addr(ip_default));
+	*mask = ntohl(inet_addr(mask_default));
+	*gateway = ntohl(inet_addr(gateway_default));
+	
+	return ret;
+}
+
+extern cs_status local_ip_init(void)
+{
+	cs_uint32 uart_ip = 0;
+	cs_uint32 uart_mask = 0;
+	cs_uint32 uart_gateway = 0;
+	cs_uint16 uart_vlan = 0;
+
+	cs_status ret = CS_E_OK;
+
+	int status = 0;
+	status = get_userdata_from_flash((unsigned char *)&g_slow_path_ip_cfg, GWD_PRODUCT_CFG_OFFSET_W, sizeof(g_slow_path_ip_cfg));
+	
+	if(0 != status)
+	{
+		cs_printf("get ipdate fail..\n");
+
+		local_ip_set_default(&uart_ip, &uart_mask, &uart_gateway, &uart_vlan);
+		g_slow_path_ip_cfg.uart_ip = uart_ip;
+		g_slow_path_ip_cfg.uart_mask = uart_mask;
+		g_slow_path_ip_cfg.uart_gateway = uart_gateway;
+		g_slow_path_ip_cfg.uart_vlan = uart_vlan;
+		int status_save = 0;
+		status_save = save_userdata_to_flash((unsigned char *)&g_slow_path_ip_cfg, GWD_PRODUCT_CFG_OFFSET_W, sizeof(g_slow_path_ip_cfg));
+		if(0 != status_save)
+		{
+			cs_printf("save_userdata_to_flash failed\n");
+		}
+		else
+		{
+			//do nothing
+			#if 1
+			cs_printf("save_userdata_to_flash success\n");
+			#endif
+		}
+	}
+	else
+	{
+		//do nothing
+		uart_ip = g_slow_path_ip_cfg.uart_ip;
+		uart_mask = g_slow_path_ip_cfg.uart_mask;
+		uart_gateway = g_slow_path_ip_cfg.uart_gateway;
+		uart_vlan = g_slow_path_ip_cfg.uart_vlan;
+		
+		ret = ip_info_check(uart_ip, uart_mask, uart_gateway, uart_vlan);
+		if(CS_E_OK == ret)
+		{
+			//do nothing
+			#if 0
+			cs_printf("ip_info_check success, uart ip :0x%x\n", uart_ip);
+			#endif
+		}
+		else
+		{
+			#if 1
+			cs_printf("ip_info_check failed, uart ip :0x%x\n", uart_ip);
+			cs_printf("wrong ip configure!\n");
+			#endif
+			
+			local_ip_set_default(&uart_ip, &uart_mask, &uart_gateway, &uart_vlan);
+			g_slow_path_ip_cfg.uart_ip = uart_ip;
+			g_slow_path_ip_cfg.uart_mask = uart_mask;
+			g_slow_path_ip_cfg.uart_gateway = uart_gateway;
+			g_slow_path_ip_cfg.uart_vlan = uart_vlan;
+			int status_save = 0;
+			status_save = save_userdata_to_flash((unsigned char *)&g_slow_path_ip_cfg, GWD_PRODUCT_CFG_OFFSET_W, sizeof(g_slow_path_ip_cfg));
+			if(0 != status_save)
+			{
+				cs_printf("save_userdata_to_flash failed\n");
+			}
+			else
+			{
+				//do nothing
+				#if 1
+				cs_printf("save_userdata_to_flash success\n");
+				#endif
+			}
+		}
+
+		
+	}
+
+	#if 1
+
+	uart_ip = g_slow_path_ip_cfg.uart_ip;
+	uart_mask = g_slow_path_ip_cfg.uart_mask;
+	uart_gateway = g_slow_path_ip_cfg.uart_gateway;
+	uart_vlan = g_slow_path_ip_cfg.uart_vlan;
+	local_ip_info_save_to_global(uart_ip, uart_mask, uart_gateway, uart_vlan);
+	ip_mode_set(3);
+	app_ipintf_add_ip_address(uart_ip, uart_gateway, uart_mask);
+	ip_mode_set(1);
+	#endif
+
+	#if 0
+	cs_printf("uart_ip :0x%x, uart_gateway :0x%x, uart_mask :0x%x\n", uart_ip, uart_gateway, uart_mask);
+	#endif
+	
+	return ret;
+}
+
+extern int cmd_local_ip(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	if(CLI_HELP_REQUESTED)
+	{
+		switch(argc)
+		{
+			case 1:
+				return cli_arg_help(cli, 0,
+				"<cr>", "show ip configure",
+				"<IP address>", "ip configure",
+				"save", "save config to flash",
+				NULL);
+				break;
+			case 2:
+				return cli_arg_help(cli, 0,
+				"<Subnet Mask>", "ip configure",
+				NULL);
+				break;
+			case 3:
+				return cli_arg_help(cli, 0,
+				"<GateWay>", "ip configure",
+				NULL);
+				break;
+			case 4:
+				return cli_arg_help(cli, 0,
+				"<Management Vlan>", "ip configure",
+				NULL);
+				break;
+			case 5:
+				return cli_arg_help(cli, 0,
+				"<cr>", "finish ip configure",
+				NULL);
+				break;
+			default:
+			return cli_arg_help(cli, argc > 1, NULL);
+		}
+	}
+
+
+	#if 0
+	cs_printf("argc :0x%x\n", argc);
+	#endif
+
+	int valid = 0;
+	int argc_valid[] = {0, 1,4,};
+	int i = 0;
+	int len = 0;
+	len = sizeof(argc_valid)/sizeof(argc_valid[0]);
+	for(i=0;i<len;i++)
+	{
+		if(argc == argc_valid[i])
+		{
+			valid = 1;
+			break;
+		}
+		else
+		{
+			//do nothing
+		}
+	}
+
+	
+	if(0 == valid)
+	{
+		cli_print(cli, "%% Invalid input");
+		return CLI_ERROR;
+	}
+	else
+	{
+		//do nothing
+	}
+
+	if(0 == argc)
+	{
+		#if 0
+		cs_printf("show ip configure\n");
+		#endif
+
+		cs_status ret = CS_E_OK;
+		cs_uint32	device_ip;
+		cs_uint32	device_mask;
+		cs_uint32	device_gateway;
+		cs_uint16	device_vlan;
+		
+		ret = local_ip_info_get_from_global(&device_ip, &device_mask, &device_gateway, &device_vlan);
+		if(CS_E_OK != ret)
+		{
+			cs_printf("ip_info_get_from_global fail\n");
+		}
+		else
+		{
+			#if 0
+			cs_printf("ip_info_get_from_global success\n");
+			#endif
+		}
+
+		#if 0
+		ip_info_get_from_flash(&device_ip, &device_mask, &device_gateway, &device_vlan);
+		app_ipintf_add_ip_address(ntohl(device_ip), device_vlan, ntohl(device_mask));
+		#endif
+
+		struct sockaddr_in addrp[3];
+		addrp[0].sin_addr.s_addr = htonl(device_ip);
+		addrp[1].sin_addr.s_addr = htonl(device_mask); 
+		addrp[2].sin_addr.s_addr = htonl(device_gateway);
+		
+		cli_print(cli, "ip from network card:\n");		
+		cli_print(cli,"=========================================================================");
+		cli_print(cli,"IP - %s", inet_ntoa(addrp[0].sin_addr));
+		cli_print(cli,"IP Submask - %s", inet_ntoa(addrp[1].sin_addr));
+		cli_print(cli,"IP Gateway - %s", inet_ntoa(addrp[2].sin_addr));
+		cli_print(cli,"IP Management Vlan - %d", device_vlan);
+		cli_print(cli,"=========================================================================");
+
+		cli_print(cli, "\n");
+		cli_print(cli, "ip from flash:\n");
+		local_ip_info_get_from_flash(&device_ip, &device_mask, &device_gateway, &device_vlan);
+		addrp[0].sin_addr.s_addr = htonl(device_ip);
+		addrp[1].sin_addr.s_addr = htonl(device_mask); 
+		addrp[2].sin_addr.s_addr = htonl(device_gateway);
+		cli_print(cli,"=========================================================================");
+		cli_print(cli,"IP - %s", inet_ntoa(addrp[0].sin_addr));
+		cli_print(cli,"IP Submask - %s", inet_ntoa(addrp[1].sin_addr));
+		cli_print(cli,"IP Gateway - %s", inet_ntoa(addrp[2].sin_addr));
+		cli_print(cli,"IP Management Vlan - %d", device_vlan);
+		cli_print(cli,"=========================================================================");
+		
+	}
+	else if(1 == argc)
+	{
+		if(0 == strcmp(argv[0], "save"))
+		{
+			cs_uint32	device_ip;
+			cs_uint32	device_mask;
+			cs_uint32	device_gateway;
+			cs_uint16	device_vlan;
+
+			cs_status ret = CS_E_OK;
+			ret = local_ip_info_get_from_global(&device_ip, &device_mask, &device_gateway, &device_vlan);
+			if(CS_E_OK != ret)
+			{
+				cs_printf("ip_info_get_from_global fail\n");
+			}
+			else
+			{
+				//do nothing
+			}
+
+			ret = local_ip_info_save_to_flash(device_ip, device_mask, device_gateway, device_vlan);
+			if(CS_E_OK != ret)
+			{
+				cs_printf("ip_info_save_to_flash fail\n");
+			}
+			else
+			{
+				cs_printf("ip save to flash success\n");
+			}
+		}
+		else
+		{
+			cs_printf("input wrong!\n");
+		}	
+	}
+	else if(4 == argc)
+	{
+		cs_uint32	device_ip;
+		cs_uint32	device_mask;
+		cs_uint32	device_gateway;
+		cs_uint16	device_vlan;
+
+		device_ip = ntohl(inet_addr(argv[0]));
+		device_mask = ntohl(inet_addr(argv[1]));
+		device_gateway = ntohl(inet_addr(argv[2]));
+		device_vlan = (atoi(argv[3]));
+
+		if(CS_E_OK != ip_check(device_ip))
+		{
+			cli_print(cli, "%% Invalid ip");
+			return CLI_ERROR;
+		}
+		else
+		{
+			//do nothing
+			#if 0
+			cs_printf("ip_check OK\n");
+			#endif
+		}
+
+		if(CS_E_OK != mask_check(device_mask))
+		{
+			cli_print(cli, "%% Invalid mask");
+			return CLI_ERROR;
+		}
+		else
+		{
+			//do nothing
+			#if 0
+			cs_printf("mask_check OK\n");
+			#endif
+		}
+
+		if(CS_E_OK != gateway_check(device_gateway))
+		{
+			cli_print(cli, "%% Invalid gateway");
+			return CLI_ERROR;
+		}
+		else
+		{
+			//do nothing
+			#if 0
+			cs_printf("gateway_check OK\n");
+			#endif
+		}
+
+		if(CS_E_OK != vlan_check(device_vlan))
+		{
+			cli_print(cli, "%% Invalid vlan");
+			return CLI_ERROR;
+		}
+		else
+		{
+			//do nothing
+			#if 0
+			cs_printf("vlan_check OK\n");
+			#endif
+		}
+
+		ip_mode_set(3);
+		cs_status ret = CS_E_OK;
+		ret = app_ipintf_add_ip_address((device_ip), device_vlan, (device_mask));
+		if(CS_E_OK != ret)
+		{
+			cs_printf("app_ipintf_add_ip_address fail\n");
+		}
+		else
+		{
+			cs_printf("ip config success\n");
+		}
+		ip_mode_set(1);
+
+		#if 1
+		ret = local_ip_info_save_to_global(device_ip, device_mask, device_gateway, device_vlan);
+		if(CS_E_OK != ret)
+		{
+			cs_printf("ip_info_save_to_global fail\n");
+		}
+		else
+		{
+			#if 0
+			cs_printf("ip_info_save_to_global success\n");
+			#endif
+		}
+		#endif
+		
+	}
+	else
+	{
+		//do nothing
+	}
+	return CLI_OK;
+}
+
+#endif
 
 
 #ifdef HAVE_TERMINAL_SERVER

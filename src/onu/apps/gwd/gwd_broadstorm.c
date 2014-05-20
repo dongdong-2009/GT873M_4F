@@ -629,7 +629,7 @@ void broad_storm_thread(void* data)
 							port = logical_port;
 							mode = SDL_RL_MOD_BPS;
 							type = SDL_STORM_TYPE_BC;
-							rate.enable = 1;
+							rate.enable = 0;
 							rate.rate = 0;
 
 							
@@ -800,7 +800,46 @@ void broad_storm_thread(void* data)
 	gw_printf("=======================================\n");
 }
 
+extern cs_status port_bc_storm_no_limit(cs_port_id_t port)
+{
+	cs_status ret = CS_E_OK;
+	cs_sdl_rl_mod_e mode;
+	cs_sdl_storm_ctrl_e type;
+	cs_sdl_policy_t rate;
 
+	mode = SDL_RL_MOD_BPS;
+	type = SDL_STORM_TYPE_BC;
+	rate.enable = 0;
+	rate.rate = 0;
+	ret = port_storm_limit_set(port, mode, type, rate);
+	if(CS_E_OK != ret)
+	{
+		gw_printf("Broadcast storm speed limit failure\n");
+		gw_printf("port_storm_limit_set failed\n");
+	}
+	else
+	{
+		#if 1
+		cs_printf("port :%d,broadcast packet no limit success\n", port);
+		#endif
+	}
+	return ret;
+}
 
+cs_status uni_port_num_get(int *num);
+extern cs_status all_port_bc_storm_no_limit(void)
+{
+	cs_status ret = CS_E_OK;
+	cs_port_id_t port;
+	int i = 0;
+	int uni_num = 0;
 
+	uni_port_num_get(&uni_num);
+	for(i=0;i<uni_num;i++)
+	{
+		port = CS_UNI_PORT_ID1 + i;
+		port_bc_storm_no_limit(port);
+	}
+	return ret;
+}
 

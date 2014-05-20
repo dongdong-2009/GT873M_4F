@@ -1279,6 +1279,14 @@ sal_cmd_result_t pon_cmd_lm(int argc, char **argv)
 
     if(argc!=3) return SAL_CMD_INVALID_PARAM;
 
+	if(0 == strcmp(argv[2], "?"))
+	{
+		cs_printf("0: always off;\n");
+		cs_printf("1: burst;\n");
+		cs_printf("2: always on;\n");
+		return SAL_CMD_OK;
+	}
+	
     lm = (cs_sdl_pon_laser_mode_t)iros_strtol(argv[2]);
     sdl_rt = epon_request_onu_pon_laser_mode_set(context, 0, port, lm);
     return cs_status_2_cmd_rc_map(sdl_rt);       

@@ -520,6 +520,11 @@ extern cs_status uart_ip_init(void);
 extern cs_status config_get_from_flash(void);
 extern cs_status mc_mode_init(void);
 
+#if (LOCAL_IP_NETWORK_CARD == MODULE_YES)
+extern cs_status local_ip_init(void);
+#endif
+
+
 /*
 *   PROTOTYPE    cs_status app_ipintf_init()
 *   INPUT            void
@@ -574,6 +579,9 @@ cs_status app_ipintf_init(void)
 	uart_ip_init();
 	#endif
 	
+	#if (LOCAL_IP_NETWORK_CARD == MODULE_YES)
+	local_ip_init();
+	#endif
     app_ipintf_set_mtu(ipintf_info.mtu);
     ipintf_protocol_config();
     ipintf_cmd_reg();

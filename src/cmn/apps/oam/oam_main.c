@@ -323,11 +323,27 @@ void oam_init()
     oam_plat_onu_evt_reg(EPON_EVENT_REG_CHANGE,
             (void*)oam_port_reg_change_event_handler, NULL);
 
+	/*修改原因: OAM 包处理放在最后(oam_init_step2 函数放在初始化的最后)，
+	以保证onu 先恢复保存的配置数据，后接受olt 下发的配置。这样可以
+	保证在onu 保存配置数据和olt 下发配置同时存在时，onu 的实际状态为
+	olt 下发的配置*/
+	#if (ONU_REGISTER_LAST == MODULE_YES)
+
+	#else
     app_pkt_reg_parser(CS_PKT_OAM, oam_pkt_parser);
     app_pkt_reg_handler(CS_PKT_OAM, oam_pkt_proc);
+	#endif
 
     oam_printf("OAM init done \n");
 }
+
+#if (ONU_REGISTER_LAST == MODULE_YES)
+void oam_init_step2(void)
+{
+	app_pkt_reg_parser(CS_PKT_OAM, oam_pkt_parser);
+    app_pkt_reg_handler(CS_PKT_OAM, oam_pkt_proc);
+}
+#endif
 
 
 /*****************************************************************************/

@@ -465,6 +465,40 @@ void cli_start()
 }
 //#endif
 
+#if (OAM_PTY_SUPPORT == MODULE_YES)
+extern void oam_pty_diag_print_register(void);
+extern void oam_pty_diag_print_unregister(void);
+
+extern void oam_pty_cli_start(void)
+{
+	struct cli_def *cli = NULL;
+
+    // init command tree
+    gpst_cmd_tree = cli_tree_init();
+    if(NULL == gpst_cmd_tree)
+    {
+        return;
+    }
+
+	cli = cli_init(gpst_cmd_tree,CHANNEL_PTY);
+    if(NULL == cli)
+	{
+		return;
+	}
+
+	// configure session
+    cli->channel = CHANNEL_PTY;
+	cli_set_banner(cli, PTY_BANNER);
+    cli_set_hostname(cli, HOST_NAME);
+	oam_pty_diag_print_register();
+	
+	cli_loop(cli);
+	
+	oam_pty_diag_print_unregister();
+    cli_done(cli);
+}
+
+#endif
 
 
 void shell_thread_entry( cyg_addrword_t data )

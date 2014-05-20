@@ -1054,6 +1054,7 @@ cs_status epon_request_onu_port_stats_get(
 		uni_stats->rxstatsfrm256_511_cnt = port_cnt.etherStatsPkts256to511Octets;
 		uni_stats->rxstatsfrm512_1023_cnt = port_cnt.etherStatsPkts512to1023Octets;
 		uni_stats->rxfrm_cnt = uni_stats->rxucfrm_cnt + uni_stats->rxmcfrm_cnt + uni_stats->rxbcfrm_cnt;
+		uni_stats->txfrm_cnt = uni_stats->txucfrm_cnt + uni_stats->txmcfrm_cnt + uni_stats->txbcfrm_cnt;
 		#endif
 		
     } 

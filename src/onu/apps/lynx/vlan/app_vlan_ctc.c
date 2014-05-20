@@ -412,6 +412,13 @@ cs_status vlan_ingress_trunk_mode(
     }
 
     
+	//we treat trunk mode as 802.1q
+	//gwd trunk模式下vlan入口规则:vlan tag 为默认vlan 的报文应该通过
+	if(pkt->svlan == dft_vlan->vid)
+	{
+		return CS_E_OK;
+	}
+	
     for(i=0; i<num; i++) {
         if(pkt->svlan == vlan_cfg[i].c_vlan.vid) {
             APP_VLAN_LOG(IROS_LOG_LEVEL_DBG0, "%s , vlan 0x%x is in the list\n", __func__, pkt->svlan);

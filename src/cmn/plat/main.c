@@ -191,7 +191,9 @@ extern void ssp_init(void);
 #if (PRODUCT_CLASS == PRODUCTS_GT812C)
 extern void switch_init(void);
 #endif
-
+#if (ONU_REGISTER_LAST == MODULE_YES)
+void oam_init_step2(void);
+#endif
 
 cs_uint32 ctc_trunk_vlan_ds_untag_enable_get()
 {
@@ -283,6 +285,13 @@ void mbox_init()
 
 extern int start_up_config_syn_to_running_config(void);
 
+#if (GW_IGMP_TVM == MODULE_YES)
+extern int igmp_control_table_init(void);
+#endif
+
+#if (OAM_PTY_SUPPORT == MODULE_YES)
+extern void init_oam_pty(void);
+#endif
 // user application start
 #ifdef HAVE_POSIX
 int main(int argc, char *argv[])
@@ -369,6 +378,13 @@ void cyg_user_start(void)
 
     cs_init_seq_done(INIT_STEP_SERVICE);
 
+	#if 1
+	start_up_config_syn_to_running_config();
+	#endif
+
+	#if (ONU_REGISTER_LAST == MODULE_YES)
+	oam_init_step2();
+	#endif
     cs_printf("Init system done, time %ld\n",cs_current_time());
 	#if 1
 extern cs_boolean gwd_portstats_init();
@@ -380,8 +396,12 @@ extern void gwd_portstats_thread(cyg_addrword_t p);
         }
 #endif
 
-	#if 1
-	start_up_config_syn_to_running_config();
+	#if (GW_IGMP_TVM == MODULE_YES)
+	igmp_control_table_init();
+	#endif
+	
+	#if (OAM_PTY_SUPPORT == MODULE_YES)
+	init_oam_pty();
 	#endif
 	
     cs_circle_timer_add(1000 , cs_cpuload_warning , NULL);

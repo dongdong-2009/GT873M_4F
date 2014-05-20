@@ -51,6 +51,9 @@ void dumpPkt(char *comment, int port, unsigned char *buffer, int len)
 
 extern cs_status cs_gpio_write(unsigned char gpio_id, unsigned char data);
 extern cs_status cs_gpio_mode_set(unsigned char gpio_id, gpio_mode_t mode);
+#if 1
+extern void sdl_switch_hw_reset(void);
+#endif
 void iros_system_reset(RESET_TYPE_E reset_type)
 {
     if (reset_type >= RESET_TYPE_MAX)
@@ -58,6 +61,9 @@ void iros_system_reset(RESET_TYPE_E reset_type)
 
     switch (reset_type) {
     case RESET_TYPE_FORCE:
+		#if 1
+		sdl_switch_hw_reset();
+		#endif
 		#if (PRODUCTS == PRODUCTS_GT811D)
 			if ( CS_E_OK == cs_gpio_mode_set(0, GPIO_OUTPUT))
 			{																 			

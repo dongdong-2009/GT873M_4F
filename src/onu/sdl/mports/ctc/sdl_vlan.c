@@ -104,6 +104,9 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "rtl8367b_asicdrv.h"
 #include "rtl8367b_asicdrv_vlan.h"
 #include "rtl8367b_asicdrv_svlan.h"
+#if (QINQ_SUPPORT == MODULE_YES)
+#include "sdl_vlan_util.h"
+#endif
 
 
 #define __MC_VLAN_PER_PORT_MAX          8
@@ -111,8 +114,11 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #define __MC_VLAN_SWAP_PER_PORT_MAX     8
 
 
-
+#if 0
 #define __VLAN_MAX                      (8*UNI_PORT_MAX)
+#else
+#define __VLAN_MAX                      (9*UNI_PORT_MAX)	/*一个端口有8个tag vlan加上一个untag vlan(default vlan)*/
+#endif
 
 #define __SVID_RSVD_TRANSPARENT         0
 
@@ -124,7 +130,6 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #define __US_TRANSPARENT_EVID_INDEX     31
 #define __US_TRANSPARENT_EVID           4096
 #define __US_TRANSPARENT_ACL_ID         RTK_ACL_VLAN_START
-int FALG_DORB = 1;
 #define __NULL_CHECK(pointer)                                       \
     do{                                                             \
     if((pointer) == NULL)                                           \
@@ -179,6 +184,12 @@ typedef enum
 }__rule_mode_t;
 
 
+#if (QINQ_SUPPORT == MODULE_YES)
+qinq_list_t vlan_qinq_list_running;
+qinq_list_t *pVlan_qinq_list_running = &vlan_qinq_list_running;
+qinq_list_t vlan_qinq_list_config;
+qinq_list_t *pVlan_qinq_list_config = &vlan_qinq_list_config;
+#endif
 
 
 static __port_vlan_info_t __port_vlan_table[UNI_PORT_MAX + 1];
@@ -644,6 +655,15 @@ static void __remove_port_from_svlan(cs_uint16 s_vid, rtk_port_t rtk_port)
     rtk_svlan_cfg.memberport &= ~(1<<rtk_port);
     rtk_svlan_cfg.untagport &= ~(1<<rtk_port);
     rtk_svlan_cfg.svid = s_vid;
+
+	#if 1
+	/*svlan 1 同时用于下行untag 流的转发，不能删除*/
+	if(1 == s_vid)
+	{
+		goto end;
+	}
+	#endif
+	
     /* bug 30963: only clear this SVLAN entry if both UC and MC don't use it */
     if((0 == (0xf & (rtk_svlan_cfg.memberport & (~transparent_mbp))))  /* Clean entry, if no non-transparent port in this vlan */
        && (0 == (rtk_svlan_cfg.memberport & mcvlan_mbp)))
@@ -652,6 +672,10 @@ static void __remove_port_from_svlan(cs_uint16 s_vid, rtk_port_t rtk_port)
         rtl8367b_setAsicSvlanMemberConfiguration(rtk_svlan_cfg.index, &svlan_memconf);
         return;
     }
+	
+	#if 1
+end:	
+	#endif
     rtk_svlan_memberPortEntry_set(s_vid, &rtk_svlan_cfg);
 }
 
@@ -731,13 +755,7 @@ static void __clear_uc(cs_port_id_t port_id)
             rtk_svlan_sp2c_del(port_vlan->vlan_rule[i].rule.s_vlan.vid, rtk_port);
         }
     }
-	rtk_svlan_c2s_del(0, rtk_port);
-	#if 0
-	if(rtk_svlan_c2s_del(0, rtk_port) == RT_ERR_OK)
-		cs_printf("delete vlan 0 flag ok!\r\n");
-	else
-		cs_printf("delete vlan 0 flag fail!\r\n");
-	#endif
+	rtk_svlan_c2s_del(port_vlan->def_vlan.vid, rtk_port);
 
     /* clear vlan table for this port */
     for(i = 0; i < __VLAN_MAX; ++i)
@@ -1003,11 +1021,7 @@ static void __update_hw_uc(cs_port_id_t port_id)
             rtk_svlan_cfg.memberport |= transparent_mbp;
             if((1 << rtk_port) & __s_vlan_table[i].vlan.utg)
             {
-            #if 0
                 rtk_svlan_cfg.untagport |= (1 << rtk_port);
-			#else
-				rtk_svlan_cfg.untagport = __s_vlan_table[i].vlan.utg;
-			#endif
             }
             else
             {
@@ -1027,13 +1041,8 @@ static void __update_hw_uc(cs_port_id_t port_id)
             if( __c_vlan_table[i].valid )
             {
                 rtk_mbr.bits[0] = __c_vlan_table[i].vlan.mbr;
-				//vlan4K.mbr = __c_vlan_table[i].vlan.mbr;
                 rtk_utg.bits[0] = __c_vlan_table[i].vlan.utg;
-				//vlan4K.untag = __c_vlan_table[i].vlan.utg;
 				rtk_vlan_set(__c_vlan_table[i].vlan.vid, rtk_mbr, rtk_utg, 0);				
-				#if 0
-				cs_printf("rtk_vlan_set, __c_vlan_table[%d].vlan.vid :0x%x, rtk_mbr :0x%x,rtk_utg :0x%x\n", i, __c_vlan_table[i].vlan.vid, rtk_mbr.bits[0], rtk_utg.bits[0]);
-				#endif            
             }
         }
     }
@@ -1087,12 +1096,6 @@ static void __update_hw_uc(cs_port_id_t port_id)
                 {
                     /* c2s */
                     rtk_svlan_c2s_add(port_vlan->vlan_rule[i].rule.c_vlan.vid, rtk_port, port_vlan->vlan_rule[i].rule.c_vlan.vid);
-					
-					#if 0
-					rtk_svlan_c2s_add(0, rtk_port, 0);
-					#else
-					rtk_svlan_c2s_add(1, rtk_port, 0);
-					#endif
                 }
             }
 			memset(&vlan4K, 0, sizeof(rtl8367b_user_vlan4kentry));
@@ -1111,59 +1114,15 @@ static void __update_hw_uc(cs_port_id_t port_id)
 			}
 			//cs_printf("vlan4K.mbr :0x%x, vlan4K.untag :0x%x\n", vlan4K.mbr, vlan4K.untag);
 		    rtl8367b_setAsicVlan4kEntry(&vlan4K);
-		#if 0
-			if(port_vlan->def_vlan.vid == 1)
-				{
-					rtk_svlan_c2s_add(0, rtk_port, 0);
-					#if 0
-					if(rtk_svlan_c2s_add(0, rtk_port, 0) == RT_ERR_OK)
-						cs_printf("added untag us ok!\r\n");
-					else
-						cs_printf("added untag us FAIL!\r\n");
-					#endif
-				}
-		#else
-		#if 0
-			if(port_vlan->def_vlan.vid == 1 && FALG_DORB == 0)
-		#else
+			
 			if(1 == port_vlan->def_vlan.vid)
-		#endif
-				{
-					#if 0
-				    vlan4K.vid = port_vlan->def_vlan.vid;
-				    vlan4K.fid_msti = 0;
-					vlan4K.mbr = __c_vlan_table[0].vlan.mbr;
-					vlan4K.untag = __c_vlan_table[0].vlan.utg;
-				    rtl8367b_setAsicVlan4kEntry(&vlan4K);
-					#endif
-					#if 0
-					diag_printf("into FALG\n");
-					#endif
-					#if 0
-					rtk_svlan_c2s_add(0, rtk_port, 0);
-					#else
-					rtk_svlan_c2s_add(1, rtk_port, 0);
-					#endif
-					//__vlan_table_del_port(__s_vlan_table, port_id);
-					//__rule_table_clr(__port_vlan_table[port_id].vlan_rule);
-					FALG_DORB = 1;
-				}
-			#endif
-			if(port_vlan->def_vlan.vid != 1)
-				{
-					#if 0
-				    vlan4K.vid = port_vlan->def_vlan.vid;
-				    vlan4K.fid_msti = 0;
-					vlan4K.mbr = __c_vlan_table[0].vlan.mbr;
-					vlan4K.untag = __c_vlan_table[0].vlan.utg;
-				    rtl8367b_setAsicVlan4kEntry(&vlan4K);
-					#endif
-					#if 1
-				    rtk_svlan_c2s_add(port_vlan->def_vlan.vid, rtk_port, port_vlan->def_vlan.vid);
-					#else
-					rtk_svlan_c2s_add(port_vlan->def_vlan.vid, rtk_port, 0);
-					#endif
-				}
+			{
+				rtk_svlan_c2s_add(port_vlan->def_vlan.vid, rtk_port, 0);
+			}
+			else
+			{
+				rtk_svlan_c2s_add(port_vlan->def_vlan.vid, rtk_port, port_vlan->def_vlan.vid);
+			}
             break;
 
         case SDL_VLAN_MODE_STACKING:
@@ -1207,40 +1166,12 @@ static void __update_sw
         __vlan_table_add_port(__s_vlan_table, def_vlan.vid, CS_UPLINK_PORT, EPON_FALSE);
 		__port_vlan_table[port_id].mc_vlan[0].valid = EPON_TRUE;
 		__port_vlan_table[port_id].mc_vlan[0].vid =def_vlan.vid;
-		#if 0
-		if(def_vlan.vid == 1 && cfg_nums == 0 && vlan_mode == SDL_VLAN_MODE_TRUNK)
-			{
-				__vlan_table_add_port(__c_vlan_table,def_vlan.vid, port_id, EPON_TRUE);
-		        __vlan_table_add_port(__c_vlan_table,def_vlan.vid, CS_UPLINK_PORT, EPON_TRUE);
-				FALG_DORB = 0;
-			}
-		#else
-		if((1 == def_vlan.vid) && (vlan_mode == SDL_VLAN_MODE_TRUNK))
-		{
-			__vlan_table_add_port(__c_vlan_table,def_vlan.vid, port_id, EPON_TRUE);
-		    __vlan_table_add_port(__c_vlan_table,def_vlan.vid, CS_UPLINK_PORT, EPON_TRUE);
-			if(0 == cfg_nums)
-			{
-				FALG_DORB = 0;
-			}
-			else
-			{
-				//do nothing
-			}
-		}
-		#endif
-		if(def_vlan.vid !=1 && vlan_mode == SDL_VLAN_MODE_TRUNK )
-			{
-				__vlan_table_add_port(__c_vlan_table,def_vlan.vid, port_id, EPON_TRUE);
-		        __vlan_table_add_port(__c_vlan_table,def_vlan.vid, CS_UPLINK_PORT, EPON_TRUE);
-			}
     }
 
     if( (SDL_VLAN_MODE_TRANSLATION == vlan_mode) || (SDL_VLAN_MODE_AGGREGATION == vlan_mode) ) 
     {
         for(i=0; i<cfg_nums; ++i)
-        {
-        	
+        {  	
             __rule_table_add(__port_vlan_table[port_id].vlan_rule, __RULE_LOOKUP_ALL, &vlan_cfg[i]);
             __vlan_table_add_port(__s_vlan_table, vlan_cfg[i].s_vlan.vid, port_id, EPON_TRUE);
             __vlan_table_add_port(__s_vlan_table, vlan_cfg[i].s_vlan.vid, CS_UPLINK_PORT, EPON_FALSE);
@@ -1249,7 +1180,10 @@ static void __update_sw
         }
     }
     else if( SDL_VLAN_MODE_TRUNK == vlan_mode )
-    {  	
+    {
+		__vlan_table_add_port(__c_vlan_table,def_vlan.vid, port_id, EPON_TRUE);
+		__vlan_table_add_port(__c_vlan_table,def_vlan.vid, CS_UPLINK_PORT, EPON_TRUE);
+		
         for(i=0; i<cfg_nums; ++i)
         {
             __rule_table_add(__port_vlan_table[port_id].vlan_rule, __RULE_LOOKUP_CVLAN, &vlan_cfg[i]);
@@ -1257,10 +1191,8 @@ static void __update_sw
 			__port_vlan_table[port_id].mc_vlan[i].vid = vlan_cfg[i].s_vlan.vid;
             __vlan_table_add_port(__s_vlan_table, vlan_cfg[i].c_vlan.vid, port_id, EPON_FALSE);
             __vlan_table_add_port(__s_vlan_table, vlan_cfg[i].c_vlan.vid, CS_UPLINK_PORT, EPON_FALSE);
-			#if 1
             __vlan_table_add_port(__c_vlan_table, vlan_cfg[i].c_vlan.vid, port_id, EPON_FALSE);
             __vlan_table_add_port(__c_vlan_table, vlan_cfg[i].c_vlan.vid, CS_UPLINK_PORT, EPON_TRUE);
-			#endif
         }
     }
     else{/* no need update sw table in transparent/stacking/tag mode */}
@@ -1811,6 +1743,9 @@ cs_status sdl_vlan_init(void)
     vlan4K.fid_msti = 0;
     rtl8367b_setAsicVlan4kEntry(&vlan4K);
 
+	#if (QINQ_SUPPORT == MODULE_YES)
+	vlan_qinq_sw_table_init(pVlan_qinq_list_running);
+	#endif
     /* Enable downstream transparent for double-tagged frames */
     rtk_mbp.bits[0] = (1<<SWITCH_UPLINK_PORT);
     for(i = 0; i < 4; ++i)
@@ -1831,4 +1766,1013 @@ cs_status sdl_vlan_init(void)
     return CS_E_OK;
 
 }
+
+#if (QINQ_SUPPORT == MODULE_YES)
+extern int vlan_entry_add_cmp(vlan_qinq_infor_t vlan_entry1, vlan_qinq_infor_t vlan_entry2)
+{
+	if(vlan_entry1.old_vid != vlan_entry2.old_vid)
+	{
+		return 0;
+	}
+
+	if(vlan_entry1.direction != vlan_entry2.direction)
+	{
+		return 0;
+	}
+
+	return 1;
+}
+
+extern int vlan_entry_del_cmp(vlan_qinq_infor_t vlan_entry1, vlan_qinq_infor_t vlan_entry2)
+{
+	if(vlan_entry1.old_vid != vlan_entry2.old_vid)
+	{
+		return 0;
+	}
+
+	if(vlan_entry1.direction != vlan_entry2.direction)
+	{
+		return 0;
+	}
+
+	if(vlan_entry1.new_vid != vlan_entry2.new_vid)
+	{
+		return 0;
+	}
+
+	if(vlan_entry1.action != vlan_entry2.action)
+	{
+		return 0;
+	}
+
+	return 1;
+}
+
+extern cs_status vlan_qinq_table_search(qinq_list_t *list, vlan_qinq_infor_t vlan_entry, int (*vlan_entry_cmp)(vlan_qinq_infor_t, vlan_qinq_infor_t), int *found)
+{
+	//入口参数检查，通过则继续处理，否则推出并返回错误
+	if(NULL == list)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		return CS_E_ERROR;
+	}
+	
+	if(NULL == vlan_entry_cmp)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		return CS_E_ERROR;
+	}
+
+	if(NULL == found)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		return CS_E_ERROR;
+	}
+	
+	//遍历链表, 用比较函数比较
+	qinq_link_t link = NULL;
+
+	*found = 0;
+	for(link = list->head; NULL != link; link = link->next)
+	{
+		//根据查找结果设置标志位，退出
+		if(1 == (*vlan_entry_cmp)(link->elem, vlan_entry))
+		{
+			*found = 1;
+			break;
+		}
+		else
+		{
+			//do nothing
+		}
+	}
+	
+	return CS_E_OK;
+}
+
+extern cs_status vlan_qinq_sw_table_init(qinq_list_t *list)
+{
+	//入口参数检查，通过则继续处理，否则推出并返回错误
+	if(NULL == list)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		return CS_E_ERROR;
+	}
+
+	//设置链表的长度为0，并设置头指针为空，设置尾指针为空
+	list->head = NULL;
+	list->tail = NULL;
+	
+	return CS_E_OK;
+}
+
+extern cs_status vlan_qinq_sw_table_add(qinq_list_t *list, vlan_qinq_infor_t vlan_entry)
+{
+	//入口参数检查，通过则继续处理，否则推出并返回错误
+	if(NULL == list)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		return CS_E_ERROR;
+	}
+	
+	//查找链表，确定元素是否可以添加
+	int found = 0;
+	if(CS_E_OK == vlan_qinq_table_search(list, vlan_entry, vlan_entry_add_cmp, &found))
+	{
+		//没有找到冲突的元素，可以添加
+		if(0 == found)
+		{
+			//申请节点空间，加入元素
+			qinq_link_t link = NULL;
+			link = (qinq_node_t *)malloc(sizeof(qinq_node_t));
+			if(NULL == link)
+			{
+				cs_printf("in %s\n", __func__);
+				cs_printf("malloc failed\n");
+				return CS_E_ERROR;
+			}
+			memcpy(&(link->elem), &vlan_entry, sizeof(vlan_qinq_infor_t));		
+
+			//将节点加入链表
+			link->next = NULL;
+			if(NULL == list->head)
+			{
+				list->head = link;
+				list->tail = list->head;
+			}
+			else
+			{
+				list->tail->next = link;
+				list->tail = link;
+			}
+		}
+		else
+		{
+			cs_printf("vlan entry conflict!\n");
+			return CS_E_ERROR;
+		}
+	}
+	else
+	{
+		cs_printf("vlan_qinq_table_search err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);		
+		return CS_E_ERROR;
+	}
+
+	
+	return CS_E_OK;
+}
+extern cs_status vlan_qinq_sw_table_del(qinq_list_t *list, vlan_qinq_infor_t vlan_entry)
+{
+	//入口规则检查
+	if(NULL == list)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		return CS_E_ERROR;
+	}
+	//查找链表，确定元素是否可以删除
+	qinq_link_t link = NULL;
+	qinq_link_t link_previou = NULL;
+
+	for(link=list->head; NULL!=link; link_previou=link, link=link->next)
+	{
+		//如果可以删除，则删除
+		if(1 == vlan_entry_del_cmp(link->elem, vlan_entry))
+		{
+			if(list->head == list->tail)
+			{
+				list->head = NULL;
+				list->tail = NULL;
+			}
+			else
+			{
+				if(list->head == link)
+				{
+					list->head = link->next;
+				}
+				else if(list->tail == link)
+				{
+					list->tail = link_previou;
+					list->tail->next = NULL;
+				}
+				else
+				{
+					link_previou->next = link->next;
+				}
+			}
+			free(link);
+			link = NULL;
+			return CS_E_OK;
+		}
+		else
+		{
+			continue;
+		}
+	}
+		
+		//否则返回错误，并退出
+	cs_printf("vlan entry not found !");
+	return CS_E_ERROR;
+}
+
+extern cs_status vlan_qinq_sw_table_dump(qinq_list_t *list)
+{
+	//入口规则检查
+	if(NULL == list)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		return CS_E_ERROR;
+	}
+	
+	//打印提示信息
+	cs_printf("%s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\n", "count", "qualifier", "old-vid", "direction", "prio-source", "new-vid", "vlan-type", "action");
+	//遍历链表
+	qinq_link_t link = NULL;
+	vlan_qinq_infor_t vlan_entry;
+	int count = 0;
+	char qualifier[10]= {0};
+	int old_vid = 0;
+	char direction[10] = {0};
+	char prio_source[15] = {0};
+	int new_vid = 0;
+	int vlan_type = 0;
+	char action[15] = {0};
+
+	for(link = list->head, count = 1; NULL != link; link = link->next, count++)
+	{
+		//打印元素信息
+		vlan_entry = link->elem;
+		
+		strcpy(qualifier, "VLAN");
+		old_vid = vlan_entry.old_vid;
+		if(DOWN == vlan_entry.direction)
+		{
+			strcpy(direction, "DOWN");
+		}
+		else
+		{
+			strcpy(direction, "UP");
+		}
+
+		strcpy(prio_source, "ORIGINAL");
+
+		new_vid = vlan_entry.new_vid;
+		vlan_type = 0x8100;
+		if(EXCHANGE == vlan_entry.action)
+		{
+			strcpy(action, "EXCHANGE");
+		}
+		else if(ATTACH == vlan_entry.action)
+		{
+			strcpy(action, "ATTACH");
+		}
+		else
+		{
+			
+		}
+		cs_printf("%d\t %s\t\t %d\t\t %s\t\t %s\t %d\t\t 0x%x\t\t %s\n", count, qualifier, old_vid, direction, prio_source, new_vid, vlan_type, action);
+	}
+		
+	return CS_E_OK;
+}
+
+extern cs_status vlan_qinq_sw_table_get_length(qinq_list_t *list, int *length)
+{
+	//入口规则检查
+	if(NULL == list)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		return CS_E_ERROR;
+	}
+	if(NULL == length)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		return CS_E_ERROR;
+	}
+
+	//获取链表长度
+	qinq_link_t link = NULL;
+	int count = 0;
+	for(link=list->head; NULL!=link; link=link->next)
+	{
+		count++;
+	}
+	*length = count;
+	
+	return CS_E_OK;
+}
+
+
+
+extern cs_status vlan_qinq_sw_table_update_hw(qinq_list_t *list)
+{
+	cs_status ret = CS_E_OK;
+	//入口规则检查
+	if(NULL == list)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		return CS_E_ERROR;
+	}
+
+	qinq_link_t link = NULL;
+	vlan_qinq_infor_t vlan_entry;
+
+	for(link=list->head; NULL!=link; link=link->next)
+	{
+		vlan_entry = link->elem;
+		if(CS_E_OK == vlan_qinq_hw_table_add(vlan_entry))
+		{
+			//do nothing	
+		}
+		else
+		{
+			cs_printf("in %s\n", __func__);
+			cs_printf("vlan_qinq_hw_table_add err!\n");
+			ret = CS_E_ERROR;
+		}
+		
+	}
+
+	return ret;
+}
+
+extern cs_status vlan_qinq_hw_table_add(vlan_qinq_infor_t vlan_entry)
+{
+	cs_port_id_t port_id;
+	int oper_count = 0;
+	cs_sdl_vlan_oper_t vlan_oper[__VLAN_RULE_PER_PORT_MAX];
+	QINQ_DIRECTION direction;
+	QINQ_ACTION action;
+	int old_vid = 0;
+	int new_vid = 0;
+
+	//获取配置
+	direction = vlan_entry.direction;
+	action = vlan_entry.action;
+	old_vid = vlan_entry.old_vid;
+	new_vid = vlan_entry.new_vid;
+	
+	switch(direction)
+	{
+		case UP:
+			port_id = CS_UNI_PORT_ID1;
+			vlan_oper[oper_count].vlan_id = old_vid;
+			vlan_oper[oper_count].op_vid= new_vid;
+			break;
+		case DOWN:
+			port_id = CS_PON_PORT_ID;
+			vlan_oper[oper_count].vlan_id = old_vid;
+			vlan_oper[oper_count].op_vid= new_vid;
+			break;
+		default:
+			cs_printf("in %s\n", __func__);
+			cs_printf("direction wrong :%d\n", direction);
+			return CS_E_ERROR;
+			break;
+	}
+		
+	switch(action)
+	{
+		case EXCHANGE:
+			vlan_oper[oper_count].vlan_cmd = SDL_VLAN_CMD_SWAP;
+			break;
+		case ATTACH:
+			if(UP == direction)
+			{
+				vlan_oper[oper_count].vlan_cmd = SDL_VLAN_CMD_PUSH;
+			}
+			else
+			{
+				vlan_oper[oper_count].vlan_cmd = SDL_VLAN_CMD_POP;
+			}
+			
+			break;
+		default:
+			cs_printf("in %s\n", __func__);
+			cs_printf("direction wrong :%d\n", direction);
+			return CS_E_ERROR;
+			break;
+	}
+	oper_count = 1;
+
+	//将配置更新到硬件
+	if(CS_E_OK != (vlan_member_add(port_id, oper_count, vlan_oper)))
+	{
+		cs_printf("in %s\n", __func__);
+		cs_printf("vlan_member_add err, port_id :%d\n", port_id);
+		return CS_E_ERROR;
+	}
+	else
+	{
+		//执行成功，不做处理
+	}
+	
+	return CS_E_OK;
+}
+
+
+extern cs_status vlan_qinq_hw_table_del(vlan_qinq_infor_t vlan_entry)
+{
+	cs_port_id_t port_id;
+	int oper_count = 0;
+	cs_uint16 vlan_oper[__VLAN_RULE_PER_PORT_MAX];
+	QINQ_DIRECTION direction;
+	int old_vid = 0;
+	
+	oper_count = 0;
+	direction = vlan_entry.direction;
+	old_vid = vlan_entry.old_vid;
+	switch(direction)
+	{
+		case UP:
+			port_id = CS_UNI_PORT_ID1;
+			vlan_oper[oper_count] = old_vid;
+			break;
+		case DOWN:
+			port_id = CS_PON_PORT_ID;
+			vlan_oper[oper_count] = old_vid;
+			break;
+		default:
+			cs_printf("in %s\n", __func__);
+			cs_printf("direction wrong :%d\n", direction);
+			return CS_E_ERROR;
+			break;
+	}
+	oper_count = 1;
+
+	//将配置更新到硬件
+	if(CS_E_OK != (vlan_member_del(port_id, oper_count, vlan_oper)))
+	{
+		cs_printf("in %s\n", __func__);
+		cs_printf("vlan_member_del err, port_id :%d\n", port_id);
+		return CS_E_ERROR;
+	}
+	else
+	{
+		//执行成功，不做处理
+	}
+
+	return CS_E_OK;
+}
+
+extern cs_status vlan_qinq_sw_table_clear(qinq_list_t *list)
+{
+	//入口规则检查
+	if(NULL == list)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		return CS_E_ERROR;
+	}
+
+	if(NULL != list->head)
+	{
+		qinq_link_t link_previous = NULL;
+		qinq_link_t link = NULL;
+
+		link = list->head;
+		do
+		{
+			link_previous = link;
+			link = link->next;
+			
+			free(link_previous);
+		}while(NULL != link);
+
+		//设置链表头
+		list->head = NULL;
+		list->tail = NULL;
+	}
+	else
+	{
+		//链表为空
+	}
+	return CS_E_OK;
+}
+
+extern cs_status vlan_qinq_hw_table_clear(qinq_list_t *list)
+{
+	cs_status ret = CS_E_OK;
+	//入口规则检查
+	if(NULL == list)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		return CS_E_ERROR;
+	}
+
+	qinq_link_t link = NULL;
+	vlan_qinq_infor_t vlan_entry;
+
+	for(link=list->head; NULL!=link; link=link->next)
+	{
+		vlan_entry = link->elem;
+		if(CS_E_OK == vlan_qinq_hw_table_del(vlan_entry))
+		{
+			//do nothing	
+		}
+		else
+		{
+			cs_printf("in %s\n", __func__);
+			cs_printf("vlan_qinq_hw_table_del err!\n");
+			ret = CS_E_ERROR;
+		}
+		
+	}
+
+	return ret;
+}
+
+
+
+extern cs_status vlan_qinq_hw_port_dump(cs_port_id_t port_id)
+{
+	cs_status ret = 0;
+	cs_status state = CS_E_OK;
+	cs_uint16 vlan_num = 0;
+	cs_sdl_vlan_oper_t vlanid_list[__VLAN_RULE_PER_PORT_MAX];
+	int i = 0;
+	int old_vid = 0;
+	int new_vid = 0;
+	char *vlan_oper_str[] = {"nop", "push", "pop", "swap", "l2"};
+	int vlan_oper = 0;
+	state = vlan_member_get(port_id, &vlan_num, vlanid_list);
+	if(CS_E_OK == state)
+	{
+		for(i=0; i<vlan_num; i++)
+		{
+			old_vid = vlanid_list[i].vlan_id;
+			new_vid = vlanid_list[i].op_vid;
+			vlan_oper = vlanid_list[i].vlan_cmd;
+			cs_printf("old_vid :%d, new_vid :%d, vlan_oper :%s\n", old_vid, new_vid, vlan_oper_str[vlan_oper]);
+		}
+	}
+	else
+	{
+		
+	}
+	
+	return ret;
+}
+
+extern cs_status vlan_qinq_hw_table_dump(void)
+{
+	cs_printf("\ndebug information from hardware:\n");
+	cs_printf("------------------------------------------------------------------\n");
+	cs_printf("up :\n");
+	vlan_qinq_hw_port_dump(CS_UNI_PORT_ID1);
+	cs_printf("down :\n");
+	vlan_qinq_hw_port_dump(CS_PON_PORT_ID);
+	cs_printf("------------------------------------------------------------------\n");
+	return CS_E_OK;
+}
+
+extern cs_status vlan_qinq_table_cpy(qinq_list_t *list_dest, qinq_list_t *list_src)
+{
+	cs_status ret = CS_E_OK;
+	//入口规则检查
+	if(NULL == list_dest)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		return CS_E_ERROR;
+	}
+	if(NULL == list_src)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		return CS_E_ERROR;
+	}
+
+	//遍历链表
+	qinq_link_t link = NULL;
+	for(link=list_src->head; NULL!=link; link=link->next)
+	{
+		//将原链表的每个元素加入目的链表
+		if(CS_E_OK != vlan_qinq_sw_table_add(list_dest, link->elem))
+		{
+			cs_printf("in %s\n", __func__);
+			cs_printf("vlan_qinq_sw_table_add err!\n");
+			ret = CS_E_ERROR;
+			break;	
+		}
+		else
+		{	
+			//do nothing
+		}
+	}
+		
+	return ret;
+}
+
+extern cs_status vlan_qinq_table_recover(qinq_list_t *list)
+{
+	if(CS_E_OK != vlan_qinq_table_cpy(pVlan_qinq_list_running, list))
+	{
+		cs_printf("vlan_qinq_table_recover err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		return CS_E_ERROR;
+	}
+	
+	if(CS_E_OK != vlan_qinq_sw_table_update_hw(pVlan_qinq_list_running))
+	{
+		cs_printf("vlan_qinq_table_recover err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		return CS_E_ERROR;
+	}
+	
+	return CS_E_OK;
+}
+
+
+//tlv
+extern int vlan_qinq_table_tlv_infor_get(int *len, char **value, int *free_need)
+{
+	int ret = 0;
+	//入口规则检查
+	if(NULL == len)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		goto err;
+	}
+	else
+	{
+		*len = 0;
+	}
+	if(NULL == value)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		goto err;
+	}
+	else
+	{
+		*value = NULL;
+	}
+	if(NULL == free_need)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		goto err;
+	}
+	else
+	{
+		*free_need = 0;
+	}
+	
+	
+	//获取申请空间的大小
+	int size = 0;
+	qinq_list_t *list = pVlan_qinq_list_running;
+	int length = 0;
+	if(CS_E_OK != vlan_qinq_sw_table_get_length(list, &length))
+	{
+		goto err;
+	}
+
+	if(0 == length)
+	{
+		goto end;
+	}
+	size = length * sizeof(vlan_qinq_infor_t);
+	
+	//申请空间
+	vlan_qinq_infor_t *pElem = NULL;
+	if(NULL == (pElem = (vlan_qinq_infor_t *)iros_malloc(IROS_MID_APP, size)))
+	{
+		goto err;
+	}
+
+	//遍历链表，复制信息到指定的空间
+	qinq_link_t link = NULL;
+	vlan_qinq_infor_t elem;
+	vlan_qinq_infor_t *pElem_offset = pElem;
+	for(link=list->head; NULL!=link; link=link->next)
+	{
+		elem = link->elem;
+		memcpy(pElem_offset, &elem, sizeof(elem));
+		pElem_offset++;
+	}
+	
+	//设置对外输出的变量值
+	*len = size;
+	*value = (char *)pElem;
+	*free_need = 1;
+err:
+	ret = -1;
+end:
+	return ret;
+}
+
+extern int vlan_qinq_table_tlv_infor_handle(int len, char *data, int opcode)
+{
+	int ret = 0;
+	//入口规则检查
+	if(0 == len)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		ret = -1;
+		goto end;
+	}
+
+	if(NULL == data)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		ret = -1;
+		goto end;
+	}
+
+	qinq_list_t *list_config = NULL;
+	list_config = pVlan_qinq_list_config;
+	//清空配置表
+	vlan_qinq_sw_table_clear(list_config);
+	
+	//将数据恢复到配置表
+	vlan_qinq_infor_t elem;
+	int elem_num = 0;
+	vlan_qinq_infor_t *pElem = NULL;
+	vlan_qinq_infor_t *pElem_offset = NULL;
+
+	pElem = (vlan_qinq_infor_t *)data;
+	pElem_offset = pElem;
+	elem_num = len / sizeof(elem);
+	int i = 0;
+	for(i=0; i<elem_num; i++)
+	{
+		memcpy(&elem, pElem_offset, sizeof(elem));
+		vlan_qinq_sw_table_add(list_config, elem);
+		pElem_offset++;
+	}
+	
+	//根据操作码完成操作
+	if(DATA_RECOVER == opcode)
+	{
+		//恢复配置
+		if(CS_E_OK != vlan_qinq_table_recover(list_config))
+		{
+			cs_printf("in %s, line :%d\n", __func__, __LINE__);
+			ret = -1;
+		}
+		else
+		{
+			//do nothing
+		}
+	}
+	else if(DATA_SHOW == opcode)
+	{
+		//显示配置
+		if(CS_E_OK != vlan_qinq_sw_table_dump(list_config))
+		{
+			cs_printf("in %s, line :%d\n", __func__, __LINE__);
+			ret = -1;
+		}
+		else
+		{
+			//do nothing
+		}
+	}
+	else
+	{
+		ret = -1;
+	}
+	
+end:
+	return ret;
+}
+
+extern int vlan_qinq_running_config_show(void)
+{
+	vlan_qinq_sw_table_dump(pVlan_qinq_list_running);
+	return 0;
+}
+
+#endif
+
+#if 1
+typedef struct addr
+{
+	unsigned char DA[6];
+	unsigned char SA[6];
+}eth_head_t;
+
+typedef struct
+{
+	cs_uint32 TPID		:16;
+	cs_uint32 vlan_id_h	:4;
+	cs_uint32 Priority	:3;
+	cs_uint32 CFI		:1;
+	cs_uint32 vlan_id_l	:4;
+	cs_uint32 vlan_id_m	:4;
+}tag_t;
+
+extern void push_vlan(cs_uint16 vlan, cs_uint8 *in, cs_uint8 *out,cs_uint32* len);
+
+/**********************************************************************************************************************************************
+*函数名：pkt_vlan_tag_check
+*函数功能描述：判断包是有vlan 标签
+*函数参数：pkt - 包起始地址; len - 包长度
+*函数返回值：有vlan 标签(tag )返回1; 无vlan 标签(untag )返回0
+*作者：朱晓辉
+*函数创建日期：
+*函数修改日期：尚未修改
+*修改人：尚未修改
+*修改原因：尚未修改
+*版本：1.0
+*历史版本：无
+**********************************************************************************************************************************************/
+extern int pkt_vlan_tag_check(char *eth_pkt, cs_uint32 len)
+{
+	int found = 0;
+	unsigned char * posation = NULL;
+	tag_t *tag = NULL;
+	//入口规则检查
+	if(NULL == eth_pkt)
+	{
+		cs_printf("in %s, line :%d pointer is NULL!\n");
+		return -1;
+	}
+
+	posation = (unsigned char *)eth_pkt;
+	//跳过以太网头
+	posation += sizeof(eth_head_t);
+	
+	//跳过vlan tag
+	tag = (tag_t *)posation;
+	if(0x8100 == ntohs(tag->TPID))
+	{	
+		found = 1;
+	}
+	else
+	{
+		found = 0;
+	}
+
+	return found;
+}
+
+extern int pkt_ip_check(char *eth_pkt)
+{
+	int found = 0;
+	unsigned char * posation = NULL;
+	tag_t *tag = NULL;
+	//入口规则检查
+	if(NULL == eth_pkt)
+	{
+		cs_printf("in %s, line :%d pointer is NULL!\n");
+		return -1;
+	}
+
+	posation = (unsigned char *)eth_pkt;
+	//跳过以太网头
+	posation += sizeof(eth_head_t);
+	
+	//跳过vlan tag
+	tag = (tag_t *)posation;
+	if(0x0800 == ntohs(tag->TPID))
+	{	
+		found = 1;
+	}
+	else
+	{
+		found = 0;
+	}
+
+	return found;
+}
+
+//tag 报文不做处理，untag 报文打上端口的默认vlan 标签
+extern cs_status ip_pkt_to_pkt_with_tag( cs_uint8 *eth_pkt, cs_uint32 *len, cs_port_id_t port_id )
+{
+	//入口规则检查
+	if(NULL == eth_pkt)
+	{
+		cs_printf("in %s, line :%d, arg check err!\n", __func__, __LINE__);
+		return CS_E_ERROR;
+	}
+	
+	if(NULL == len)
+	{
+		cs_printf("in %s, line :%d, arg check err!\n", __func__, __LINE__);
+		return CS_E_ERROR;
+	}
+
+	//报文如果不是ip 报文则返回错误
+	if(1 != pkt_ip_check(eth_pkt))
+	{
+		return CS_E_ERROR;
+	}
+
+	//报文是否有vlan tag
+	if(0 == pkt_vlan_tag_check(eth_pkt, *len))
+	{
+		//untag 报文的处理
+		
+		cs_uint16 def_vlan = 0;
+		//没有，则获取端口的默认vlan
+		def_vlan = port_def_vlan_id_get(port_id);
+		if(1 != def_vlan)
+		{
+			push_vlan(def_vlan, eth_pkt, eth_pkt, len);
+		}
+		else
+		{
+			//vlan id : 1 的untag 包不打上vlan 1 的标签,继续以untag 形式处理
+		}
+	}
+	else
+	{
+		//非untag 报文不做处理
+	}
+	return CS_E_OK;
+}
+
+
+extern cs_uint16 port_def_vlan_id_get(cs_port_id_t port_id)
+{
+	cs_callback_context_t context;
+    cs_sdl_vlan_tag_t    def_vlan;
+    cs_sdl_vlan_mode_t  vlan_mode;
+    cs_sdl_vlan_cfg_t    vlan_cfg[__VLAN_RULE_PER_PORT_MAX];
+    cs_uint16 nums;
+	epon_request_onu_vlan_get(context, 0, 0, port_id, &def_vlan, &vlan_mode, vlan_cfg, &nums);
+	return def_vlan.vid;
+}
+
+extern cs_status vlan_add_all_port(int vlan)
+{
+	int port_id;
+	cs_callback_context_t context;
+    cs_sdl_vlan_tag_t    def_vlan;
+    cs_sdl_vlan_mode_t  vlan_mode;
+    cs_sdl_vlan_cfg_t    vlan_cfg[__VLAN_RULE_PER_PORT_MAX];
+    cs_uint16 nums;
+	int vlan_exist = 0;
+	int count = 0;
+	
+	for(count=0; count<UNI_PORT_MAX; count++)
+	{
+		port_id = count + CS_UNI_PORT_ID1;
+		vlan_exist = 0;
+		nums = 0;
+		memset(vlan_cfg, 0, sizeof(vlan_cfg));
+		
+		//查看端口是否在vlan 中
+		if(CS_E_OK != epon_request_onu_vlan_get(context, 0, 0, port_id, &def_vlan, &vlan_mode, vlan_cfg, &nums))
+		{
+			cs_printf("epon_request_onu_vlan_get failed!\n");
+			return CS_E_ERROR;
+		}
+		//端口以untag 形式在vlan 中
+		if(vlan == def_vlan.vid)
+		{
+			vlan_exist = 1;
+			continue;
+		}
+		
+		int i = 0;
+		for(i=0; i<nums; i++)
+		{
+			//端口以tag 形式在vlan 中
+			if(vlan == vlan_cfg[i].c_vlan.vid)
+			{
+				vlan_exist = 1;
+				break;
+			}
+		}
+
+		//端口不在vlan 中
+		if(1 != vlan_exist)
+		{
+			if(nums < __VLAN_RULE_PER_PORT_MAX)
+			{
+				vlan_cfg[nums].c_vlan.vid = vlan;
+				vlan_cfg[nums].s_vlan.vid = vlan;
+				nums++;
+				if(CS_E_OK != epon_request_onu_vlan_set(context, 0, 0, port_id, def_vlan, vlan_mode, vlan_cfg, nums))
+				{
+					cs_printf("epon_request_onu_vlan_set failed!\n");
+					return CS_E_ERROR;
+				}
+			}
+		}
+	}
+	
+	return CS_E_OK;
+}
+
+#endif
+
 

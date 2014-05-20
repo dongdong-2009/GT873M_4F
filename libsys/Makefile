@@ -35,6 +35,8 @@ $(SWHOME)/src/onu/apps/gwd/oam.c \
 $(SWHOME)/src/onu/apps/gwd/gwd_eth_loop_detect.c \
 $(SWHOME)/src/onu/apps/gwd/timer.c \
 $(SWHOME)/src/onu/apps/gwd/gwd_broadstorm.c \
+$(SWHOME)/src/onu/apps/gwd/oam_pty.c \
+$(SWHOME)/src/onu/apps/gwd/gw_igmp_tvm.c \
 
 ifeq ($(strip $(USING_SW_TYPE)),MRV)
 CFILES += $(SWHOME)/src/onu/3rd/driver/marvell/msApiInit.c \

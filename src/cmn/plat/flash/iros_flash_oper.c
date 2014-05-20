@@ -922,6 +922,18 @@ extern int uni_ingress_rate_tlv_infor_get(int *len, char **value, int *free_need
 extern int uni_ingress_rate_running_config_show(void);
 #endif
 
+#if (PORT_ISOLATE_MODE_SAVE == MODULE_YES)
+extern int port_isolate_mode_tlv_infor_get(int *len, char **value, int *free_need);
+extern int port_isolate_mode_tlv_infor_handle(int len, char *data, int opcode);
+extern int port_isolate_mode_running_config_show(void);
+#endif
+
+#if (QINQ_SUPPORT == MODULE_YES)
+extern int vlan_qinq_table_tlv_infor_get(int *len, char **value, int *free_need);
+extern int vlan_qinq_table_tlv_infor_handle(int len, char *data, int opcode);
+extern int vlan_qinq_running_config_show(void);
+#endif
+
 
 
 //向外提供的接口
@@ -985,6 +997,16 @@ extern int save_user_tlv_data_to_flash(void)
 				break;
 			case UNI_INGRESS:
 				uni_ingress_rate_tlv_infor_get(&len, &value, &free_need);
+				break;
+		#endif
+		#if (PORT_ISOLATE_MODE_SAVE == MODULE_YES)
+			case PORT_ISOLATE_MODE:
+				port_isolate_mode_tlv_infor_get(&len, &value, &free_need);
+				break;
+		#endif
+		#if (QINQ_SUPPORT == MODULE_YES)
+			case VLAN_QINQ:
+				vlan_qinq_table_tlv_infor_get(&len, &value, &free_need);
 				break;
 		#endif
 			default:
@@ -1244,6 +1266,16 @@ extern int get_user_tlv_data_from_flash(int opcode)
 						uni_ingress_rate_tlv_infor_handle(len, value, opcode);
 						break;
 				#endif
+				#if (PORT_ISOLATE_MODE_SAVE == MODULE_YES)
+					case PORT_ISOLATE_MODE:
+						port_isolate_mode_tlv_infor_handle(len, value, opcode);
+						break;
+				#endif
+				#if (QINQ_SUPPORT == MODULE_YES)
+					case VLAN_QINQ:
+						vlan_qinq_table_tlv_infor_handle(len, value, opcode);
+						break;
+				#endif
 					default:
 						break;
 				}
@@ -1394,6 +1426,16 @@ extern int running_config_show(void)
 				break;
 			case UNI_INGRESS:
 				uni_ingress_rate_running_config_show();
+				break;
+		#endif
+		#if (PORT_ISOLATE_MODE_SAVE == MODULE_YES)
+			case PORT_ISOLATE_MODE:
+				port_isolate_mode_running_config_show();
+				break;
+		#endif
+		#if (QINQ_SUPPORT == MODULE_YES)
+			case VLAN_QINQ:
+				vlan_qinq_running_config_show();
 				break;
 		#endif
 			default:

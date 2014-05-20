@@ -102,6 +102,9 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "sdl.h"
 #include "osal_api_packet.h"
 #include "aal_ptp.h"
+#if 1
+#include "sdl_vlan.h"
+#endif
 
 
 extern void ethdrv_pkt_recv(cs_uint8* event_buf);
@@ -288,6 +291,21 @@ cs_status __ma_rx_parse(cs_aal_ma_rx_buf_t *buf, cs_uint16 len, __ma_spid_t spid
     buf->pkt->port = port_id;
     buf->pkt->len  = pkt_len;
 
+#if 1
+	cs_uint8 *eth_pkt = NULL;
+	cs_uint32 eth_pkt_len = 0;
+	
+	eth_pkt = buf->pkt->data + buf->pkt->offset;
+	eth_pkt_len = buf->pkt->len;
+	
+	//只处理ip 报文
+	//将ip 报文(untag/tag)转化为带tag 的形式
+	if(CS_E_OK == ip_pkt_to_pkt_with_tag(eth_pkt, &eth_pkt_len, port_id))
+	{
+		buf->pkt->len = eth_pkt_len;
+	}
+#endif
+
     // Call APP handler
     if(NULL!=__pkt_rx_func)
     {
@@ -301,6 +319,7 @@ cs_status __ma_rx_parse(cs_aal_ma_rx_buf_t *buf, cs_uint16 len, __ma_spid_t spid
     return CS_E_OK;
 }
 
+#define VLAN_ID_LEN		4
 cs_status __ma_rx_process(cs_aal_ma_rx_buf_id_t buf_id, cs_aal_ma_rx_buf_status_t *buf_status)
 {
     cs_aal_ma_rx_buf_t buf;
@@ -331,7 +350,7 @@ cs_status __ma_rx_process(cs_aal_ma_rx_buf_id_t buf_id, cs_aal_ma_rx_buf_status_
 
     pkt_alloc_len = CS_PKT_OFFSET+(sizeof(cs_pkt_t)-1)+(buf_status->pkt_len);
 
-    if(NULL == (buf.pkt = (cs_pkt_t *)iros_malloc(IROS_MID_PACKET, pkt_alloc_len)))
+    if(NULL == (buf.pkt = (cs_pkt_t *)iros_malloc(IROS_MID_PACKET, pkt_alloc_len + VLAN_ID_LEN)))
     {
         SDL_MAJ_LOG("MA RX buffer %u allocte memory %u failed.\n", buf_id, pkt_alloc_len);
         rt = CS_E_RESOURCE;

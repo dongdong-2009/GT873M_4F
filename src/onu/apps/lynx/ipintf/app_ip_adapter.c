@@ -744,6 +744,11 @@ extern cs_status eth1_ip_get(cs_uint32 *ip)
 }
 #endif
 
+#if (LOCAL_IP_NETWORK_CARD == MODULE_YES)
+extern cs_status local_ip_info_save_to_global(cs_uint32 ip, cs_uint32 mask, cs_uint32	gateway, cs_uint16 vlan);
+extern cs_status local_ip_info_get_from_global(cs_uint32 *ip, cs_uint32 *mask, cs_uint32 *gateway, cs_uint16 *vlan);
+#endif
+
 cs_status ipintf_add_ip_address(cs_uint32 localIp, cs_uint32 gwIp, cs_uint32 mask)
 {
     struct ip_addr ipaddr;
@@ -814,30 +819,66 @@ cs_status ipintf_add_ip_address(cs_uint32 localIp, cs_uint32 gwIp, cs_uint32 mas
 
 #else
 
-	net_if = ipintf_net_if_get();
-
-	if(net_if == NULL) 
+	#if (LOCAL_IP_NETWORK_CARD == MODULE_YES)
+	int mode = 0;
+	ip_mode_get(&mode);
+	//cs_printf("mode :%d\n", mode);
+	if(3 == mode)
 	{
-		return CS_E_ERROR;
+		net_if = ipintf_net_if_get_1();
+		if(net_if == NULL) 
+		{
+		    return CS_E_ERROR;
+		}
+		else
+		{
+			//do noting
+		}
+		
+		cs_uint32	local_ip;
+		cs_uint32	local_mask;
+		cs_uint32	local_gateway;
+		cs_uint16	local_vlan;
+
+		local_ip_info_get_from_global(&local_ip, &local_mask, &local_gateway, &local_vlan);
+		local_ip = (localIp);
+		local_mask = (mask);
+		local_gateway = (gwIp);
+		local_ip_info_save_to_global(local_ip, local_mask, local_gateway, local_vlan);
+
+		
+		cs_uint32 eth1_ip = 0;
+		eth1_ip = localIp;
+		eth1_ip_set(eth1_ip);
 	}
 	else
 	{
-		//do noting
+		net_if = ipintf_net_if_get();
+		if(net_if == NULL) 
+		{
+			return CS_E_ERROR;
+		}
+		else
+		{
+			//do noting
+		}
+
+		cs_uint32	device_ip;
+		cs_uint32	device_mask;
+		cs_uint32	device_gateway;
+		cs_uint16	device_vlan;
+		ip_info_get_from_global(&device_ip, &device_mask, &device_gateway, &device_vlan);
+		device_ip = (localIp);
+		device_mask = (mask);
+		device_gateway = (gwIp);
+		ip_info_save_to_global(device_ip, device_mask, device_gateway, device_vlan);
+
+		cs_uint32 eth0_ip = 0;
+		eth0_ip = localIp;
+		eth0_ip_set(eth0_ip);
 	}
-
-	cs_uint32	device_ip;
-	cs_uint32	device_mask;
-	cs_uint32	device_gateway;
-	cs_uint16	device_vlan;
-	ip_info_get_from_global(&device_ip, &device_mask, &device_gateway, &device_vlan);
-	device_ip = (localIp);
-	device_mask = (mask);
-	device_gateway = (gwIp);
-	ip_info_save_to_global(device_ip, device_mask, device_gateway, device_vlan);
-
-	cs_uint32 eth0_ip = 0;
-	eth0_ip = localIp;
-	eth0_ip_set(eth0_ip);
+	#endif
+	
 
 
 #endif

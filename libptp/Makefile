@@ -12,12 +12,12 @@ MOD_CFLAGS= -Werror -Wno-uninitialized -nostdlib -fno-inline \
 -include $(IROS_CONFIG_H)
 
 CFILES= \
-$(SWHOME)/src/onu/apps/lynx/ptp/ptp_halftc.c    \
-$(SWHOME)/src/onu/apps/lynx/ptp/ptp_parse.c     \
-$(SWHOME)/src/onu/apps/lynx/ptp/ptp_cmd.c     \
-$(SWHOME)/src/onu/apps/lynx/ptp/ptp_mgmt.c      \
-$(SWHOME)/src/onu/apps/lynx/ptp/ptp_lynx.c      \
-$(SWHOME)/src/onu/apps/lynx/ptp/802_1as.c
+#$(SWHOME)/src/onu/apps/lynx/ptp/ptp_halftc.c    \
+#$(SWHOME)/src/onu/apps/lynx/ptp/ptp_parse.c     \
+#$(SWHOME)/src/onu/apps/lynx/ptp/ptp_cmd.c     \
+#$(SWHOME)/src/onu/apps/lynx/ptp/ptp_mgmt.c      \
+#$(SWHOME)/src/onu/apps/lynx/ptp/ptp_lynx.c      \
+#$(SWHOME)/src/onu/apps/lynx/ptp/802_1as.c
 
 
 

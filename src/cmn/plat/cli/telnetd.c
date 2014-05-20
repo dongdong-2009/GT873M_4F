@@ -3,7 +3,6 @@
 #include "cli_common.h"
 
 struct cli_def *telnet_cli = NULL; /* Global telnet session.*/
-extern cs_uint32 app_ip_changed;
 
 extern int cur_chan;
 extern void cli_usr_init(struct cli_def *cli);
@@ -170,7 +169,6 @@ void telnetd_thread_entry(cyg_addrword_t p)
 		cur_chan = CHANNEL_TCP;
 		telnet_cli = cli;
 		telnet_diag_print_register();
-		app_ip_changed = 0;
 #endif
         cli_loop(cli);
         close(x);		

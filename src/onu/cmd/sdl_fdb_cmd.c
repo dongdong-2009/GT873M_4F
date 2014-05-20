@@ -820,7 +820,54 @@ end:
     return ret;       
 }
 
+#if 1
+//删除第一个元素后，此元素后面的所有元素向前移动一个单位
+// 因为此list 的删除方法是长度减1，事实上删除的是最后一个元素
+static int fdb_static_list_del_update(cs_sdl_fdb_entry_t *pFdb_entry, int entry_len)
+{
+	//入口规则检查
+	if(NULL == pFdb_entry)
+	{
+		cs_printf("in %s, line:%d, arg check err!\n");
+		return CS_E_ERROR;
+	}
 
+	if(entry_len <= 0)
+	{
+		cs_printf("in %s, line:%d, arg check err!\n");
+		return CS_E_ERROR;
+	}
+	//只有一个元素时，清除此元素并退出
+	if(1 == entry_len)
+	{
+		memset(&pFdb_entry[0], 0, sizeof(cs_sdl_fdb_entry_t));
+		
+		return CS_E_OK;
+	}
+	
+	
+	//第一个元素以后的所有元素均向前移动一个单位
+	cs_sdl_fdb_entry_t *fdb_entry_buf = NULL;
+	int buf_len = 0;
+	buf_len = sizeof(cs_sdl_fdb_entry_t)*(entry_len-1);
+	fdb_entry_buf = (cs_sdl_fdb_entry_t *)malloc(buf_len);
+	if(NULL == fdb_entry_buf)
+	{
+		cs_printf("in %s, line:%d, malloc err!\n");
+		return CS_E_ERROR;
+	}
+	
+	memcpy(fdb_entry_buf, &pFdb_entry[1], buf_len);
+	memcpy(&pFdb_entry[0], fdb_entry_buf, buf_len);
+	free(fdb_entry_buf);
+	fdb_entry_buf = NULL;
+	//最后一个元素清零
+	memset(&pFdb_entry[entry_len-1], 0, sizeof(cs_sdl_fdb_entry_t));
+	
+	//结束退出
+	return CS_E_OK;
+}
+#endif
 int fdb_static_list_del(char *mac, int vlan_id)
 {
 	int ret = CS_E_OK;
@@ -847,19 +894,28 @@ int fdb_static_list_del(char *mac, int vlan_id)
 		    }
 			else
 			{
-				__fdb_static_entry_num--;
 				cs_printf("delete %02x:%02x:%02x:%02x:%02x:%02x static fdb entry success\n",__fdb_static_entry[ii].mac.addr[0],
 																				__fdb_static_entry[ii].mac.addr[1],
 																				__fdb_static_entry[ii].mac.addr[2],
 																				__fdb_static_entry[ii].mac.addr[3],
 																				__fdb_static_entry[ii].mac.addr[4],
 																				__fdb_static_entry[ii].mac.addr[5]);
+				#if 1
+				if(CS_E_OK != fdb_static_list_del_update(&__fdb_static_entry[ii], __fdb_static_entry_num - ii))
+				{
+					ret = CS_E_ERROR;
+					goto end;
+				}
+				#endif
+				__fdb_static_entry_num--;
+				
 				ret = CS_E_OK;
 				goto end;
 			}
 		}
 	}
 	ret = CS_E_ERROR;
+	cs_printf("mac not found!\n");
 	
 end:
 		return ret;   

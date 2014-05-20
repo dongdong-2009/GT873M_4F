@@ -88,6 +88,9 @@ cs_int32 cs_thread_create(
                     cs_uint32       priority,                   /* Range 0~255 , 0 is the highest priority , 255 is the lowest priority*/
                     cs_uint32       flags                        /* Don't support , you can ignore it */
                     );
+#if 1
+cs_int32 cs_thread_delete(cs_int32 thread_id);		//added by zhuxiaohui
+#endif
 
 cs_int32 cs_thread_delay(
                     cs_uint32 milli_second                 /* in millisecond , For Ecos and Linux , the minimum value should be 10,*/

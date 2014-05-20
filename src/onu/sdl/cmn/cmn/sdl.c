@@ -412,5 +412,12 @@ cs_status uni_port_check(cs_port_id_t port)
 	UNI_PORT_CHECK(port);
 	return CS_E_OK;
 }
+
+cs_status uni_port_num_get(int *num)
+{
+	*num = UNI_PORT_MAX;
+	return CS_E_OK;
+}
+
 #endif
 
