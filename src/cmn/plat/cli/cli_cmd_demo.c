@@ -6,6 +6,9 @@
 #include "cs_utils.h"
 #include "mc_type.h"
 #include "aal_util.h"
+#if 1
+#include "sdl_vlan_util.h"
+#endif
 #ifdef HAVE_TELNET_CLI
 #define DFT_ENABLE_PASSWD           "enable"
 

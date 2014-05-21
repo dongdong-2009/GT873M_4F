@@ -99,9 +99,6 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "sdl_pktctrl.h"
 #include <rtk_api.h>
 #include <rtk_api_ext.h>
-#if 1
-#include "gpio.h"
-#endif
 
 extern cs_status aal_pon_mac_addr_get( CS_IN cs_mac_t *mac);
 extern rtk_chip_id_t g_rtk_chip_id ;
@@ -1188,38 +1185,6 @@ cs_status epon_request_onu_pkt_cpu_queue_map_get(
  
     return CS_E_OK;
 }
-
-#if 1
-#define SWITCH_GPIO		4
-#define UP_LEVEL		1
-#define DOWN_LEVEL		0
-#define HOLD_TIME		100		//单位:毫秒
-
-extern void sdl_switch_hw_reset(void)
-{
-	gpio_mode_t mode_original;
-	cs_uint8 level_original;
-	
-	//获取原来的配置
-	cs_gpio_mode_get(SWITCH_GPIO, &mode_original);
-	cs_gpio_read(SWITCH_GPIO, &level_original);
-	
-	//交换芯片掉电
-	cs_gpio_mode_set(SWITCH_GPIO, GPIO_OUTPUT);
-	cs_gpio_write(SWITCH_GPIO, DOWN_LEVEL);
-
-	//延时
-	cs_thread_delay(HOLD_TIME);
-	
-	//交换芯片上电
-	cs_gpio_write(SWITCH_GPIO, UP_LEVEL);
-	
-	//恢复原来的配置
-	cs_gpio_write(SWITCH_GPIO, level_original);
-	cs_gpio_mode_set(SWITCH_GPIO, mode_original);
-	
-}
-#endif
 
 
 // fo fwd packet with ether type 0x8899 from reateltek switch

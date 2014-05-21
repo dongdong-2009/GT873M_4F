@@ -49,11 +49,41 @@ void dumpPkt(char *comment, int port, unsigned char *buffer, int len)
     diag_printf(" .\n");
 }
 
+extern cs_status cs_gpio_read(cs_uint8 gpio_id, cs_uint8* data);
 extern cs_status cs_gpio_write(unsigned char gpio_id, unsigned char data);
 extern cs_status cs_gpio_mode_set(unsigned char gpio_id, gpio_mode_t mode);
-#if 1
-extern void sdl_switch_hw_reset(void);
-#endif
+
+
+#define SWITCH_GPIO		4
+#define UP_LEVEL		1
+#define DOWN_LEVEL		0
+#define HOLD_TIME		100		//单位:毫秒
+
+extern void sdl_switch_hw_reset(void)
+{
+	gpio_mode_t mode_original;
+	cs_uint8 level_original;
+	
+	//获取原来的配置
+	cs_gpio_mode_get(SWITCH_GPIO, &mode_original);
+	cs_gpio_read(SWITCH_GPIO, &level_original);
+	
+	//交换芯片掉电
+	cs_gpio_mode_set(SWITCH_GPIO, GPIO_OUTPUT);
+	cs_gpio_write(SWITCH_GPIO, DOWN_LEVEL);
+
+	//延时
+	cs_thread_delay(HOLD_TIME);
+	
+	//交换芯片上电
+	cs_gpio_write(SWITCH_GPIO, UP_LEVEL);
+	
+	//恢复原来的配置
+	cs_gpio_write(SWITCH_GPIO, level_original);
+	cs_gpio_mode_set(SWITCH_GPIO, mode_original);
+	
+}
+
 void iros_system_reset(RESET_TYPE_E reset_type)
 {
     if (reset_type >= RESET_TYPE_MAX)
@@ -64,7 +94,7 @@ void iros_system_reset(RESET_TYPE_E reset_type)
 		#if 1
 		sdl_switch_hw_reset();
 		#endif
-		#if (PRODUCTS == PRODUCTS_GT811D)
+		#if (PRODUCT_CLASS == PRODUCTS_GT811D)
 			if ( CS_E_OK == cs_gpio_mode_set(0, GPIO_OUTPUT))
 			{																 			
 				cs_gpio_write(0, (unsigned char)0);								

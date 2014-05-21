@@ -3400,10 +3400,15 @@ int cmd_oam_port_isolate(struct cli_def *cli, char *command, char *argv[], int a
 
 #if (PORT_ISOLATE_MODE_SAVE == MODULE_YES)
 #define PORT_ISOLATE_MODE_DEFAULT	1
-extern int port_isolate_mode_config_recover(int en)
+extern int port_isolate_mode_config_recover(cs_boolean en)
 {
 	int ret = 0;
+#if 0
 	if(port_aal_isolation_set(en) != CS_E_OK)
+#else
+	CS_IN cs_callback_context_t     context = {0};
+	if(epon_request_onu_port_isolation_set(context, 0, 0, en) != CS_E_OK)
+#endif
 	{
 		cs_printf("set all port isolate %s fail!\r\n", en?"enabled":"disabled");
 	}
@@ -3413,7 +3418,7 @@ extern int port_isolate_mode_config_recover(int en)
 	}
 	return ret;
 }
-extern int port_isolate_mode_config_show(int en)
+extern int port_isolate_mode_config_show(cs_boolean en)
 {
 	int ret = 0;
 
@@ -3428,7 +3433,7 @@ extern int port_isolate_mode_tlv_infor_get(int *len, char **value, int *free_nee
 {
 	int ret = 0;
 	int buf_len = 0;
-	int *port_isolate_mode = NULL;
+	cs_boolean *port_isolate_mode = NULL;
 	
 	if(NULL == len)
 	{
@@ -3459,9 +3464,14 @@ extern int port_isolate_mode_tlv_infor_get(int *len, char **value, int *free_nee
 	}
 
 	*free_need = 1;
-	buf_len = sizeof(int);
-	port_isolate_mode = (int *)iros_malloc(IROS_MID_APP, buf_len);
+	buf_len = sizeof(cs_boolean);
+	port_isolate_mode = (cs_boolean *)iros_malloc(IROS_MID_APP, buf_len);
+#if 0
 	if(port_aal_isolation_get(port_isolate_mode) != CS_E_OK)
+#else
+	CS_IN cs_callback_context_t     context = {0};
+	if(epon_request_onu_port_isolation_get(context, 0, 0, port_isolate_mode) != CS_E_OK)
+#endif
 	{
 		cs_printf("%s\r\n", "get port isolate fail!");
 	}
@@ -3489,7 +3499,7 @@ end:
 extern int port_isolate_mode_tlv_infor_handle(int len, char *data, int opcode)
 {
 	int ret = 0;
-	int port_isolate_mode = 0;
+	cs_boolean port_isolate_mode = 0;
 	
 	if(0 != len)
 	{
@@ -3509,7 +3519,7 @@ extern int port_isolate_mode_tlv_infor_handle(int len, char *data, int opcode)
 		goto error;
 	}
 
-	memcpy(&port_isolate_mode, data, sizeof(int));
+	memcpy(&port_isolate_mode, data, sizeof(cs_boolean));
 	if(DATA_RECOVER == opcode)
 	{
 		port_isolate_mode_config_recover(port_isolate_mode);
@@ -3535,9 +3545,13 @@ end:
 extern int port_isolate_mode_running_config_show(void)
 {
 	int ret = 0;
-	int en = 0;
-
+	cs_boolean en = 0;
+#if 0
 	if(port_aal_isolation_get(&en) != CS_E_OK)
+#else		
+	CS_IN cs_callback_context_t     context = {0};
+	if(epon_request_onu_port_isolation_get(context, 0, 0, &en) != CS_E_OK)
+#endif
 	{
 		cs_printf("\n-----------------------------------\n");
 		cs_printf("get port isolate fail!\r\n");

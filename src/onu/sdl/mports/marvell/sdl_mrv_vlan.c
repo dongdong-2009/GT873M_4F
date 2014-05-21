@@ -94,6 +94,7 @@ Copyright (c) 2009 by Cortina Systems Incorporated
  */
 
 #include "plat_common.h" 
+#include "sdl_vlan_util.h"
 #include "sdl_vlan.h"
 #include "sdl_fdb.h"
 #include "sdl_util.h"
@@ -1453,6 +1454,11 @@ cs_status sdl_vlan_init(void)
         epon_request_onu_vlan_set(context,0,0, port, def_vlan,SDL_VLAN_MODE_TRUNK,&cfg, 0);
     }
 
+
+	#if (QINQ_SUPPORT == MODULE_YES)
+	extern	qinq_list_t *pVlan_qinq_list_running;
+	vlan_qinq_sw_table_init(pVlan_qinq_list_running);
+	#endif
     //set uplink port FALLBACK mode
 
     gvlnSetPortVlanDot1qMode(QD_MASTER_DEV_PTR, CS_UPLINK_PHY_PORT, GT_FALLBACK);

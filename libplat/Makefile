@@ -67,6 +67,7 @@ MOD_INCLUDES=-I$(ECOS_INSTALL_HOME)/include \
 -I$(SWHOME)/src/onu/aal/lynxd/include \
 -I$(SWHOME)/src/onu/sdl/include/cmn \
 -I$(SWHOME)/src/onu/sdl/include \
+-I$(SWHOME)/src/onu/sdl/cmn/cmn \
 -I$(SWHOME)/src/onu/apps/lynx/cortina \
 -I$(SWHOME)/src/onu/plat/lynxd \
 -I$(SWHOME)/src/onu/plat/lynxd/mports/ctc \

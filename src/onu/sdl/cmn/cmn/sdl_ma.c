@@ -103,7 +103,7 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "osal_api_packet.h"
 #include "aal_ptp.h"
 #if 1
-#include "sdl_vlan.h"
+#include "sdl_vlan_util.h"
 #endif
 
 
