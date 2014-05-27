@@ -976,28 +976,31 @@ cs_status epon_request_onu_spec_pkt_dst_set(
         ret = __l2_sw_uni_set(pkt_type, state);
         // set management port
         ret +=__l2_mii_port_set(pkt_type, state);
-//#else
-    	cs_aal_port_id_t port;
-    	cs_aal_pkt_type_t pkt;
-        cs_aal_spec_pkt_ctrl_msk_t  pkt_msk;
-        cs_aal_spec_pkt_ctrl_t      pkt_cfg;
+#else
+        if(((pkt_type == CS_PKT_ARP) && (state == DST_CPU)) || ((pkt_type == CS_PKT_MYMAC) && (state == DST_CPU))|| ((pkt_type == CS_PKT_GMP) && (state == DST_CPU)))
+        {
+			cs_aal_port_id_t port;
+			cs_aal_pkt_type_t pkt;
+			cs_aal_spec_pkt_ctrl_msk_t  pkt_msk;
+			cs_aal_spec_pkt_ctrl_t      pkt_cfg;
 
-        memset(&pkt_msk, 0, sizeof(cs_aal_spec_pkt_ctrl_msk_t));
-        memset(&pkt_cfg, 0, sizeof(cs_aal_spec_pkt_ctrl_t));
+			memset(&pkt_msk, 0, sizeof(cs_aal_spec_pkt_ctrl_msk_t));
+			memset(&pkt_cfg, 0, sizeof(cs_aal_spec_pkt_ctrl_t));
 
-        pkt_msk.u32 = 0;
-        pkt_msk.s.dpid = 1;
+			pkt_msk.u32 = 0;
+			pkt_msk.s.dpid = 1;
 
-        pkt_cfg.dpid.dst_op = (state==DST_FE)?AAL_SPEC_DST_FE:((state==DST_CPU)?AAL_SPEC_DST_PORT: AAL_SPEC_DST_DROP);
-        pkt_cfg.dpid.dpid   = AAL_PORT_ID_CPU;
+			pkt_cfg.dpid.dst_op = (state==DST_FE)?AAL_SPEC_DST_FE:((state==DST_CPU)?AAL_SPEC_DST_PORT: AAL_SPEC_DST_DROP);
+			pkt_cfg.dpid.dpid   = AAL_PORT_ID_CPU;
 
-    	pkt = g_sdl_pkt_map[pkt_type];
+			pkt = g_sdl_pkt_map[pkt_type];
 
-        if(CS_DOWN_STREAM==direction)
-           port = AAL_PORT_ID_PON;
-        else
-           port = AAL_PORT_ID_GE;
-        ret = aal_special_pkt_behavior_set(port, pkt, pkt_msk, &pkt_cfg);
+			if(CS_DOWN_STREAM==direction)
+			   port = AAL_PORT_ID_PON;
+			else
+			   port = AAL_PORT_ID_GE;
+			ret = aal_special_pkt_behavior_set(port, pkt, pkt_msk, &pkt_cfg);
+        }
 
 #endif
         if(CS_PKT_GMP == pkt_type)
