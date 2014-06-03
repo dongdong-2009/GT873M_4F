@@ -1021,6 +1021,7 @@ cs_status epon_request_onu_spec_pkt_dst_set(
     }
     else 
     {
+
         /* set Realtek switch chip */        
         ret = __l2_sw_uni_set(pkt_type, state);
         // set management port

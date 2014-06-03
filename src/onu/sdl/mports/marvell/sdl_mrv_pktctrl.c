@@ -102,6 +102,7 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "switch_expo.h"
 #include "gtDrvSwRegs.h"
 #include "switch_drv.h"
+#include "msApiDefs.h"
 
 extern cs_status aal_pon_mac_addr_get( CS_IN cs_mac_t *mac);
 #define LOOPDELETADD 
@@ -945,7 +946,7 @@ cs_status epon_request_onu_spec_pkt_dst_set(
 {
     cs_status                   ret;
 
-   
+   cs_printf("pkt_type is %d, state is %d\r\n",pkt_type,state);
     if(direction > CS_UP_STREAM)
     {
         SDL_MIN_LOG("Direction invalid.(%d) FILE: %s, LINE: %d", direction, __FILE__, __LINE__);
@@ -976,8 +977,8 @@ cs_status epon_request_onu_spec_pkt_dst_set(
         ret = __l2_sw_uni_set(pkt_type, state);
         // set management port
         ret +=__l2_mii_port_set(pkt_type, state);
-#else
-        if(((pkt_type == CS_PKT_ARP) && (state == DST_CPU)) || ((pkt_type == CS_PKT_MYMAC) && (state == DST_CPU))|| ((pkt_type == CS_PKT_GMP) && (state == DST_CPU)))
+
+        if(((pkt_type == CS_PKT_ARP) && (state == DST_CPU)) || ((pkt_type == CS_PKT_MYMAC) && (state == DST_CPU)))
         {
 			cs_aal_port_id_t port;
 			cs_aal_pkt_type_t pkt;
@@ -1000,8 +1001,27 @@ cs_status epon_request_onu_spec_pkt_dst_set(
 			else
 			   port = AAL_PORT_ID_GE;
 			ret = aal_special_pkt_behavior_set(port, pkt, pkt_msk, &pkt_cfg);
-        }
+			if((pkt_type == CS_PKT_MYMAC) && (state == DST_CPU))
+			{
+				pkt_msk.u32 = 0;
+				pkt_msk.s.dpid = 1;
 
+				pkt_cfg.dpid.dst_op = AAL_SPEC_DST_PORT;
+				pkt_cfg.dpid.dpid   = AAL_PORT_ID_PON;
+
+				pkt = g_sdl_pkt_map[pkt_type];
+
+				port = AAL_PORT_ID_CPU;
+				ret = aal_special_pkt_behavior_set(port, pkt, pkt_msk, &pkt_cfg);
+			}
+        }
+//#else
+        extern GT_STATUS MinimizeCPUTraffic2(GT_QD_DEV *dev, GT_U8* macAddr);
+        cs_mac_t     mac;
+        (void)aal_pon_mac_addr_get(&mac);
+        FOR_UNIT_START(GT_32, unit)
+        MinimizeCPUTraffic2(QD_DEV_PTR, mac.addr);
+        FOR_UNIT_END
 #endif
         if(CS_PKT_GMP == pkt_type)
         {
@@ -1016,6 +1036,7 @@ cs_status epon_request_onu_spec_pkt_dst_set(
             	}
             }
         }
+        ret = CS_E_OK;
     }
     
     if(ret != CS_E_OK)
@@ -1026,7 +1047,7 @@ cs_status epon_request_onu_spec_pkt_dst_set(
 
     // record
     g_pkt_dst[direction][pkt_type] = state; 
-    
+    cs_printf("set record ret = %d ....\r\n",ret);
     if(CS_DOWN_STREAM == direction)
     {
         if(state == DST_CPU)

@@ -691,6 +691,7 @@ cs_status app_ipintf_set_wan_cfg(
     ipintf_info.remoteip = remote_subnet;
     ipintf_info.remotemask = subnet_mask;
     if(ipintf_info.inband) {
+    	cs_printf("ipintf_info.inband.............................\r\n");
         epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_DOWN_STREAM, CS_PKT_ARP, DST_CPU);
 		epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_UP_STREAM, CS_PKT_ARP, DST_FE);
         epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_DOWN_STREAM, CS_PKT_MYMAC, DST_CPU);
@@ -701,6 +702,7 @@ cs_status app_ipintf_set_wan_cfg(
 
     }
     else {
+    	cs_printf("ipintf_info.outband...........................\r\n");
         epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_DOWN_STREAM, CS_PKT_ARP, DST_FE);
         epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_UP_STREAM, CS_PKT_ARP, DST_CPU);
         epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_DOWN_STREAM, CS_PKT_MYMAC, DST_FE);

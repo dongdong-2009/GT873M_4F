@@ -94,7 +94,7 @@ Copyright (c) 2010 by Cortina Systems Incorporated
  */
 
 #include "cs_cmd.h"
-
+#include "aal_l2.h"
 #ifdef HAVE_SDL_CMD
 
 #include "cs_types.h"
@@ -374,7 +374,28 @@ sal_cmd_result_t ma_cmd_stat(int argc, char **argv)
 
     return SAL_CMD_OK;
 }
-
+cs_uint8 pkt_map[] =
+{
+    AAL_PKT_BPDU,           /* CS_PKT_BPDU*/
+    AAL_PKT_8021X,          /* CS_PKT_8021X */
+    AAL_PKT_IGMP,           /* CS_PKT_GMP */
+    AAL_PKT_ARP,            /* CS_PKT_ARP */
+    AAL_PKT_OAM,            /* CS_PKT_OAM */
+    AAL_PKT_MPCP,           /* CS_PKT_MPCP */
+    AAL_PKT_DHCP,           /* CS_PKT_DHCP */
+    AAL_PKT_SWT,            /* CS_PKT_IROS */
+    AAL_PKT_SWT,            /* CS_PKT_PPPOE */
+    AAL_PKT_SWT,            /* CS_PKT_IP */
+    AAL_PKT_IPV6NDP,        /* CS_PKT_NDP */
+    AAL_PKT_SWT,            /* CS_PKT_LOOPDETECT */
+    AAL_PKT_MYMAC,          /* CS_PKT_MYMAC */
+    AAL_PKT_SWT,            /* CS_PKT_TYPE_NUM */
+#ifdef LOOPDELETADD
+	AAL_PKT_SWT,
+	AAL_PKT_SWT,
+	AAL_PKT_SWT,
+#endif
+};
 sal_cmd_result_t pkt_cmd_set(int argc, char **argv)
 {   
     sal_cmd_result_t rc = SAL_CMD_INVALID_CMD;
@@ -382,13 +403,15 @@ sal_cmd_result_t pkt_cmd_set(int argc, char **argv)
     int para1;
     int para2;
     int para3;
-       
+    int para4;
+#if 0
     if(argc!=5) return SAL_CMD_INVALID_PARAM;
-
+#endif
     para1 = iros_strtol(argv[2]);
     para2 = iros_strtol(argv[3]);
     para3 = iros_strtol(argv[4]);
-
+    para4 = iros_strtol(argv[5]);
+#if 0
     if (para1 > CS_UP_STREAM) {
         cs_printf("dir error!\n");
         return SAL_CMD_INVALID_PARAM;
@@ -402,8 +425,40 @@ sal_cmd_result_t pkt_cmd_set(int argc, char **argv)
         cs_printf("state error!\n");
         return SAL_CMD_INVALID_PARAM;
     }
- 
-    rc = cs_status_2_cmd_rc_map(epon_request_onu_spec_pkt_dst_set(context,0,0,para1,para2,para3));
+#endif
+    if(para1 <= CS_UP_STREAM)
+    	rc = cs_status_2_cmd_rc_map(epon_request_onu_spec_pkt_dst_set(context,0,0,para1,para2,para3));
+    else
+    {
+    	cs_printf("para1 is %d, pkt_type is %d ,source_port is %d, source_port is %d\r\n",para1,para2,para3,para4);
+		cs_aal_pkt_type_t pkt_type = para2;
+		cs_sdl_pkt_dst_t	source_port = para3, dest_port = para4;
+
+		cs_aal_port_id_t port;
+		cs_aal_pkt_type_t pkt;
+		cs_aal_spec_pkt_ctrl_msk_t  pkt_msk;
+		cs_aal_spec_pkt_ctrl_t      pkt_cfg;
+
+		memset(&pkt_msk, 0, sizeof(cs_aal_spec_pkt_ctrl_msk_t));
+		memset(&pkt_cfg, 0, sizeof(cs_aal_spec_pkt_ctrl_t));
+
+		pkt_msk.u32 = 0;
+		pkt_msk.s.dpid = 1;
+//dest_port    0     cpu         2     fe
+		pkt_cfg.dpid.dst_op = (dest_port==2)?AAL_SPEC_DST_FE:((dest_port==0)?AAL_SPEC_DST_PORT: AAL_SPEC_DST_DROP);
+		pkt_cfg.dpid.dpid   = AAL_PORT_ID_CPU;
+
+		pkt = pkt_map[pkt_type];
+#if 0
+	    AAL_PORT_ID_GE            = 0,  /* GE port;                  */
+	    AAL_PORT_ID_PON           = 1,  /* PON port;                 */
+	    AAL_PORT_ID_CPU           = 2,  /* CPU port; (MA)            */
+#endif
+		   port = source_port;
+
+		aal_special_pkt_behavior_set(port, pkt, pkt_msk, &pkt_cfg);
+		rc = SAL_CMD_OK;
+    }
      
     return rc;
 }
