@@ -4132,6 +4132,10 @@ extern cs_status ip_pkt_to_pkt_with_tag( cs_uint8 *eth_pkt, cs_uint32 *len, cs_p
 		return CS_E_ERROR;
 	}
 
+	if((port_id < CS_UNI_PORT_ID1) || (port_id > UNI_PORT_MAX))
+	{
+		return CS_E_ERROR;
+	}
 	//报文如果不是ip 报文则返回错误
 	if(1 != pkt_ip_check(eth_pkt))
 	{
