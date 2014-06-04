@@ -977,51 +977,46 @@ cs_status epon_request_onu_spec_pkt_dst_set(
         ret = __l2_sw_uni_set(pkt_type, state);
         // set management port
         ret +=__l2_mii_port_set(pkt_type, state);
+#else
+		cs_aal_port_id_t port;
+		cs_aal_pkt_type_t pkt;
+		cs_aal_spec_pkt_ctrl_msk_t  pkt_msk;
+		cs_aal_spec_pkt_ctrl_t      pkt_cfg;
 
-        if(((pkt_type == CS_PKT_ARP) && (state == DST_CPU)) || ((pkt_type == CS_PKT_MYMAC) && (state == DST_CPU)))
-        {
-			cs_aal_port_id_t port;
-			cs_aal_pkt_type_t pkt;
-			cs_aal_spec_pkt_ctrl_msk_t  pkt_msk;
-			cs_aal_spec_pkt_ctrl_t      pkt_cfg;
+		memset(&pkt_msk, 0, sizeof(cs_aal_spec_pkt_ctrl_msk_t));
+		memset(&pkt_cfg, 0, sizeof(cs_aal_spec_pkt_ctrl_t));
 
+		pkt_msk.u32 = 0;
+		pkt_msk.s.dpid = 1;
+
+		pkt_cfg.dpid.dst_op = (state==DST_FE)?AAL_SPEC_DST_FE:((state==DST_CPU)?AAL_SPEC_DST_PORT: AAL_SPEC_DST_DROP);
+		pkt_cfg.dpid.dpid   = AAL_PORT_ID_CPU;
+
+		pkt = g_sdl_pkt_map[pkt_type];
+		cs_printf("pkt_type is %d ,pkt is %d",pkt_type,pkt);
+		if(pkt != AAL_PKT_SWT)
+		{
+			cs_printf("pkt is %d pkt_type is %d dst_op is %d dpid is %d\r\n", pkt,pkt_type,pkt_cfg.dpid.dst_op,pkt_cfg.dpid.dpid);
+			if(CS_DOWN_STREAM==direction)
+			   port = AAL_PORT_ID_PON;
+			else
+			   port = AAL_PORT_ID_GE;
+			ret = aal_special_pkt_behavior_set(port, pkt, pkt_msk, &pkt_cfg);
+		}
+		if((pkt_type == CS_PKT_ARP)&&(state == DST_FE))
+		{
+			cs_printf("Special set arp pkt from pon to CPU\r\n");
 			memset(&pkt_msk, 0, sizeof(cs_aal_spec_pkt_ctrl_msk_t));
 			memset(&pkt_cfg, 0, sizeof(cs_aal_spec_pkt_ctrl_t));
 
 			pkt_msk.u32 = 0;
 			pkt_msk.s.dpid = 1;
 
-			pkt_cfg.dpid.dst_op = (state==DST_FE)?AAL_SPEC_DST_FE:((state==DST_CPU)?AAL_SPEC_DST_PORT: AAL_SPEC_DST_DROP);
+			pkt_cfg.dpid.dst_op = AAL_SPEC_DST_FE;
 			pkt_cfg.dpid.dpid   = AAL_PORT_ID_CPU;
-
 			pkt = g_sdl_pkt_map[pkt_type];
-
-			if(CS_DOWN_STREAM==direction)
-			   port = AAL_PORT_ID_PON;
-			else
-			   port = AAL_PORT_ID_GE;
-			ret = aal_special_pkt_behavior_set(port, pkt, pkt_msk, &pkt_cfg);
-			if((pkt_type == CS_PKT_MYMAC) && (state == DST_CPU))
-			{
-				pkt_msk.u32 = 0;
-				pkt_msk.s.dpid = 1;
-
-				pkt_cfg.dpid.dst_op = AAL_SPEC_DST_PORT;
-				pkt_cfg.dpid.dpid   = AAL_PORT_ID_PON;
-
-				pkt = g_sdl_pkt_map[pkt_type];
-
-				port = AAL_PORT_ID_CPU;
-				ret = aal_special_pkt_behavior_set(port, pkt, pkt_msk, &pkt_cfg);
-			}
-        }
-//#else
-        extern GT_STATUS MinimizeCPUTraffic2(GT_QD_DEV *dev, GT_U8* macAddr);
-        cs_mac_t     mac;
-        (void)aal_pon_mac_addr_get(&mac);
-        FOR_UNIT_START(GT_32, unit)
-        MinimizeCPUTraffic2(QD_DEV_PTR, mac.addr);
-        FOR_UNIT_END
+			ret = aal_special_pkt_behavior_set(AAL_PORT_ID_PON, pkt, pkt_msk, &pkt_cfg);
+		}
 #endif
         if(CS_PKT_GMP == pkt_type)
         {
