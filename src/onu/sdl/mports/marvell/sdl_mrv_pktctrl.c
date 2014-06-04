@@ -946,7 +946,6 @@ cs_status epon_request_onu_spec_pkt_dst_set(
 {
     cs_status                   ret;
 
-   cs_printf("pkt_type is %d, state is %d\r\n",pkt_type,state);
     if(direction > CS_UP_STREAM)
     {
         SDL_MIN_LOG("Direction invalid.(%d) FILE: %s, LINE: %d", direction, __FILE__, __LINE__);
@@ -993,29 +992,13 @@ cs_status epon_request_onu_spec_pkt_dst_set(
 		pkt_cfg.dpid.dpid   = AAL_PORT_ID_CPU;
 
 		pkt = g_sdl_pkt_map[pkt_type];
-		cs_printf("pkt_type is %d ,pkt is %d",pkt_type,pkt);
 		if(pkt != AAL_PKT_SWT)
 		{
-			cs_printf("pkt is %d pkt_type is %d dst_op is %d dpid is %d\r\n", pkt,pkt_type,pkt_cfg.dpid.dst_op,pkt_cfg.dpid.dpid);
 			if(CS_DOWN_STREAM==direction)
 			   port = AAL_PORT_ID_PON;
 			else
 			   port = AAL_PORT_ID_GE;
 			ret = aal_special_pkt_behavior_set(port, pkt, pkt_msk, &pkt_cfg);
-		}
-		if((pkt_type == CS_PKT_ARP)&&(state == DST_FE))
-		{
-			cs_printf("Special set arp pkt from pon to CPU\r\n");
-			memset(&pkt_msk, 0, sizeof(cs_aal_spec_pkt_ctrl_msk_t));
-			memset(&pkt_cfg, 0, sizeof(cs_aal_spec_pkt_ctrl_t));
-
-			pkt_msk.u32 = 0;
-			pkt_msk.s.dpid = 1;
-
-			pkt_cfg.dpid.dst_op = AAL_SPEC_DST_FE;
-			pkt_cfg.dpid.dpid   = AAL_PORT_ID_CPU;
-			pkt = g_sdl_pkt_map[pkt_type];
-			ret = aal_special_pkt_behavior_set(AAL_PORT_ID_PON, pkt, pkt_msk, &pkt_cfg);
 		}
 #endif
         if(CS_PKT_GMP == pkt_type)
@@ -1042,7 +1025,6 @@ cs_status epon_request_onu_spec_pkt_dst_set(
 
     // record
     g_pkt_dst[direction][pkt_type] = state; 
-    cs_printf("set record ret = %d ....\r\n",ret);
     if(CS_DOWN_STREAM == direction)
     {
         if(state == DST_CPU)
