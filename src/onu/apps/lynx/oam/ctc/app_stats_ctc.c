@@ -96,7 +96,7 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "app_stats_ctc.h"
 #include "app_alarm_ctc.h"
 #include "sdl_port.h"
-
+#include "sdl_vlan.h"
 #define STATS_MONITOR_ALARM_CHECK(name, id)          value = ctrl->last_duration.name;  \
                                                                                     if(CS_E_OK == ctc_oam_get_alarm_threshold(type, port,  \
                                                                                                               id, &raise_value, &clear_value)) \
@@ -115,6 +115,8 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 
 /*pon port(index 0) and uni port(index 1...) monitor*/
 ctc_stats_monitor_ctrl_t *g_moitor_stats = NULL;
+
+
 
 
 void ctc_onu_stats_monitor_init()
@@ -718,19 +720,19 @@ void ctc_onu_stats_dump(cs_port_id_t port)
 }
 
 typedef struct{
-	cs_uint8  portid; //端口ID
-	cs_uint8  status; //端口统计状�?
-	cs_uint32 icount; //统计周期计数
-	cs_uint32 interval; //统计周期时长
-	cs_uint32 seconds; //当前统计周期已统计时�?
-	cyg_mutex_t mutex;	//数据同步互斥�?
-	cs_sdl_port_uni_stats_t * phis; //端口上一周期统计数据
-	cs_sdl_port_uni_stats_t * pcur; //端口当前周期统计数据
-	cs_uint64 txrate;	//发送速率
-	cs_uint64 rxrate;   //接收速率
-	cs_uint8  portstatus;	//端口状�?	
-	cs_uint64 linkchange;	//端口状态变化次�?	
-	cs_uint64 linkchangehis; //端口状态变化次数历史数�?
+	cs_uint8  portid;
+	cs_uint8  status;
+	cs_uint32 icount;
+	cs_uint32 interval;
+	cs_uint32 seconds;
+	cyg_mutex_t mutex;
+	cs_sdl_port_uni_stats_t * phis;
+	cs_sdl_port_uni_stats_t * pcur;
+	cs_uint64 txrate;
+	cs_uint64 rxrate;
+	cs_uint8  portstatus;
+	cs_uint64 linkchange;
+	cs_uint64 linkchangehis;
 	}gwd_portstats_ctrl_t, *ptr_gwd_portstats_ctrl_t;
 #define PORT_STATS_DEFAULT_INTERVAL 0x384
 static ptr_gwd_portstats_ctrl_t g_ps_ctrl = NULL;
@@ -751,7 +753,7 @@ extern cs_uint8 oam_plat_get_switch_port_num();
 void onu_tmfunc_port_stats_get(void*date)
 {
 	ptr_gwd_portstats_ctrl_t pctrl = g_ps_ctrl;
-	cs_uint8 uni_num = 4;
+	cs_uint8 uni_num = UNI_PORT_MAX;
 	cyg_uint64 time_ticks = 0,time1_ticks =0;
 	cs_callback_context_t     context;
 	cs_uint64 rxrate=0,txrate =0;
@@ -804,7 +806,7 @@ void onu_tmfunc_port_stats_get(void*date)
 void gwd_portstats_thread(cyg_addrword_t p)
 {
 	ptr_gwd_portstats_ctrl_t pctrl = g_ps_ctrl;
-	cs_uint8 uni_num = CS_UNI_NUMBER;
+	cs_uint8 uni_num = UNI_PORT_MAX;
 	cyg_uint64 time_ticks = 0,time1_ticks =0;
 	cs_callback_context_t     context;
 	cs_uint64 rxrate=0,txrate =0;
@@ -876,7 +878,7 @@ void gwd_portstats_thread(cyg_addrword_t p)
 cs_boolean gwd_portstats_init()
 {
 	cs_boolean ret = EPON_FALSE;
-	cs_uint8 uni_num = CS_UNI_NUMBER;
+	cs_uint8 uni_num = UNI_PORT_MAX;
 
 	if(uni_num > 0)
 	{

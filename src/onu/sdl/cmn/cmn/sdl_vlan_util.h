@@ -738,7 +738,7 @@ typedef struct list_s
 }qinq_list_t;
 
 
-extern cs_status vlan_qinq_sw_table_init(qinq_list_t *list);
+extern cs_status vlan_qinq_sw_table_init();
 extern cs_status vlan_qinq_sw_table_add(qinq_list_t *list, vlan_qinq_infor_t vlan_entry);
 extern cs_status vlan_qinq_sw_table_del(qinq_list_t *list, vlan_qinq_infor_t vlan_entry);
 extern cs_status vlan_qinq_sw_table_clear(qinq_list_t *list);

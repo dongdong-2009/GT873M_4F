@@ -3316,8 +3316,9 @@ extern cs_status vlan_qinq_table_search(qinq_list_t *list, vlan_qinq_infor_t vla
 	return CS_E_OK;
 }
 
-extern cs_status vlan_qinq_sw_table_init(qinq_list_t *list)
+extern cs_status vlan_qinq_sw_table_init()
 {
+	qinq_list_t *list = pVlan_qinq_list_running;
 	//入口参数检查，通过则继续处理，否则推出并返回错误
 	if(NULL == list)
 	{

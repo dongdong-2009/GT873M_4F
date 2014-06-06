@@ -97,7 +97,7 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "startup_cfg.h"
 #include "app_gpio.h"
 #include "packet.h"
-
+#include "iros_config.h"
 #ifdef SYS_SCFG_PARAM
 unsigned int gScfgVer = SCFG_CTC_VERSION;
 cfg_field_t glb_field[] =
@@ -157,13 +157,8 @@ cfg_field_t glb_field[] =
             /*HELP STRING*/ "1-255, measured in 10ms",1,255},
     {CFG_ID_PON_LASER_POLARITY  , FIELD_TYPE_CHAR    , "PON port laser polarity"            ,  1     , SCFG_R   , 0 ,         {0},
             /*HELP STRING*/ "(tx_burst_polarity:a sig_loss_polarity:b)\n0 - a=0,b=0\n1 - a=1,b=0\n2 - a=0,b=0\n3 - a=1,b=1",0,3},
-#if(PRODUCT_CLASS == PRODUCTS_GT812C)
-	{CFG_ID_SWITCH_PORT_NUM     , FIELD_TYPE_CHAR    , "Swith port number"                  ,  1     , SCFG_R   , 8 ,         {0},
+	{CFG_ID_SWITCH_PORT_NUM     , FIELD_TYPE_CHAR    , "Swith port number"                  ,  1     , SCFG_R   , CS_UNI_NUMBER ,         {0},
 			/*HELP STRING*/ "Indicates the external switch port number",1,8},
-#else
-	{CFG_ID_SWITCH_PORT_NUM     , FIELD_TYPE_CHAR    , "Swith port number"                  ,  1     , SCFG_R   , 4 ,         {0},
-			/*HELP STRING*/ "Indicates the external switch port number",1,8},
-#endif
     {CFG_ID_OAM_VERSION         , FIELD_TYPE_CHAR    , "OAM version"                        ,  1     , SCFG_R   , 0 ,         {0},
             /*HELP STRING*/ "0x00 - Standard\n0x01 - 802.3ah Draft 2.0",0,1},
     {CFG_ID_VENDOR_ID           , FIELD_TYPE_STRING  , "Vendor ID"                          ,  4     , SCFG_R   , 0 ,         {0},

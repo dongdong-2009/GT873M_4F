@@ -574,16 +574,7 @@ cs_uint8 app_ipintf_pkt_recv(cs_pkt_t* pkt)
 
     APP_IPINTF_LOG(IROS_LOG_LEVEL_DBG0,"%s, sport %d, len %d, vlan %d, type %d\n", 
         __func__, pkt->port, pkt->len, pkt->svlan, pkt->eth_type);
-#if 0
-    cs_uint8 i=0;
-    
-    for(i=0;i<pkt->len;i++)
-    {
-    	if(0 ==i%16)
-    		cs_printf("\ni   ");
-    	cs_printf("0x%02x   ",*((cs_uint8*)pkt+i));
-    }
-#endif
+
     IPINTF_STATIS_INC(RECV, pkt->port);
    // app_ipintf_mac_learning(pkt);
     

@@ -1735,10 +1735,6 @@ cs_status sdl_vlan_init(void)
     vlan4K.fid_msti = 0;
     rtl8367b_setAsicVlan4kEntry(&vlan4K);
 
-	#if (QINQ_SUPPORT == MODULE_YES)
-	extern	qinq_list_t *pVlan_qinq_list_running;
-	vlan_qinq_sw_table_init(pVlan_qinq_list_running);
-	#endif
     /* Enable downstream transparent for double-tagged frames */
     rtk_mbp.bits[0] = (1<<SWITCH_UPLINK_PORT);
     for(i = 0; i < 4; ++i)

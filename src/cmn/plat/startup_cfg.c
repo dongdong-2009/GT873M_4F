@@ -377,11 +377,6 @@ void startup_cfg_rebuild(unsigned int *inst_id)
         return;
     }
     startup_config_restore(new_instid);
-#if 1
-    cs_uint8 uni_port =0 ;
-    startup_config_read(CFG_ID_SWITCH_PORT_NUM, 1, &uni_port);
-    cs_printf("UNI_PORT_NUM is %d \r\n",uni_port);
-#endif
     rsvd_flag = rsvd_flag|TLV_CFG_ENC_FLAG;
     tlv_write_flag(new_instid, rsvd_flag);
     tlv_write_version(new_instid, gScfgVer);

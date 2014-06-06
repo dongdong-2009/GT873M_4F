@@ -98,6 +98,7 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "aal_sys.h"
 #include "sdl_init.h"
 #include "sdl.h"
+#include "sdl_vlan_util.h"
 
 extern cs_status sdl_service_down(void);
 extern cs_status sdl_domain_table_init(sdl_init_cfg_t *sdl_init_cfg);
@@ -266,6 +267,9 @@ cs_status sdl_internel_init(void)
     sdl_fdb_init(&sdl_int_cfg);
     sdl_qos_init(&sdl_int_cfg);
     sdl_pktctrl_init();
+#if (QINQ_SUPPORT == MODULE_YES)
+vlan_qinq_sw_table_init();
+#endif
     sdl_vlan_init();
     sdl_mc_init();
     sdl_macfilter_init();
