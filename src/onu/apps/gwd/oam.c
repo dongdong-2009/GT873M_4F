@@ -2690,11 +2690,11 @@ int cmd_onu_mgt_config_device_name(struct cli_def *cli, char *command, char *arg
 int cmd_show_system_information(struct cli_def *cli, char *command, char *argv[], int argc)
 {
 #if (PRODUCT_CLASS == PRODUCTS_GT811D)
-	char onu_type[] = "GT811D";
+	char onu_type[] = "GT811_D";
 #endif
 
 #if (PRODUCT_CLASS == PRODUCTS_GT811G)
-	char onu_type[] = "GT811G";
+	char onu_type[] = "GT811_G";
 #endif
 
 #if (PRODUCT_CLASS == PRODUCTS_GT873_M_4F4S)
@@ -2702,7 +2702,7 @@ int cmd_show_system_information(struct cli_def *cli, char *command, char *argv[]
 #endif
 
 #if (PRODUCT_CLASS == PRODUCTS_GT812C)
-	char onu_type[] = "GT812C";
+	char onu_type[] = "GT812_C";
 #endif
 
 	long lRet = GWD_RETURN_OK;
@@ -4848,7 +4848,9 @@ void gw_broadcast_storm_init()
 
 void gwd_onu_init(void)
 {
+#if (PRODUCT_CLASS != PRODUCTS_GT812C)
 extern void Rcp_Mgt_init(void);
+#endif
 //extern void cli_switch_gwd_cmd(struct cli_command **cmd_root);
 //extern void cli_debeg_gwd_cmd(struct cli_command **cmd_root);
 //extern void cli_reg_rcp_cmd(struct cli_command **cmd_root);
@@ -4858,8 +4860,10 @@ extern void Rcp_Mgt_init(void);
 	pStrGwdSwVer = onu_system_info_total.sw_version;
 	pStrGwdHwVer = onu_system_info_total.hw_version;
 	oam_vendor_handler_register(GwOUI, gwd_oam_handlers);
-	
+
+#if (PRODUCT_CLASS != PRODUCTS_GT812C)
 	Rcp_Mgt_init();
+#endif
 	gw_broadcast_storm_init();
 	#if 0
 	if(registerUserCmdInitHandler("gwd", cli_reg_gwd_cmd) != CS_OK)

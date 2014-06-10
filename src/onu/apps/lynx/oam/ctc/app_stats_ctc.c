@@ -117,8 +117,6 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 ctc_stats_monitor_ctrl_t *g_moitor_stats = NULL;
 
 
-
-
 void ctc_onu_stats_monitor_init()
 {
     cs_uint8 i = 0;

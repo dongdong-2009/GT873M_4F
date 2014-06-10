@@ -98,6 +98,7 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "app_gpio.h"
 #include "packet.h"
 #include "iros_config.h"
+
 #ifdef SYS_SCFG_PARAM
 unsigned int gScfgVer = SCFG_CTC_VERSION;
 cfg_field_t glb_field[] =

@@ -584,7 +584,7 @@ cs_uint8 app_ipintf_pkt_recv(cs_pkt_t* pkt)
     else { 
         rc = app_ipintf_ip_pre_process(pkt);
     }
-//cs_printf("rc is %d\n",rc);
+
     if(rc != 0) {
         APP_IPINTF_LOG(IROS_LOG_LEVEL_DBG3,"%s, does not send to IP stack, 0x%x\n", __func__, (int)pkt);
         IPINTF_STATIS_INC(DROP, pkt->port);

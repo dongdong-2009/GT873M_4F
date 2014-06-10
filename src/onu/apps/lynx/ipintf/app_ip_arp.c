@@ -318,7 +318,6 @@ cs_status app_ipintf_arp_pre_process(cs_pkt_t* pkt)
                 APP_IPINTF_LOG(IROS_LOG_LEVEL_DBG3, "RX to TX len %d,sport %d, dport %d\n", 
                                                                                       pkt->len,pkt->port, PTABLE[i].port);
                     ret |= app_ipintf_send_pkt_with_vlan_check(PTABLE[i].port, pkt, packet_buf);
-
             }
         }
         
