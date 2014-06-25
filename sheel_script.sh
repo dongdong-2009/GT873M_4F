@@ -1,5 +1,9 @@
 #!/bin/sh 
 echo ""
+SWHOME=$(cd `dirname $0`;pwd)
+export SWHOME
+echo "SWHOME = "$SWHOME
+echo ""
 echo "1.make GT812C"
 echo "2.make clean GT812C"
 echo "3.make GT811D"
@@ -10,6 +14,7 @@ echo "7.make GT873_M_4F4S"
 echo -n "8.make clean GT873_M_4F4S\n\n"
 read -p "Select Product Type NO.:" ptype
 echo ""
+
 if [ $ptype -eq 1 ];then
 	echo "You select make GT812C"
 	sleep 2

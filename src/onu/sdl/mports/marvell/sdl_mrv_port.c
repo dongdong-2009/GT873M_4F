@@ -107,6 +107,9 @@ Copyright (c) 2010 by Cortina Systems Incorporated
 #include "switch_expo.h"
 #include "gtDrvSwRegs.h"
 #include "switch_drv.h"
+#if (RPU_MODULE_POE == MODULE_YES)
+#include "gwd_poe.h"
+#endif
 
 #define __SDL_PORT_AUTO_NEGO_FAIL              0
 #define __SDL_PORT_AUTO_NEGO_SUCCESS           1
@@ -804,7 +807,9 @@ cs_status epon_request_onu_port_status_get(
 
     return CS_E_OK;
 }
-
+#if (RPU_MODULE_POE == MODULE_YES)
+extern PoeOperation_t PoeOperation;
+#endif
 cs_status epon_request_onu_port_admin_set(
     CS_IN cs_callback_context_t     context,
     CS_IN cs_int32                  device_id,
@@ -822,6 +827,30 @@ cs_status epon_request_onu_port_admin_set(
     UNI_PORT_CHECK(port_id);
     
     port = L2P_PORT(port_id);
+
+#if (RPU_MODULE_POE == MODULE_YES)
+	if(PoeOperation.PoeOperationflag)
+	{
+		PoeOperation.PoeOpertable[port] = admin;
+		PoeOperation.PoeOperationflag = 0;
+	}
+	else
+	{
+		PoeOperation.CommandOperation[port] = admin;
+	}
+
+	if(PoeOperation.PoeOpertable[port] && PoeOperation.CommandOperation[port])
+	{
+		admin = 1;
+	}
+	else
+	{
+		admin = 0;
+	}
+
+#endif
+
+	
     if (__port_cfg[port].uni_admin == admin) {
         goto END;
     }

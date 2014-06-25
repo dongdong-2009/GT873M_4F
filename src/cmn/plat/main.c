@@ -385,11 +385,7 @@ void cyg_user_start(void)
 	start_up_config_syn_to_running_config();
 	#endif
 
-	#if (ONU_REGISTER_LAST == MODULE_YES)
-	oam_init_step2();
-	#endif
-    cs_printf("Init system done, time %ld\n",cs_current_time());
-	#if 1
+
 extern cs_boolean gwd_portstats_init();
 extern void gwd_portstats_thread(cyg_addrword_t p);
 	if(gwd_portstats_init() == EPON_TRUE)
@@ -410,6 +406,12 @@ extern void gwd_portstats_thread(cyg_addrword_t p);
 	#if (RPU_MODULE_POE == MODULE_YES)
 	gwd_poe_init();
 	#endif
+
+	#if (ONU_REGISTER_LAST == MODULE_YES)
+	oam_init_step2();
+	#endif
+    cs_printf("Init system done, time %ld\n",cs_current_time());
+	#if 1
     cs_circle_timer_add(1000 , cs_cpuload_warning , NULL);
 
 #ifdef HAVE_ZTE_OAM
