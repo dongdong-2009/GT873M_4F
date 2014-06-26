@@ -107,6 +107,7 @@ Copyright (c) 2010 by Cortina Systems Incorporated
 #include "switch_expo.h"
 #include "gtDrvSwRegs.h"
 #include "switch_drv.h"
+#include "iros_config.h"
 #if (RPU_MODULE_POE == MODULE_YES)
 #include "gwd_poe.h"
 #endif
@@ -827,8 +828,9 @@ cs_status epon_request_onu_port_admin_set(
     UNI_PORT_CHECK(port_id);
     
     port = L2P_PORT(port_id);
-
+//cs_printf("come in epon_request_onu_port_admin_set  admin is %d\r\n",admin);
 #if (RPU_MODULE_POE == MODULE_YES)
+//cs_printf("PoeOperation.PoeOperationflag is %d,PoeOperation.CommandOperation[port] is %d\r\n",PoeOperation.PoeOperationflag,PoeOperation.CommandOperation[port]);
 	if(PoeOperation.PoeOperationflag)
 	{
 		PoeOperation.PoeOpertable[port] = admin;
@@ -849,7 +851,6 @@ cs_status epon_request_onu_port_admin_set(
 	}
 
 #endif
-
 	
     if (__port_cfg[port].uni_admin == admin) {
         goto END;

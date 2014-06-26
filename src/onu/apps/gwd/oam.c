@@ -17,6 +17,7 @@
 #include "sockets.h"
 #include "cs_cmn.h"
 #include "sdl.h"
+#include "gwd_poe.h"
 
 #if (GE_RATE_LIMIT == MODULE_YES)
 #include "../../sdl/cmn/cmn/sdl.h"
@@ -4737,7 +4738,57 @@ extern int cmd_onu_uart_ip_show(struct cli_def *cli, char *command, char *argv[]
 int cmd_onu_uart_ip_set(struct cli_def *cli, char *command, char *argv[], int argc);
 
 #endif
-
+#if(RPU_MODULE_POE == MODULE_YES)
+extern epon_return_code_e Gwd_onu_port_poe_controle_stat_set(unsigned int port, unsigned int poe_ctl_state);
+extern epon_return_code_e Gwd_onu_port_poe_controle_stat_get(unsigned int port, unsigned int* poe_ctl_state);
+int poe_control_set(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	cs_uint32 port ,poe_ctl_state;
+	cs_uint8 ret = 0;
+	if(CLI_HELP_REQUESTED)
+	{
+		switch(argc)
+			{
+			case 1:
+				return cli_arg_help(cli, 0,
+					"port", "poe port num",
+					 NULL);
+			case 2:
+				return cli_arg_help(cli,0,
+					"1 | 0", "enable or disable",
+					NULL);
+			default:
+				return cli_arg_help(cli, argc > 1, NULL);
+			}
+	}
+	if(argc == 2)
+	{
+		port = atoi(argv[0]);
+		poe_ctl_state = atoi(argv[1]);
+		if((port >= 1)&&(port <=CS_UNI_NUMBER))
+		{
+			ret = Gwd_onu_port_poe_controle_stat_set(port,poe_ctl_state);
+		}
+		if(EPON_RETURN_OK == ret)
+			cli_print(cli,"poe port %d set %s",port,poe_ctl_state?"enabled":"disabled");
+		else
+			cli_print(cli, "%% Invalid input.");
+	}
+	else if(argc <= 1)
+	{
+		if(argc == 1)
+		{
+			port = atoi(argv[0]);
+			if((port >= 1)&&(port <=CS_UNI_NUMBER))
+			{
+				ret = Gwd_onu_port_poe_controle_stat_get(port,&poe_ctl_state);
+			}
+			cli_print(cli,"poe port %d is %s",port,poe_ctl_state?"enabled":"disabled");
+		}
+	}
+	return CLI_OK;
+}
+#endif
 #if 1
 extern int cmd_laser(struct cli_def *cli, char *command, char *argv[], int argc);
 #endif
@@ -4805,6 +4856,10 @@ void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 		cli_register_command(cmd_root, 0, 		"mrvReg", 		mrv_reg_option,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "mrv register R or W");
 #endif
 		cli_register_command(cmd_root, 0, 		"ponReg", 		pon_reg_option,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "pon register R or W");
+#if (RPU_MODULE_POE == MODULE_YES)
+		cp = cli_register_command(cmd_root, 0, 		"poe", 		NULL,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "poe");
+		cli_register_command(cmd_root, cp, 		"control", 		poe_control_set,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "poe control");
+#endif
 		#endif
 	
 	#if 1

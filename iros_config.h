@@ -89,11 +89,18 @@
 #define PORT_ISOLATE_MODE_SAVE		MODULE_YES
 #define QINQ_SUPPORT				MODULE_YES
 
+
 #ifdef HAVE_TERMINAL_SERVER
 #define LOCAL_IP_NETWORK_CARD	 	MODULE_NO
 #else
 #define LOCAL_IP_NETWORK_CARD	 	MODULE_YES
 #endif
+
+//#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+#define RPU_MODULE_POE 		MODULE_YES
+//#else
+//#define RPU_MODULE_POE 		RPU_NO
+//#endif
 
 #endif
 

@@ -318,6 +318,7 @@ int mrv_reg_option(struct cli_def *cli, char *command, char *argv[], int argc)
     return CLI_OK;
 }
 #endif
+
 int pon_reg_option(struct cli_def *cli, char *command, char *argv[], int argc)
 {
     if(CLI_HELP_REQUESTED)

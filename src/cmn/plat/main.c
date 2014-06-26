@@ -134,9 +134,6 @@ This file contains main process entry point
 #if (PRODUCT_CLASS == PRODUCTS_GT812C)
 #include "../../onu/3rd/driver/marvell/msSample.h"
 #endif
-#if (RPU_MODULE_POE == MODULE_YES)
-#include "gwd_poe.h"
-#endif
 #define UART
 static cs_uint32 g_ctc_vlan_trunk_ds_untag_enable = 1;
 cs_uint32 sdl_thread_id = 0;
@@ -385,7 +382,7 @@ void cyg_user_start(void)
 	start_up_config_syn_to_running_config();
 	#endif
 
-
+#if 1
 extern cs_boolean gwd_portstats_init();
 extern void gwd_portstats_thread(cyg_addrword_t p);
 	if(gwd_portstats_init() == EPON_TRUE)
@@ -404,6 +401,7 @@ extern void gwd_portstats_thread(cyg_addrword_t p);
 	#endif
 	
 	#if (RPU_MODULE_POE == MODULE_YES)
+	extern void gwd_poe_init();
 	gwd_poe_init();
 	#endif
 
@@ -411,7 +409,7 @@ extern void gwd_portstats_thread(cyg_addrword_t p);
 	oam_init_step2();
 	#endif
     cs_printf("Init system done, time %ld\n",cs_current_time());
-	#if 1
+
     cs_circle_timer_add(1000 , cs_cpuload_warning , NULL);
 
 #ifdef HAVE_ZTE_OAM

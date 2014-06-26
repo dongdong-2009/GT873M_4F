@@ -103,7 +103,8 @@ MOD_INCLUDES=-I$(ECOS_INSTALL_HOME)/include \
 -I$(SWHOME)/src/onu/3rd/driver/marvell \
 -I$(SWHOME)/src/onu/sdl/include \
 -I$(SWHOME)/src/onu/sdl/include/cmn \
--I$(SWHOME)/src/onu/apps/lynx/gpio/cmn
+-I$(SWHOME)/src/onu/apps/lynx/gpio/cmn	\
+-I$(SWHOME)/src/onu/apps/gwd
 
 ifeq ($(strip $(USING_SW_TYPE)),MRV)
 MOD_INCLUDES += -I$(SWHOME)/gtmrv/include \

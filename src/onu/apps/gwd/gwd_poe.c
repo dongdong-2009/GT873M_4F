@@ -2,7 +2,12 @@
 #include "cs_cmn.h"
 #include "sdl_peri_util.h"
 #include "onu_syscfg.h"
+#include "sdl_port.h"
+#include "cli_common.h"
+
 #if (RPU_MODULE_POE == MODULE_YES)
+#define CPLD_OP_READ 0x03
+#define CPLD_OP_WRITE 0x02
 
 PoeOperation_t PoeOperation;
 
@@ -22,8 +27,6 @@ epon_return_code_e Gwd_onu_poe_exist_stat_set(unsigned int poe_stat)
     gulPoeEnable = poe_stat;
     return EPON_RETURN_OK;
 }
-
-
 
 
 int gwd_poe_cpld_read(unsigned int type,unsigned char* val)
@@ -73,7 +76,7 @@ int onu_cpld_read_register(unsigned int type,unsigned char* val)
             reg = type;
             if(gwd_poe_cpld_read(reg,val) != EPON_RETURN_OK)
             {
-                gw_log(GW_LOG_LEVEL_MINOR,"read cpld register(0x%02x) fail\n",reg);
+                cs_printf("read cpld register(0x%02x) fail\n",reg);
             }
             
             break;
@@ -83,7 +86,7 @@ int onu_cpld_read_register(unsigned int type,unsigned char* val)
     }
     if(ret)
     {
-        gw_log(GW_LOG_LEVEL_MINOR,"read cpld register type error\n");
+    	cs_printf("read cpld register type error\n");
         return EPON_RETURN_ERROR;
     }
     return EPON_RETURN_OK;
@@ -107,15 +110,15 @@ int onu_cpld_write_register(unsigned int type,unsigned int val)
             
             if((ret += gwd_poe_cpld_write(GWD_CPLD_PROTECT_REG,UNLOCK_CPLD)) != EPON_RETURN_OK)
             {
-                gw_log(GW_LOG_LEVEL_MINOR,"UNLOCK CPLD fail\n");
+                cs_printf("UNLOCK CPLD fail\n");
             }
             if((ret += gwd_poe_cpld_write(reg,val)) != EPON_RETURN_OK)
             {
-                gw_log(GW_LOG_LEVEL_MINOR,"write cpld register(0x%02x) fail\n",reg);
+            	cs_printf("write cpld register(0x%02x) fail\n",reg);
             }
             if((ret += gwd_poe_cpld_write(GWD_CPLD_PROTECT_REG,LOCK_CPLD)) != EPON_RETURN_OK)
             {
-                gw_log(GW_LOG_LEVEL_MINOR,"LOCK CPLD fail\n");
+            	cs_printf("LOCK CPLD fail\n");
             }
             break;
            default:
@@ -124,7 +127,7 @@ int onu_cpld_write_register(unsigned int type,unsigned int val)
     }
     if(ret)
     {
-        gw_log(GW_LOG_LEVEL_MINOR,"write cpld register type error\n");
+    	cs_printf("write cpld register type error\n");
         return EPON_RETURN_ERROR;
     }
     return EPON_RETURN_OK;
@@ -143,7 +146,7 @@ int gwd_poe_cpld_check(unsigned char *val)
         return EPON_RETURN_ERROR;
     }
 
-    if(*val < GWD_CPLD_VERSION_1)  
+    if((*val < GWD_CPLD_VERSION_1)||(0xff == *val))
     {
         ret = EPON_RETURN_EXIST_ERROR;
     }
@@ -176,7 +179,6 @@ epon_return_code_e Gwd_onu_port_poe_controle_stat_set(unsigned int port, unsigne
 
 epon_return_code_e Gwd_onu_port_power_detect_get(unsigned int port,unsigned int* port_power_stat)
 {
-    unsigned int reg_num = 0;
     unsigned int ret = 0;
     unsigned char power_stat = 0;
     unsigned int uni_port_num = 0;
@@ -189,7 +191,7 @@ epon_return_code_e Gwd_onu_port_power_detect_get(unsigned int port,unsigned int*
     if((port < 1) || port > uni_port_num)
         return EPON_RETURN_ERROR;
     
-    if(onu_cpld_read_register(GWD_CPLD_POWER3_REG,&power_stat) != EPON_RETURN_OK)
+    if(onu_cpld_read_register(GWD_CPLD_POWER1_REG,&power_stat) != EPON_RETURN_OK)
     {
         ret = EPON_RETURN_ERROR;
     }
@@ -207,11 +209,11 @@ epon_return_code_e Gwd_onu_port_poe_operation_stat_set(int lport,int state)
 {
 	cs_callback_context_t context;
     
-    PoeOperation.PoeOperationflag = ENABLE;
-    
+    PoeOperation.PoeOperationflag = TRUE;
+//    cs_printf("Gwd_onu_port_poe_operation_stat_set lport is %d,state is %d\r\n",lport,state);
     if(epon_request_onu_port_admin_set(context,0,0,lport,state) != EPON_RETURN_OK)
     {
-        gw_printf("set port poe operation fail\n");
+        cs_printf("set port poe operation fail\n");
         return EPON_RETURN_ERROR;
     }
 
@@ -221,7 +223,6 @@ epon_return_code_e Gwd_onu_port_poe_operation_stat_set(int lport,int state)
 void gwd_onu_poe_thread_hander()
 {
 	cs_callback_context_t context;
-    unsigned int poeexiststat =0;
     unsigned int uni_port_num = UNI_PORT_MAX;
     unsigned int ulport =0;
     unsigned int port_stat = 0;
@@ -238,19 +239,20 @@ void gwd_onu_poe_thread_hander()
             }
             if(Gwd_onu_port_poe_controle_stat_get(ulport,&ctl_state) != EPON_RETURN_OK)
             {
-                gw_log(GW_LOG_LEVEL_MINOR,"get port:%d  admin fail:\n",ulport);
+                cs_printf("get port:%d  admin fail:\n",ulport);
                 continue;
             }
+//            cs_printf("port_stat is %d,ctl_state is %d\r\n",port_stat,ctl_state);
             if(port_stat == PORT_ADMIN_UP)
             {
                 if(ctl_state == POE_PORT_ENABLE)
                 {
                     if(Gwd_onu_port_power_detect_get(ulport,&Pstate) != EPON_RETURN_OK)
                     {
-                        gw_log(GW_LOG_LEVEL_MINOR,"get port:%d  power fail:\n",ulport);
+                    	cs_printf("get port:%d  power fail:\n",ulport);
                         continue;
                     }
-
+//                    cs_printf("pstate is %d\r\n",Pstate);
                     if(Pstate == POE_POWER_DISABLE)
                     {
                         Gwd_onu_port_poe_operation_stat_set(ulport,PORT_ADMIN_DOWN);
@@ -265,9 +267,10 @@ void gwd_onu_poe_thread_hander()
                 {
                     if(Gwd_onu_port_power_detect_get(ulport,&Pstate) != EPON_RETURN_OK)
                     {
-                        gw_log(GW_LOG_LEVEL_MINOR,"get port:%d power fail\n",ulport);
+                    	cs_printf("get port:%d power fail\n",ulport);
                         continue;
                     }
+//                    cs_printf("pstate is %d\r\n",Pstate);
                     if(Pstate == POE_POWER_ENABLE)
                     {
                          Gwd_onu_port_poe_operation_stat_set(ulport,PORT_ADMIN_UP);
@@ -275,13 +278,14 @@ void gwd_onu_poe_thread_hander()
                 }
                 else
                 {
+//                	cs_printf("else else\r\n");
                     Gwd_onu_port_poe_operation_stat_set(ulport,PORT_ADMIN_UP);
                 }
                     
             }
         }
 
-        cs_thread_delay(100);
+        cs_thread_delay(5000);
     }
 }
 
@@ -313,10 +317,10 @@ epon_return_code_e gwdonu_port_poe_operation_table_init()
 	
 	for(port = 0; port < UNI_PORT_MAX;port++)
 	{
-	   PoeOperation.CommandOperation[port] = 0;
+	   PoeOperation.CommandOperation[port] = 1;
 	   PoeOperation.PoeOpertable[port] = 1;
 	}
-	return GW_OK;
+	return CS_OK;
 }
 
 void gwd_poe_init()
@@ -324,8 +328,8 @@ void gwd_poe_init()
 	int ret = -1;
 	unsigned char val = 0;
 	
-	ret == gwd_poe_cpld_check(&val);
-	cs_printf("GWD CPLD VERSION 0x%x , %s !", val, ret==EPON_RETURN_EXIST_OK?"VALID":"INVALID");
+	ret = gwd_poe_cpld_check(&val);
+	cs_printf("GWD CPLD VERSION 0x%x , %s !\r\n", val, ret==EPON_RETURN_EXIST_OK?"VALID":"INVALID");
 	if(EPON_RETURN_EXIST_OK == ret)
 	{
 		Gwd_onu_poe_exist_stat_set(1);

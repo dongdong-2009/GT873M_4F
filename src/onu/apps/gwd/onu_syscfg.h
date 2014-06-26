@@ -748,11 +748,6 @@ extern "C"{
 #define RPU_MODULE_EPON_ALL RPU_NO
 
 #define RPU_MODULE_XCVR_MON RPU_NO
-//#if (PRODUCT_CLASS == PRODUCTS_GT812C)
-#define RPU_MODULE_POE 		RPU_YES
-//#else
-//#define RPU_MODULE_POE 		RPU_NO
-//#endif
 
 #define RPU_MODULE_CPLD		RPU_NO
 
