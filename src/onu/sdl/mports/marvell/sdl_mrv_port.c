@@ -864,6 +864,7 @@ cs_status epon_request_onu_port_admin_set(
     
     gt_getswitchunitbylport(port, &unit, &hwport);
     ret = gprtPortPowerDown(QD_DEV_PTR, hwport, state);
+    ret += gfdbFlush(QD_DEV_PTR, 1);
     if(GT_OK != ret){
         SDL_MIN_LOG("gstpSetPortState return %d\n", ret);
         rt = CS_E_ERROR;
