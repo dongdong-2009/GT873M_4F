@@ -2895,9 +2895,11 @@ int cmd_show_atu(struct cli_def *cli, char *command, char *argv[], int argc)
     return CLI_OK;
 }
 #else
-
-cs_uint32 learn_buf[4]={1,1,1,1};
-
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+cs_uint32 learn_buf[CS_UNI_NUMBER] = {1,1,1,1,1,1,1,1};
+#else
+cs_uint32 learn_buf[CS_UNI_NUMBER] = {1,1,1,1};
+#endif
 int fdb_learn_set(int portid, int en)
 {
 	int ret = CS_E_OK;
