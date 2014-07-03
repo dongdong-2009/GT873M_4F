@@ -854,8 +854,14 @@ void gwd_portstats_thread(cyg_addrword_t p)
 								}
 						}
 				//	cs_printf("rxbyte:%lld txbatye:%lld\n",pcur.rxbyte_cnt,pcur.txbyte_cnt);
-					rxrate = (pcur.rxbyte_cnt - phis.rxbyte_cnt)*8;
-					txrate = (pcur.txbyte_cnt - phis.txbyte_cnt)*8;
+					if(pcur.rxbyte_cnt > phis.rxbyte_cnt)
+						rxrate = (pcur.rxbyte_cnt - phis.rxbyte_cnt)*8;
+					else
+						rxrate = (0xFFFFFFFFFFFFFFFF - (phis.rxbyte_cnt - pcur.rxbyte_cnt))*8;
+					if(pcur.txbyte_cnt > phis.txbyte_cnt)
+						txrate = (pcur.txbyte_cnt - phis.txbyte_cnt)*8;
+					else
+						txrate = (0xFFFFFFFFFFFFFFFF - (phis.txbyte_cnt - pcur.txbyte_cnt))*8;
 					p->rxrate = rxrate;
 					p->txrate = txrate;
 				//	cs_printf("rxrate:%d txrate:%d\n",p->rxrate,p->txrate);
