@@ -3157,7 +3157,6 @@ extern int fdb_static_list_del(char *mac, int vlan_id);
 #define GW_VLAN_MAX 4094
 #define GW_VLAN_LAS 1
 
-#define GW_ONUPORT_MAX 4
 #define GW_ONUPORT_LAS 1
 
 #define GW_PORT_PRI_MAX 7
@@ -3196,7 +3195,7 @@ int cmd_static_mac_add_fdb(struct cli_def *cli, char *command, char *argv[], int
 	if(argc == 4)
 	{
 		gw_port = iros_strtol(argv[1]);
-		if(gw_port > GW_ONUPORT_MAX || gw_port < GW_ONUPORT_LAS)
+		if(gw_port > UNI_PORT_MAX || gw_port < 1)
 		{
 			cli_print(cli,"port error\n");
 			return -1;
@@ -3223,7 +3222,7 @@ int cmd_static_mac_add_fdb(struct cli_def *cli, char *command, char *argv[], int
 		}
 		else
 		{
-			cli_print(cli,"add static mac success\n");
+			cli_print(cli,"add port %d static mac success\n",gw_port);
 		}
 	}
 	else
