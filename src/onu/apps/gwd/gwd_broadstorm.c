@@ -29,6 +29,7 @@
 #include "osal_api_core.h"
 #include "sdl_port.h"
 #include "port_stats.h"
+#include "iros_config.h"
 #endif
 
 //#define __DEBUG__	1
@@ -511,6 +512,9 @@ gw_return_code_t gwd_port_rate_update(gw_uint32 port)
 	return GW_RETURN_SUCCESS;
 
 }
+#ifndef UNI_PORT_MAX
+#define UNI_PORT_MAX            CS_UNI_NUMBER
+#endif
 void broad_storm_thread(void* data)
 {
 #if 1
@@ -537,7 +541,7 @@ void broad_storm_thread(void* data)
 //	localtime_tm tm;
 	while(true)
 	{
-		for(logical_port=1; logical_port < 5; logical_port++)
+		for(logical_port=1; logical_port < UNI_PORT_MAX+1; logical_port++)
 		{
 			if(gwd_logical_to_physical(logical_port,&physical_port))
 			{
@@ -793,7 +797,7 @@ void broad_storm_thread(void* data)
 				gwd_onu_port_bcstorm_date_clear(physical_port);
 			}
 		}
-		gw_thread_delay(10000);
+		gw_thread_delay(50);
 	}
 	gw_printf("=======================================\n");
 	gw_printf("====Broadcast storm thread exit========\n");
