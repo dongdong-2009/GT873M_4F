@@ -108,6 +108,7 @@ Copyright (c) 2010 by Cortina Systems Incorporated
 #include "gtDrvSwRegs.h"
 #include "switch_drv.h"
 #include "iros_config.h"
+#include "msApiDefs.h"
 #if (RPU_MODULE_POE == MODULE_YES)
 #include "gwd_poe.h"
 #endif
@@ -1891,6 +1892,21 @@ cs_status epon_request_onu_port_storm_ctrl_set(
         UNI_PORT_CHECK(port_id); 
         
         port = (GT_LPORT)(port_id - 1);
+        //add by zhangjj 2014-7-6
+        GT_STATUS   ret  = 0;
+        GT_32 unit, hwport;
+        gt_getswitchunitbylport(port, &unit, &hwport);
+        cs_printf("hwport is %d",hwport);
+        if(rate->rate)
+        	ret = gprtSetMcRateLimit(QD_DEV_PTR,hwport,GT_MC_100_PERCENT_RL);
+        else
+        	ret = gprtSetMcRateLimit(QD_DEV_PTR,hwport,GT_MC_12_PERCENT_RL);
+        if(GT_OK != ret){
+                cs_printf("gstpSetPortState return %d\n", ret);
+                rc = CS_E_ERROR;
+                goto end;
+            }
+        //end
         /* mtodo replace rtk api by mrv api
         rtk_rate = ((rtk_rate_t)rate->rate) / STORM_GRANULARITY * STORM_GRANULARITY;
         if(rtk_rate < MIN_STORM_RATE){
