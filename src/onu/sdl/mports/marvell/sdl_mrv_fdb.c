@@ -950,7 +950,7 @@ cs_status epon_request_onu_fdb_entry_add(
     memcpy(&l2_data.macAddr.arEther[0], &entry->mac, sizeof(cs_mac_t));
     l2_data.entryState.ucEntryState = (entry->type == SDL_FDB_ENTRY_STATIC)?GT_UC_STATIC:GT_UC_DYNAMIC;
     l2_data.DBNum = entry->vlan_id;
-    l2_data.portVec |= 1<<(L2P_PORT(port));
+    l2_data.portVec |= 1<<((port));
     
     gt_ret = gfdbAddMacEntry(QD_DEV_PTR, &l2_data);
     if(GT_OK != gt_ret){
