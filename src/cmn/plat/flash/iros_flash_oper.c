@@ -20,7 +20,7 @@
 #include "image.h"
 #include "iros_flash_partition.h"
 #include "flash_dev_driver.h"
-
+#include "gwd_poe.h"
 //#define FLASH_DEBUG
 
 FLASH_FAMILY_TYPE_T flash_family_type = FLASH_FAMILY_TYPE_NULL;
@@ -1009,6 +1009,11 @@ extern int save_user_tlv_data_to_flash(void)
 				vlan_qinq_table_tlv_infor_get(&len, &value, &free_need);
 				break;
 		#endif
+		#if (RPU_MODULE_POE == MODULE_YES)
+			case POE_MODULE:
+				gwd_onu_tlv_infor_get(&len, &value, &free_need);
+				break;
+		#endif
 			default:
 				len = 0;
 				value = NULL;
@@ -1274,6 +1279,11 @@ extern int get_user_tlv_data_from_flash(int opcode)
 				#if (QINQ_SUPPORT == MODULE_YES)
 					case VLAN_QINQ:
 						vlan_qinq_table_tlv_infor_handle(len, value, opcode);
+						break;
+				#endif
+				#if (RPU_MODULE_POE == MODULE_YES)
+					case POE_MODULE:
+						gwd_onu_tlv_infor_handle(len, value, opcode);
 						break;
 				#endif
 					default:

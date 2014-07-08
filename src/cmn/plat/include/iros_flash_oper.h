@@ -235,6 +235,9 @@ enum data_type
 #if (QINQ_SUPPORT == MODULE_YES)
 	VLAN_QINQ = 7,
 #endif
+#if (RPU_MODULE_POE == MODULE_YES)
+	POE_MODULE =8,
+#endif
 	TYPE_NUM
 };
 #endif

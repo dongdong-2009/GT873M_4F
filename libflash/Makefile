@@ -26,7 +26,8 @@ MOD_INCLUDES=-I$(ECOS_INSTALL_HOME)/include \
 -I$(SWHOME)/src/cmn/plat \
 -I$(SWHOME)/src/cmn/plat/peripheral \
 -I$(SWHOME)/src/include \
--I$(SWHOME)/src/onu/apps/lynx/gpio/cmn
+-I$(SWHOME)/src/onu/apps/lynx/gpio/cmn	\
+-I$(SWHOME)/src/onu/apps/gwd
 
 include $(SWHOME)/tools/support/build/makefile.mod_start
 

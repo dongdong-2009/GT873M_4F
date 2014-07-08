@@ -177,6 +177,55 @@ epon_return_code_e Gwd_onu_port_poe_controle_stat_set(unsigned int port, unsigne
     return EPON_RETURN_OK;
 }
 
+extern int gwd_onu_tlv_infor_get(int *len, char **value, int *free_need)
+{
+	int ret = 0;
+	//入口规则检查
+	if(NULL == len)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		ret=-1;
+	}
+	else
+	{
+		*len = sizeof(gucPoeDisablePerPort);
+	}
+	if(NULL == value)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		ret=-1;
+	}
+	else
+	{
+		*value = gucPoeDisablePerPort;
+	}
+	if(NULL == free_need)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		ret=-1;
+	}
+	else
+	{
+		*free_need = 0;
+	}
+	cs_printf("get success\r\n\n\n\n\n");
+	return ret;
+}
+extern int gwd_onu_tlv_infor_handle(int length,char *value,int opcode)
+{
+	if(length!=sizeof(gucPoeDisablePerPort))
+		return -1;
+	if(NULL == value)
+		return -1;
+	memcpy(gucPoeDisablePerPort,value,sizeof(gucPoeDisablePerPort));
+	cs_printf("set success\r\n\n\n\n\n");
+	return 0;
+}
+
+
 epon_return_code_e Gwd_onu_port_power_detect_get(unsigned int port,unsigned int* port_power_stat)
 {
     unsigned int ret = 0;
