@@ -1025,7 +1025,7 @@ static void __update_sw
             __vlan_table_add_port(__s_vlan_table, vlan_cfg[i].c_vlan.vid, CS_UPLINK_PORT, EPON_FALSE);
 			#if 1
             __vlan_table_add_port(__c_vlan_table, vlan_cfg[i].c_vlan.vid, port_id, EPON_FALSE);
-            __vlan_table_add_port(__c_vlan_table, vlan_cfg[i].c_vlan.vid, CS_UPLINK_PORT, EPON_TRUE);
+            __vlan_table_add_port(__c_vlan_table, vlan_cfg[i].c_vlan.vid, CS_UPLINK_PORT, (vlan_cfg[i].c_vlan.vid == 1)?EPON_TRUE:EPON_FALSE);
 			#endif
         }
     }
