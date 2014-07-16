@@ -836,28 +836,40 @@ void gwd_portstats_thread(cyg_addrword_t p)
 					phis.txbyte_cnt = 0;
 					phis.rxbyte_cnt = 0;
 					while(next_port)
+					{
+						if(FIRST)
 						{
-							if(FIRST)
-							{
-								epon_request_onu_port_stats_get(context, ONU_DEVICEID_FOR_API, ONU_LLIDPORT_FOR_API,p->portid,FALSE,&phis);	
-							  	time_ticks = cyg_current_time();
-								FIRST = 0;
-							}
-							time1_ticks = cyg_current_time();
-							time_stat = time1_ticks - time_ticks;
-							if(time_stat > 100)
-								{
-									epon_request_onu_port_stats_get(context, ONU_DEVICEID_FOR_API, ONU_LLIDPORT_FOR_API,p->portid,FALSE,&pcur);
-									
-									next_port = 0;
-									FIRST = 1;
-								}
+							epon_request_onu_port_stats_get(context, ONU_DEVICEID_FOR_API, ONU_LLIDPORT_FOR_API,p->portid,FALSE,&phis);
+							time_ticks = cyg_current_time();
+							FIRST = 0;
 						}
+						time1_ticks = cyg_current_time();
+						time_stat = time1_ticks - time_ticks;
+						if(time_stat > 100)
+							{
+								epon_request_onu_port_stats_get(context, ONU_DEVICEID_FOR_API, ONU_LLIDPORT_FOR_API,p->portid,FALSE,&pcur);
+
+								next_port = 0;
+								FIRST = 1;
+							}
+					}
 				//	cs_printf("rxbyte:%lld txbatye:%lld\n",pcur.rxbyte_cnt,pcur.txbyte_cnt);
-
+					if((pcur.rxbyte_cnt - phis.rxbyte_cnt) > 0)
+					{
 						rxrate = (pcur.rxbyte_cnt - phis.rxbyte_cnt)*8;
-
+					}
+					else
+					{
+						rxrate = (0xffffffff - (phis.rxbyte_cnt - pcur.rxbyte_cnt))*8;
+					}
+					if((pcur.txbyte_cnt - phis.txbyte_cnt) > 0)
+					{
 						txrate = (pcur.txbyte_cnt - phis.txbyte_cnt)*8;
+					}
+					else
+					{
+						txrate = (0xffffffff - (phis.txbyte_cnt - pcur.txbyte_cnt)*8;
+					}
 
 					p->rxrate = rxrate;
 					p->txrate = txrate;
