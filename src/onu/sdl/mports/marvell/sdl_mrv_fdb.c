@@ -1212,10 +1212,6 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
     FOR_UNIT_START(GT_U32, unit)
 
     GT_VTU_ENTRY ve;
-    GT_32 vnum = 0;
-
-    if( gvtuGetEntryCount(QD_DEV_PTR, &vnum) != GT_OK)
-    	continue;
 
 	if(getnext)
 	{
@@ -1227,16 +1223,14 @@ cs_status epon_request_onu_fdb_entry_get_byindex(
 	else
 	{
 		memset(&l2_data, 0, sizeof(l2_data));
-	    if(vnum > 0)
-	    {
-	    	ve.DBNum = 1;
-	    	ve.vid = 1;
-	    }
-	    else
-	    {
-	    	if( gvtuGetEntryFirst(QD_DEV_PTR, &ve) != GT_OK )
-	    		continue;
-	    }
+
+		if( gvtuGetEntryFirst(QD_DEV_PTR, &ve) != GT_OK )
+			continue;
+		else
+		{
+			ve.DBNum = 1;
+			ve.vid = 1;
+		}
 	}
 
 	do
@@ -1363,7 +1357,7 @@ cs_status epon_request_onu_fdb_entry_get_byindex_per_port(
 )
 {
 	GT_ATU_ENTRY l2_data;
-    GT_U32 count = 0, i, hwport = 0,db = 0, lunit, lport, loffset = offset;
+    GT_U32 i, hwport = 0,db = 0, lunit, lport, loffset = offset;
     GT_STATUS gt_ret = GT_OK;
     cs_status ret =  CS_E_OK;
     GT_BOOL found = GT_FALSE, getnext = 0;
@@ -1389,9 +1383,7 @@ cs_status epon_request_onu_fdb_entry_get_byindex_per_port(
     	return CS_E_PARAM;
 
     FOR_UNIT_START(GT_U32, unit)
-
     GT_QD_DEV *dev = QD_DEV_PTR;
-    gfdbGetAtuAllCount(QD_DEV_PTR, &count);
     hwport = GT_LPORT_2_PORT(lport);
     if(mode == SDL_FDB_ENTRY_GET_MODE_STATIC){
 		cs_printf("into statuc\n");
@@ -1450,13 +1442,8 @@ cs_status epon_request_onu_fdb_entry_get_byindex_per_port(
     	getnext = 1;
 
     i = 0;
-    count = 0;
 
     GT_VTU_ENTRY ve;
-    GT_32 vnum = 0;
-
-    if( gvtuGetEntryCount(QD_DEV_PTR, &vnum) != GT_OK)
-    	continue;
 
 	if(getnext)
 	{
@@ -1468,16 +1455,14 @@ cs_status epon_request_onu_fdb_entry_get_byindex_per_port(
 	else
 	{
 		memset(&l2_data, 0, sizeof(l2_data));
-	    if(vnum > 0)
-	    {
-	    	ve.DBNum = 1;
-	    	ve.vid = 1;
-	    }
-	    else
-	    {
-	    	if( gvtuGetEntryFirst(QD_DEV_PTR, &ve) != GT_OK )
-	    		continue;
-	    }
+
+		if( gvtuGetEntryFirst(QD_DEV_PTR, &ve) != GT_OK )
+			continue;
+		else
+		{
+			ve.DBNum = 1;
+			ve.vid = 1;
+		}
 	}
 #if 0
     for(i=0; i<count; i++)
