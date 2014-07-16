@@ -868,7 +868,7 @@ void gwd_portstats_thread(cyg_addrword_t p)
 					}
 					else
 					{
-						txrate = (0xffffffff - (phis.txbyte_cnt - pcur.txbyte_cnt)*8;
+						txrate = (0xffffffff - (phis.txbyte_cnt - pcur.txbyte_cnt))*8;
 					}
 
 					p->rxrate = rxrate;
