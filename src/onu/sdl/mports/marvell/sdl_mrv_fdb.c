@@ -1131,6 +1131,7 @@ cs_status epon_request_onu_fdb_entry_get(
     GT_STATUS      gt_ret = 0;
     cs_status          rt = CS_E_ERROR;
     GT_BOOL        found = GT_FALSE;
+    GT_VTU_ENTRY vtuEntry;
 
     if((NULL==mac) || (NULL==entry) || (vlan>4095)) {
         SDL_MIN_LOG("In %s(%d) error params!\n",__FUNCTION__, __LINE__);
@@ -1149,6 +1150,14 @@ cs_status epon_request_onu_fdb_entry_get(
     l2_data.DBNum = vlan;
 
     FOR_UNIT_START(GT_U32, unit)
+
+    memset(&vtuEntry, 0, sizeof(GT_VTU_ENTRY));
+	vtuEntry.DBNum = vlan;
+	vtuEntry.vid = vlan;
+	if(GT_OK == (gt_ret = gvtuFindVidEntry(QD_DEV_PTR, &vtuEntry, &found)))
+	{
+		l2_data.DBNum = vtuEntry.DBNum;
+	}
 
     gt_ret = gfdbFindAtuMacEntry(QD_DEV_PTR, &l2_data, &found);
     if(GT_OK != gt_ret ){

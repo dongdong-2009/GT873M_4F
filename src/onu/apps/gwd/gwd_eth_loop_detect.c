@@ -164,8 +164,22 @@ cs_int32 gtGetSrcPortForMac(cs_int8 *mac, cs_uint16 vid, cs_ulong32 *pLogicPort)
 				if(epon_onu_sw_get_port_pvid(context, 0, 0, i, &pvid ) != CS_E_OK)
 						return GWD_RETURN_ERR;
 #if (PRODUCT_CLASS == PRODUCTS_GT812C)
-			    memset(&entry, 0, sizeof(cs_sdl_fdb_entry_t));
-#endif
+				cs_mac_t smac;
+				idx=nextidx=0;
+				memcpy(smac.addr,mac,CS_MACADDR_LEN);
+				if(GWD_RETURN_OK == (gtRet = epon_request_onu_fdb_entry_get(context,0,i,&smac,vid,&entry)))
+					{
+						LOOPBACK_DETECT_DEBUG(("\r\nfind vid %d smac %02x%02x:%02x%02x:%02x%02x\r\n", vid,
+								(int)mac[0],(int)mac[1],(int)mac[2],
+								(int)mac[3],(int)mac[4],(int)mac[5]));
+						LOOPBACK_DETECT_DEBUG(("entry:  vid %d  mac %02x%02x:%02x%02x:%02x%02x\r\n", entry.vlan_id,
+								(int)entry.mac.addr[0],(int)entry.mac.addr[1],(int)entry.mac.addr[2],
+								(int)entry.mac.addr[3],(int)entry.mac.addr[4],(int)entry.mac.addr[5]));
+						if(entry.vlan_id == 0)
+							entry.vlan_id = pvid;
+						gtFound = EPON_TRUE;
+					}
+#else
 				while(epon_request_onu_fdb_entry_get_byindex_per_port(context, 0, 0, i, SDL_FDB_ENTRY_GET_MODE_ALL,
 							idx, &entry, &nextidx) == CS_OK)
 					{
@@ -192,6 +206,7 @@ cs_int32 gtGetSrcPortForMac(cs_int8 *mac, cs_uint16 vid, cs_ulong32 *pLogicPort)
 						}
 
 					}
+#endif
 				if (EPON_TRUE == gtFound)
 					{
 						LOOPBACK_DETECT_DEBUG(("\r\nMac found in vlan %d", vid));
