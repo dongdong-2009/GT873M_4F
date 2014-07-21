@@ -740,7 +740,7 @@ void Gwd_Oam_Handle(unsigned int port, unsigned char *frame, unsigned int len)
 			GWDOAMTRC("Gwd_Oam_Handle - EQU_DEVICE_INFO_REQ received.\n");
 			if(GWD_RETURN_OK != (iRet = GwOamInformationRequest(pMessage)))
 			{
-				IROS_LOG_MAJ(IROS_MID_OAM, "Generate OAM(Information Request) response Error!(%d)", iRet);
+//				IROS_LOG_MAJ(IROS_MID_OAM, "Generate OAM(Information Request) response Error!(%d)", iRet);
 				GWDOAMTRC("Gwd_Oam_Handle - EQU_DEVICE_INFO_REQ failed.(%d)\n", iRet);
 			}
 			GwOamMessageListNodeFree(pMessage);
