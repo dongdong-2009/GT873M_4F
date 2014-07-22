@@ -1848,6 +1848,64 @@ END:
     
 }
 
+
+GT_STATUS limitBcRate(GT_QD_DEV	*dev, GT_LPORT phyPort, cs_uint32 rate)
+{
+	GT_STATUS gtRet;
+
+	if(NULL == dev)
+		return GT_BAD_PARAM;
+
+	if (IS_IN_DEV_GROUP(dev, DEV_PIRL2_RESOURCE))
+	{
+		GT_PIRL2_DATA gtPirl2Data;
+
+		memset(&gtPirl2Data, 0, sizeof(GT_PIRL2_DATA));
+
+		gtPirl2Data.ingressRate = rate;
+#ifndef _USE_DSDT_26A_
+		gtPirl2Data.customSetup.isValid = GT_FALSE;
+#endif
+		gtPirl2Data.accountQConf = GT_TRUE;
+		gtPirl2Data.accountFiltered = GT_TRUE;
+		gtPirl2Data.mgmtNrlEn = GT_TRUE;
+		gtPirl2Data.saNrlEn = GT_TRUE;
+		gtPirl2Data.daNrlEn = GT_TRUE;
+		gtPirl2Data.samplingMode = GT_FALSE;
+		gtPirl2Data.actionMode = PIRL_ACTION_USE_LIMIT_ACTION;
+		gtPirl2Data.ebsLimitAction = ESB_LIMIT_ACTION_DROP;
+		gtPirl2Data.fcDeassertMode = GT_PIRL_FC_DEASSERT_CBS_LIMIT;
+		gtPirl2Data.bktRateType = BUCKET_TYPE_TRAFFIC_BASED;
+		gtPirl2Data.priORpt = GT_TRUE;
+		gtPirl2Data.priMask = 0;
+		gtPirl2Data.bktTypeMask = BUCKET_TRAFFIC_BROADCAST;
+		gtPirl2Data.byteTobeCounted = GT_PIRL_COUNT_ALL_LAYER3;
+
+	    gtRet = gpirl2WriteResource(dev, phyPort, 1, &gtPirl2Data);
+	}
+	else
+	{
+		cs_printf("limitBcRate error type\r\n");
+		/*
+		gtRet = gsysGetRateLimitMode(dev, &ggtIngressRateMode[logicPort]);
+		gtRet += grcGetLimitMode(dev, phyPort, &ggtRateLimitMode[logicPort]);
+		if( GT_RATE_BURST_BASE == ggtIngressRateMode[logicPort])
+			gtRet += grcGetBurstRate(dev, phyPort, &ggtBurstSize[logicPort], &ggtBurstRate[logicPort]);
+		else
+			gtRet += grcGetPri0RateInKbps(dev, phyPort, &ggtPri0Rate[logicPort]);
+		gtRet += gprtGetFCOnRateLimitMode(dev, phyPort, &ggtFCOnRateLimitMode[logicPort]);
+		if(GT_OK == gtRet)
+			ulShouldRestoreRateLimit[logicPort] = 1;
+
+		gtRet += gsysSetRateLimitMode(dev, GT_RATE_PRI_BASE);
+		gtRet += grcSetLimitMode(dev, phyPort, GT_LIMIT_FLOOD);
+		gtRet += grcSetPri0RateInKbps(dev, phyPort, 64);
+		gtRet += gprtSetFCOnRateLimitMode(dev, phyPort, GT_FALSE);*/
+	}
+
+	return gtRet;
+}
+
 /****************************************************************************/
 /* $rtn_hdr_start  epon_request_onu_port_storm_control_set                  */
 /* CATEGORY   : Device                                                      */
@@ -1898,9 +1956,9 @@ cs_status epon_request_onu_port_storm_ctrl_set(
         gt_getswitchunitbylport(port, &unit, &hwport);
         cs_printf("hwport is %d",hwport);
         if(rate->rate)
-        	ret = gprtSetMcRateLimit(QD_DEV_PTR,hwport,GT_MC_100_PERCENT_RL);
+        	ret = limitBcRate(QD_DEV_PTR,hwport,rate->rate);
         else
-        	ret = gprtSetMcRateLimit(QD_DEV_PTR,hwport,GT_MC_12_PERCENT_RL);
+        	ret = grcSetPri0RateInKbps(QD_DEV_PTR,hwport,rate->rate);
         if(GT_OK != ret){
                 cs_printf("gstpSetPortState return %d\n", ret);
                 rc = CS_E_ERROR;
