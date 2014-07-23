@@ -100,13 +100,18 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #define _MEMPOOL_H_
 
 #include "cs_types.h"
+#include "iros_config.h"
 
 #define MEMPOOL_EX
 #define MAX_SYS_MODULE_NUMBER 32
 #define CS_INVALID_MODULE_ID 0xFFFF
 
 #define MAX_PKT_LEN     1600
+#if(PRODUCT_CLASS == PRODUCTS_GT812C)
+#define MAX_PKT_NUM     200
+#else
 #define MAX_PKT_NUM     80
+#endif
 
 #ifdef MEMPOOL_EX
 #define MAX_MODULE_NAME_LEN  32
