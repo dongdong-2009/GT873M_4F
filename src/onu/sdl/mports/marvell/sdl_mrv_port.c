@@ -1956,9 +1956,14 @@ cs_status epon_request_onu_port_storm_ctrl_set(
         gt_getswitchunitbylport(port, &unit, &hwport);
         cs_printf("hwport is %d",hwport);
         if(rate->rate)
+        {
         	ret = limitBcRate(QD_DEV_PTR,hwport,rate->rate);
+        }
         else
+        {
+        	rate->rate = 110000;
         	ret = grcSetPri0RateInKbps(QD_DEV_PTR,hwport,rate->rate);
+        }
         if(GT_OK != ret){
                 cs_printf("gstpSetPortState return %d\n", ret);
                 rc = CS_E_ERROR;
