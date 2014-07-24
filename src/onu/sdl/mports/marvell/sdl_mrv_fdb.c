@@ -1118,6 +1118,11 @@ END:
     return rt;
 }
 
+/*
+* This func just for loopdetect, search loop mac
+* you must send correct llidport , mac ,vlan
+* return: if found OK and *entry else ERROR
+*/
 cs_status epon_request_onu_fdb_entry_get(
     CS_IN  cs_callback_context_t         context,
     CS_IN  cs_int32                      device_id,
@@ -1162,14 +1167,19 @@ cs_status epon_request_onu_fdb_entry_get(
     gt_ret = gfdbFindAtuMacEntry(QD_DEV_PTR, &l2_data, &found);
     if(GT_OK != gt_ret ){
        SDL_MIN_LOG("gfdbFindAtuMacEntry return %d\n", gt_ret);
-       continue;
+       return rt;
     }
     
     if(found == GT_FALSE)
     {
         SDL_MIN_LOG("gfdbFindAtuMacEntry not found entry");
-        continue;
+        return rt;
     }
+
+	if(llidport !=P2L_PORT(getlportfromucportvec(QD_DEV_PTR, l2_data.portVec)))
+	{
+		return rt;
+	}
 
     memcpy(&entry->mac, &l2_data.macAddr.arEther[0], sizeof(cs_mac_t));
     entry->vlan_id = l2_data.DBNum;

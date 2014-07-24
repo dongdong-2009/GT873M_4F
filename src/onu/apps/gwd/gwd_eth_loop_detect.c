@@ -167,7 +167,7 @@ cs_int32 gtGetSrcPortForMac(cs_int8 *mac, cs_uint16 vid, cs_ulong32 *pLogicPort)
 				cs_mac_t smac;
 				idx=nextidx=0;
 				memcpy(smac.addr,mac,CS_MACADDR_LEN);
-				if(GWD_RETURN_OK == (gtRet = epon_request_onu_fdb_entry_get(context,0,i,&smac,vid,&entry)))
+				if(GWD_RETURN_OK == (epon_request_onu_fdb_entry_get(context,0,i,&smac,vid,&entry)))
 					{
 						LOOPBACK_DETECT_DEBUG(("\r\nfind vid %d smac %02x%02x:%02x%02x:%02x%02x\r\n", vid,
 								(int)mac[0],(int)mac[1],(int)mac[2],
