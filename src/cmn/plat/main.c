@@ -382,6 +382,10 @@ void cyg_user_start(void)
 	start_up_config_syn_to_running_config();
 	#endif
 
+#if (ONU_REGISTER_LAST == MODULE_YES)
+oam_init_step2();
+#endif
+
 #if 1
 extern cs_boolean gwd_portstats_init();
 extern void gwd_portstats_thread(cyg_addrword_t p);
@@ -405,9 +409,7 @@ extern void gwd_portstats_thread(cyg_addrword_t p);
 	gwd_poe_init();
 	#endif
 
-	#if (ONU_REGISTER_LAST == MODULE_YES)
-	oam_init_step2();
-	#endif
+
     cs_printf("Init system done, time %ld\n",cs_current_time());
 //    static int i=0;
 //    char *pkt;
