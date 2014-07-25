@@ -1849,6 +1849,7 @@ END:
 }
 
 
+GT_PIRL2_DATA ggtPirl2DataIndex1[UNI_PORT_MAX+1];
 GT_STATUS limitBcRate(GT_QD_DEV	*dev, GT_LPORT phyPort, cs_uint32 rate)
 {
 	GT_STATUS gtRet;
@@ -1859,10 +1860,11 @@ GT_STATUS limitBcRate(GT_QD_DEV	*dev, GT_LPORT phyPort, cs_uint32 rate)
 	if (IS_IN_DEV_GROUP(dev, DEV_PIRL2_RESOURCE))
 	{
 		GT_PIRL2_DATA gtPirl2Data;
+		gtRet = gpirl2ReadResource(dev, phyPort, 1, &ggtPirl2DataIndex1[phyPort]);
 
 		memset(&gtPirl2Data, 0, sizeof(GT_PIRL2_DATA));
 
-		gtPirl2Data.ingressRate = rate;
+		gtPirl2Data.ingressRate = 64;
 #ifndef _USE_DSDT_26A_
 		gtPirl2Data.customSetup.isValid = GT_FALSE;
 #endif
@@ -1901,6 +1903,38 @@ GT_STATUS limitBcRate(GT_QD_DEV	*dev, GT_LPORT phyPort, cs_uint32 rate)
 		gtRet += grcSetLimitMode(dev, phyPort, GT_LIMIT_FLOOD);
 		gtRet += grcSetPri0RateInKbps(dev, phyPort, 64);
 		gtRet += gprtSetFCOnRateLimitMode(dev, phyPort, GT_FALSE);*/
+	}
+
+	return gtRet;
+}
+
+GT_STATUS restoreBcRate(GT_QD_DEV	*dev, GT_LPORT phyPort, cs_uint32 rate)
+{
+	GT_STATUS gtRet;
+
+	if(NULL == dev)
+		return GT_BAD_PARAM;
+
+	if (IS_IN_DEV_GROUP(dev, DEV_PIRL2_RESOURCE))
+	{
+		if(ggtPirl2DataIndex1[phyPort].ingressRate == 0)
+		    gtRet = gpirl2DisableResource(dev, phyPort, 1);
+		else
+		    gtRet = gpirl2WriteResource(dev, phyPort, 1, &ggtPirl2DataIndex1[phyPort]);
+
+	}
+	else
+	{
+		cs_printf("limitBcRate error type\r\n");
+		/*
+		gtRet = gsysSetRateLimitMode(dev, ggtIngressRateMode[logicPort]);
+		gtRet += grcSetLimitMode(dev, phyPort, ggtRateLimitMode[logicPort]);
+		if( GT_RATE_BURST_BASE == ggtIngressRateMode[logicPort])
+			gtRet += grcSetBurstRate(dev, phyPort, ggtBurstSize[logicPort], ggtBurstRate[logicPort]);
+		else
+			gtRet += grcSetPri0RateInKbps(dev, phyPort, ggtPri0Rate[logicPort]);
+		gtRet += gprtSetFCOnRateLimitMode(dev, phyPort, ggtFCOnRateLimitMode[logicPort]);
+		*/
 	}
 
 	return gtRet;
@@ -1952,17 +1986,18 @@ cs_status epon_request_onu_port_storm_ctrl_set(
         port = (GT_LPORT)(port_id - 1);
         //add by zhangjj 2014-7-6
         GT_STATUS   ret  = 0;
-        GT_32 unit, hwport;
+        GT_32 unit=0, hwport=0;
         gt_getswitchunitbylport(port, &unit, &hwport);
         cs_printf("hwport is %d",hwport);
         if(rate->rate)
         {
+
         	ret = limitBcRate(QD_DEV_PTR,hwport,rate->rate);
         }
         else
         {
         	rate->rate = 110000;
-        	ret = grcSetPri0RateInKbps(QD_DEV_PTR,hwport,rate->rate);
+        	ret = restoreBcRate(QD_DEV_PTR,hwport,rate->rate);
         }
         if(GT_OK != ret){
                 cs_printf("gstpSetPortState return %d\n", ret);
