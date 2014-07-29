@@ -2707,7 +2707,19 @@ int cmd_show_system_information(struct cli_def *cli, char *command, char *argv[]
 #endif
 
 #if (PRODUCT_CLASS == PRODUCTS_GT812C)
-	char onu_type[] = "GT812_C";
+	char onu_type[11] = "GT812_C";
+	if (RPU_MODULE_POE == MODULE_YES)
+	{
+		memcpy(onu_type, "GT812C_B", sizeof("GT812C_B"));
+	}
+	else if(RPU_MODULE_PSE == MODULE_YES)
+	{
+		memcpy(onu_type, "GT812C_PSE", sizeof("GT812C_PSE"));
+	}
+	else
+	{
+		memcpy(onu_type, "GT812_C", sizeof("GT812_C"));
+	}
 #endif
 
 	long lRet = GWD_RETURN_OK;
