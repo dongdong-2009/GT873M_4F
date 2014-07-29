@@ -347,7 +347,7 @@ void gwd_onu_poe_thread_hander()
             }
         }
 
-        cs_thread_delay(100);
+        cs_thread_delay(500);
     }
 }
 
