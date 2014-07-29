@@ -27,7 +27,20 @@ epon_return_code_e Gwd_onu_poe_exist_stat_set(unsigned int poe_stat)
     gulPoeEnable = poe_stat;
     return EPON_RETURN_OK;
 }
-
+epon_return_code_e Gwd_onu_poe_exist_stat_get(unsigned int *poe_stat)
+{
+	unsigned char ret = 0;
+	if(NULL != poe_stat)
+	{
+		*poe_stat = gulPoeEnable;
+		ret = EPON_RETURN_OK;
+	}
+	else
+	{
+		ret = EPON_RETURN_ERROR;
+	}
+    return ret;
+}
 
 int gwd_poe_cpld_read(unsigned int type,unsigned char* val)
 {
@@ -371,6 +384,11 @@ epon_return_code_e gwdonu_port_poe_operation_table_init()
 	}
 	return CS_OK;
 }
+epon_return_code_e gwd_poe_module_init()
+{
+    memset(gucPoeDisablePerPort,1,sizeof(gucPoeDisablePerPort));
+	return EPON_RETURN_OK;
+}
 
 void gwd_poe_init()
 {
@@ -384,6 +402,7 @@ void gwd_poe_init()
 		Gwd_onu_poe_exist_stat_set(1);
 		gwd_poe_cpld_init();
 		gwdonu_port_poe_operation_table_init();
+		gwd_poe_module_init();
 	    cs_thread_create(&gwd_poe_thread_id, GWD_POE_THREAD_NAME, gwd_onu_poe_thread_hander, NULL, GWD_POE_THREAD_STACKSIZE, PORT_STATS_THREAD_PRIORITY, 0);
 	}
 	else

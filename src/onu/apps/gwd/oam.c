@@ -18,6 +18,7 @@
 #include "cs_cmn.h"
 #include "sdl.h"
 #include "gwd_poe.h"
+#include "onu_uax.h"
 
 #if (GE_RATE_LIMIT == MODULE_YES)
 #include "../../sdl/cmn/cmn/sdl.h"
@@ -4760,49 +4761,107 @@ extern epon_return_code_e Gwd_onu_port_poe_controle_stat_set(unsigned int port, 
 extern epon_return_code_e Gwd_onu_port_poe_controle_stat_get(unsigned int port, unsigned int* poe_ctl_state);
 int poe_control_set(struct cli_def *cli, char *command, char *argv[], int argc)
 {
-	cs_uint32 port ,poe_ctl_state;
-	cs_uint8 ret = 0;
+		unsigned int lport = 0;
+		unsigned int poe_ctl_val = 0;
+		unsigned int uni_port_num = 0;
+		unsigned int poe_stat = 0;
 	if(CLI_HELP_REQUESTED)
 	{
 		switch(argc)
 			{
 			case 1:
 				return cli_arg_help(cli, 0,
-					"port", "poe port num",
+					"<enable/disable>", "enable poe,disable poe\n",
 					 NULL);
 			case 2:
 				return cli_arg_help(cli,0,
-					"1 | 0", "enable or disable",
+						"<port_list>","Specify interface's port list(e.g.: 1; 1,2; 1-8)\n",
 					NULL);
 			default:
 				return cli_arg_help(cli, argc > 1, NULL);
 			}
 	}
-	if(argc == 2)
+   if(Gwd_onu_poe_exist_stat_get(&poe_stat) != EPON_RETURN_SUCCESS)
 	{
-		port = atoi(argv[0]);
-		poe_ctl_state = atoi(argv[1]);
-		if((port >= 1)&&(port <=CS_UNI_NUMBER))
-		{
-			ret = Gwd_onu_port_poe_controle_stat_set(port,poe_ctl_state);
-		}
-		if(EPON_RETURN_OK == ret)
-			cli_print(cli,"poe port %d set %s",port,poe_ctl_state?"enabled":"disabled");
-		else
-			cli_print(cli, "%% Invalid input.");
+		 return CLI_ERROR;
 	}
-	else if(argc <= 1)
+	if(!poe_stat)
 	{
-		if(argc == 1)
-		{
-			port = atoi(argv[0]);
-			if((port >= 1)&&(port <=CS_UNI_NUMBER))
-			{
-				ret = Gwd_onu_port_poe_controle_stat_get(port,&poe_ctl_state);
-			}
-			cli_print(cli,"poe port %d is %s",port,poe_ctl_state?"enabled":"disabled");
-		}
+		cli_print(cli,"POE module is not enable\r\n");
+		 return CLI_ERROR;
 	}
+
+    uni_port_num = UNI_PORT_MAX;
+
+	if(argc == 1)
+	{
+
+	       if(strcmp(argv[0],"enable") == 0)
+	       {
+	            poe_ctl_val = 1;
+	       }
+
+	       if(strcmp(argv[0],"disable") == 0)
+	       {
+	            poe_ctl_val = 0;
+	       }
+
+	       for(lport = 1; lport <= uni_port_num; lport++)
+	       {
+	            if(Gwd_onu_port_poe_controle_stat_set(lport,poe_ctl_val) != EPON_RETURN_SUCCESS)
+	            {
+	            	cli_print(cli,"poe set port %d control enable fail\r\n",lport);
+	                return CLI_ERROR;
+	            }
+	       }
+
+	    }else if(argc == 2)
+	    {
+	        if(strcmp(argv[0],"enable") == 0)
+	        {
+	            poe_ctl_val = 1;
+	            BEGIN_PARSE_PORT_LIST_TO_PORT_NO_CHECK(argv[1],lport,uni_port_num)
+	            {
+	                if(Gwd_onu_port_poe_controle_stat_set(lport,poe_ctl_val) != EPON_RETURN_SUCCESS)
+	                {
+	                	cli_print(cli,"poe set port(%d) control enable fial\r\n",lport);
+	                    continue;
+	                }
+	            }
+	            END_PARSE_PORT_LIST_TO_PORT_NO_CHECK();
+	        }
+
+	        if(strcmp(argv[0],"disable") == 0)
+	        {
+	            poe_ctl_val = 0;
+	            BEGIN_PARSE_PORT_LIST_TO_PORT_NO_CHECK(argv[1],lport,uni_port_num)
+	            {
+	                if(Gwd_onu_port_poe_controle_stat_set(lport,poe_ctl_val) != EPON_RETURN_SUCCESS)
+	                {
+	                	cli_print(cli,"poe set port(%d) control disable fail\r\n",lport);
+	                    continue;
+	                }
+	            }
+	            END_PARSE_PORT_LIST_TO_PORT_NO_CHECK();
+	        }
+
+
+	    }
+	    else
+	    {
+	            for(lport = 1; lport <= uni_port_num; lport++)
+	            {
+	                if(Gwd_onu_port_poe_controle_stat_get(lport,&poe_ctl_val) != EPON_RETURN_SUCCESS)
+	                {
+	                	cli_print(cli,"UNI Port %d : get control stat fail\r\n",lport);
+	                    continue;
+	                }
+	                else
+	                {
+	                	cli_print(cli,"UNI Port %d : %s\r\n",lport,poe_ctl_val?"POE CONTROL ENABLE":"POE CONTROL DISABLE");
+	                }
+	            }
+	    }
 	return CLI_OK;
 }
 #endif
@@ -4874,8 +4933,7 @@ void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 #endif
 		cli_register_command(cmd_root, 0, 		"ponReg", 		pon_reg_option,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "pon register R or W");
 #if (RPU_MODULE_POE == MODULE_YES)
-		cp = cli_register_command(cmd_root, 0, 		"poe", 		NULL,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "poe");
-		cli_register_command(cmd_root, cp, 		"control", 		poe_control_set,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "poe control");
+		cli_register_command(cmd_root, 0, 		"poe", 		poe_control_set,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "poe");
 #endif
 		#endif
 	

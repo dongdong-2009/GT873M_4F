@@ -378,6 +378,11 @@ void cyg_user_start(void)
 
     cs_init_seq_done(INIT_STEP_SERVICE);
 
+	#if (RPU_MODULE_POE == MODULE_YES)
+	extern void gwd_poe_init();
+	gwd_poe_init();
+	#endif
+
 	#if 1
 	start_up_config_syn_to_running_config();
 	#endif
@@ -404,12 +409,6 @@ extern void gwd_portstats_thread(cyg_addrword_t p);
 	init_oam_pty();
 	#endif
 	
-	#if (RPU_MODULE_POE == MODULE_YES)
-	extern void gwd_poe_init();
-	gwd_poe_init();
-	#endif
-
-
     cs_printf("Init system done, time %ld\n",cs_current_time());
 //    static int i=0;
 //    char *pkt;

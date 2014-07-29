@@ -51,6 +51,7 @@ typedef struct Poe_operation_s{
 void gwd_poe_init();
 extern int gwd_onu_tlv_infor_handle(int length,char *value,int opcode);
 extern int gwd_onu_tlv_infor_get(int *len, char **value, int *free_need);
+extern epon_return_code_e Gwd_onu_poe_exist_stat_get(unsigned int *poe_stat);
 
 #endif
 
