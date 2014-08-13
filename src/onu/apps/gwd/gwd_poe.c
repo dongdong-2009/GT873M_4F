@@ -9,6 +9,10 @@
 #define CPLD_OP_READ 0x03
 #define CPLD_OP_WRITE 0x02
 
+#ifndef DATA_SHOW
+#define DATA_SHOW		1
+#endif
+
 PoeOperation_t PoeOperation;
 
 unsigned int gwd_poe_thread_id = 0;
@@ -224,17 +228,31 @@ extern int gwd_onu_tlv_infor_get(int *len, char **value, int *free_need)
 	{
 		*free_need = 0;
 	}
-	cs_printf("get success\r\n\n\n\n\n");
 	return ret;
 }
 extern int gwd_onu_tlv_infor_handle(int length,char *value,int opcode)
 {
-	if(length!=sizeof(gucPoeDisablePerPort))
-		return -1;
 	if(NULL == value)
+	{
 		return -1;
-	memcpy(gucPoeDisablePerPort,value,sizeof(gucPoeDisablePerPort));
-	cs_printf("set success\r\n\n\n\n\n");
+	}
+	if(length!=sizeof(gucPoeDisablePerPort))
+	{
+		return -1;
+	}
+	if(DATA_SHOW != opcode)
+	{
+		memcpy(gucPoeDisablePerPort,value,sizeof(gucPoeDisablePerPort));
+	}
+	if(DATA_SHOW == opcode)
+	{
+		unsigned int lport = 0;
+		unsigned int uni_port_num = UNI_PORT_MAX;
+		for(lport = 1; lport <= uni_port_num; lport++)
+		{
+				cs_printf("UNI Port %d : %s\r\n",lport,value[lport-1]?"POE CONTROL ENABLE":"POE CONTROL DISABLE");
+		}
+	}
 	return 0;
 }
 
