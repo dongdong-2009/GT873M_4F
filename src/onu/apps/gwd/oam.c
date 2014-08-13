@@ -4800,10 +4800,14 @@ int poe_control_set(struct cli_def *cli, char *command, char *argv[], int argc)
 	       {
 	            poe_ctl_val = 1;
 	       }
-
-	       if(strcmp(argv[0],"disable") == 0)
+	       else if(strcmp(argv[0],"disable") == 0)
 	       {
 	            poe_ctl_val = 0;
+	       }
+	       else
+	       {
+	    	   cli_print(cli,"para error\r\n");
+	    	   return CLI_ERROR;
 	       }
 
 	       for(lport = 1; lport <= uni_port_num; lport++)
