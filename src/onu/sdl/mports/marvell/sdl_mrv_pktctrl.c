@@ -1201,7 +1201,7 @@ static cs_int32 mrv_cpu_rx_parse(cs_uint8 *pkt, cs_uint16 in_len, cs_uint16 *out
 
 		FOR_UNIT_START(GT_32, unit)
 
-		if((ret2=gfdbFindAtuMacEntry(QD_DEV_PTR, &entry, &found)) == GT_OK)
+		if((gfdbFindAtuMacEntry(QD_DEV_PTR, &entry, &found)) == GT_OK)
 		{
 			if(GT_TRUE == found)
 			{
