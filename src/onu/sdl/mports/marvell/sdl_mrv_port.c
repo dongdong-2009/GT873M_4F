@@ -1988,7 +1988,7 @@ cs_status epon_request_onu_port_storm_ctrl_set(
         GT_STATUS   ret  = 0;
         GT_32 unit=0, hwport=0;
         gt_getswitchunitbylport(port, &unit, &hwport);
-        cs_printf("hwport is %d",hwport);
+
         if(rate->rate)
         {
 

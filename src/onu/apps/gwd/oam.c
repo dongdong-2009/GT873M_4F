@@ -1549,6 +1549,10 @@ static int GwOamAlarmResponse(GWTT_OAM_MESSAGE_NODE *pRequest )
 		{
 			break;
 		}
+		case ONU_PORT_BROADCAST_STORM_ALARM:
+		{
+			break;
+		}
 		case ONU_ETH_PORT_STATE:
 		{	
 			break;

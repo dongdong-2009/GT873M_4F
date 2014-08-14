@@ -324,6 +324,7 @@ extern cs_ulong32   gulDebugOamFileOp;
 #define ONU_DATAFILE_CHG				60	/*ONU数据文件修改事件 */
 #define ONU_PORT_LOOP_ALARM      		11  /*ONU or Switch port loop alarm*/
 #define ONU_PORT_BROADCAST_STORM		16	/*ONU broadcast storm*/
+#define ONU_PORT_BROADCAST_STORM_ALARM	22	/*ONU broadcast storm add by zhangjj 2014-8-14*/
 #define ONU_SWITCH_STATUS_CHANGE_ALARM  80  /*ONU下挂交换机的注册离线告警*/
 #define ONU_SWITCH_STATUS_CHANGE_ALARM_LEN  14  /*ONU下挂交换机的注册离线告警消息长度*/
 
