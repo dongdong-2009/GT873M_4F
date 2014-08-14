@@ -108,7 +108,7 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 
 #define MAX_PKT_LEN     1600
 #if(PRODUCT_CLASS == PRODUCTS_GT812C)
-#define MAX_PKT_NUM     200
+#define MAX_PKT_NUM     150
 #else
 #define MAX_PKT_NUM     80
 #endif
