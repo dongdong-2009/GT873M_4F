@@ -330,7 +330,7 @@ void cyg_user_start(void)
     cs_thread_create(&sdl_thread_id, AAL_THREAD_NAME, cs_intr_thread, NULL, AAL_THREAD_STACKSIZE, AAL_THREAD_PRIORITY, 0);
     cs_thread_create(&appl_thread_id, APPL_THREAD_NAME, app_thread, NULL, APPL_THREAD_STACKSIZE, APPL_THREAD_PRIORITY, 0);
     cs_thread_create(&daemon_thread_id, DAEMON_THREAD_NAME, app_daemon_thread, NULL, DAEMON_THREAD_STACKSIZE, DAEMON_THREAD_PRIORITY, 0);
-	cs_thread_create(&broad_storm_thread_id, STORM_BC_THREAD_NAME, broad_storm_thread, NULL, APPL_THREAD_STACKSIZE, APPL_THREAD_PRIORITY, 0);
+	cs_thread_create(&broad_storm_thread_id, STORM_BC_THREAD_NAME, broad_storm_thread, NULL, APPL_THREAD_STACKSIZE, PORT_STATS_THREAD_PRIORITY, 0);
 #ifdef UART
     
 //	cs_thread_create(&text_uart_id_two,UART_THREAD_TWO, test_uart_thread_one, NULL, TEST_UART_STACKSIZE ,UART2_THREAD_PRIORITY, 0);

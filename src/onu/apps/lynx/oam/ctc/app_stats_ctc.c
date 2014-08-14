@@ -880,7 +880,7 @@ void gwd_portstats_thread(cyg_addrword_t p)
 				cyg_mutex_unlock(&p->mutex);
 			}
 
-			cyg_thread_delay(100);
+			cyg_thread_delay(1000);
 		}
 	}
 	else

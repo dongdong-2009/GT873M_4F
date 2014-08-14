@@ -797,7 +797,7 @@ void broad_storm_thread(void* data)
 				gwd_onu_port_bcstorm_date_clear(physical_port);
 			}
 		}
-		gw_thread_delay(50);
+		gw_thread_delay(10000);
 	}
 	gw_printf("=======================================\n");
 	gw_printf("====Broadcast storm thread exit========\n");
