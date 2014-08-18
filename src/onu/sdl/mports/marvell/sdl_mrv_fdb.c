@@ -1075,8 +1075,8 @@ cs_status epon_request_onu_fdb_entry_del(
     	GT_U32 lunit = 0, lport=0;
     	gt_getswitchunitbylport(port, &lunit, &lport );
 
-    	if(lunit != unit)
-    		continue;
+//    	if(lunit != unit)
+//    		continue;
 
     	portid = lport2port(l2_data.portVec, lport);
 
