@@ -292,6 +292,11 @@ extern int igmp_control_table_init(void);
 #if (OAM_PTY_SUPPORT == MODULE_YES)
 extern void init_oam_pty(void);
 #endif
+
+#if (ARP_DOWN_INTO_CPU_LIMIT_SUPPORT == MODULE_YES)
+extern void arp_down_into_cpu_monitor(void);
+#endif
+
 // user application start
 #ifdef HAVE_POSIX
 int main(int argc, char *argv[])
@@ -409,6 +414,10 @@ extern void gwd_portstats_thread(cyg_addrword_t p);
 	init_oam_pty();
 	#endif
 	
+
+	#if (ARP_DOWN_INTO_CPU_LIMIT_SUPPORT == MODULE_YES)
+	arp_down_into_cpu_monitor();
+	#endif
     cs_printf("Init system done, time %ld\n",cs_current_time());
 //    static int i=0;
 //    char *pkt;

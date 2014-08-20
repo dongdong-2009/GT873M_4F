@@ -31,6 +31,12 @@
 #if (GW_IGMP_TVM == MODULE_YES)
 #include "gw_igmp_tvm.h"
 #endif
+
+#if (ARP_DOWN_INTO_CPU_LIMIT_SUPPORT == MODULE_YES)
+#include "sdl_pktctrl.h"
+#endif
+
+
 #if (PRODUCT_CLASS == PRODUCTS_GT811D)
 	const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
 	const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
@@ -5058,5 +5064,69 @@ cs_status onu_software_version_get(char *sw_version, cs_uint16 sw_version_len)
 }
 #endif
 
+#if (ARP_DOWN_INTO_CPU_LIMIT_SUPPORT == MODULE_YES)
+
+#define ARP_MONITOR_INTERVAL_TIME	1000	//毫秒
+#define ARP_INTO_CPU_RATE_THRESHOLD	100		//每秒100个
+#define ARP_INTO_CPU_DELAY_PERIOD 	10		//arp 报文延时进入cpu 的周期
+void arp_down_into_cpu_limit_proc(void *data)
+{
+	//入口规则检查
+	if(NULL == data)
+	{
+		return;
+	}
+
+	cs_uint32 timeout = (cs_uint32)data;
+	static cs_uint32 count_history = 0;
+	cs_uint32 count_current = 0;
+	cs_uint32 arp_rate = 0;
+	float interval_time = 0;
+	static int oper_status = 0;
+	cs_callback_context_t context;
+	cs_sdl_pkt_dst_t state;
+	static int period_count = 0;
+
+	interval_time = timeout/1000;
+	count_current = app_pkt_get_counter(CS_PKT_ARP);
+	arp_rate = (count_current - count_history)/interval_time;
+	count_history = count_current;
+
+	if(ARP_INTO_CPU_RATE_THRESHOLD < arp_rate)
+	{
+		//禁止下行arp 报文进入cpu
+		epon_request_onu_spec_pkt_dst_get(context, 0, 0, CS_DOWN_STREAM, CS_PKT_ARP, &state);
+		if(DST_CPU == state)
+		{
+			epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_DOWN_STREAM, CS_PKT_ARP, DST_FE);
+
+			//更新状态
+			oper_status = 1;
+		}
+	}
+	else
+	{
+		if(1 == oper_status)
+		{
+			period_count++;
+			if(ARP_INTO_CPU_DELAY_PERIOD <= period_count)
+			{
+				//允许下行arp 报文进入cpu
+				epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_DOWN_STREAM, CS_PKT_ARP, DST_CPU);
+				period_count = 0;
+
+				//更新状态
+				oper_status = 0;
+			}
+		}
+	}
+}
+void arp_down_into_cpu_monitor(void)
+{
+	cs_uint32 timeout = ARP_MONITOR_INTERVAL_TIME;
+
+	cs_circle_timer_add(timeout,arp_down_into_cpu_limit_proc ,(void *)timeout);
+}
+#endif
 
 

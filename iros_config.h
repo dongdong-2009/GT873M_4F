@@ -103,5 +103,7 @@
 //#define RPU_MODULE_POE 		RPU_NO
 //#endif
 
+#define ARP_DOWN_INTO_CPU_LIMIT_SUPPORT	MODULE_YES
+
 #endif
 
