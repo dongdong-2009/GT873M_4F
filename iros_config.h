@@ -97,7 +97,7 @@
 #endif
 
 //#if (PRODUCT_CLASS == PRODUCTS_GT812C)
-#define RPU_MODULE_POE 		MODULE_YES
+#define RPU_MODULE_POE 		MODULE_NO
 #define RPU_MODULE_PSE 		MODULE_NO
 //#else
 //#define RPU_MODULE_POE 		RPU_NO
