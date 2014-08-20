@@ -419,31 +419,6 @@ extern void gwd_portstats_thread(cyg_addrword_t p);
 	arp_down_into_cpu_monitor();
 	#endif
     cs_printf("Init system done, time %ld\n",cs_current_time());
-//    static int i=0;
-//    char *pkt;
-//    while(1)
-//    {
-//    	pkt = iros_malloc(IROS_MID_PACKET, 128);
-//    	if(NULL!=pkt)
-//    	{
-//    		i++;
-//    		cs_printf("IROS_MID_PACKET Have malloc %d\r\n",i*128);
-//    	}
-//    	else
-//    	{
-//    		pkt = malloc(128);
-//    		if(NULL!=pkt)
-//    		{
-//    			i++;
-//    			if(i%8 == 0)
-//    			cs_printf("Have malloc %d\r\n",i*128);
-//    		}
-//    		else
-//    			break;
-//    	}
-//    }
-//    cs_printf("Have malloc %d\r\n",i*128);
-//    cs_printf("malloc over\r\n");
 
     cs_circle_timer_add(1000 , cs_cpuload_warning , NULL);
 
