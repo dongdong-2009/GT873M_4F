@@ -1084,8 +1084,12 @@ cs_status epon_request_onu_fdb_entry_del(
     		continue;
 
 		if(!fdb_static_entry_find(port, mac, &index)){
-			SDL_MIN_LOG("ERROR: Static mac entry is not found!\n");
-			return CS_E_OK;
+			if(port+1 == UNI_PORT_MAX)
+			{
+				SDL_MIN_LOG("ERROR: Static mac entry is not found!\n");
+				return CS_E_ERROR;
+			}
+			continue;
 		}
 
 		memset(&__fdb_static_entry_table[port].entry[index], 0, sizeof(cs_sdl_fdb_entry_t));
