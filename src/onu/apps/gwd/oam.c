@@ -4844,8 +4844,7 @@ int poe_control_set(struct cli_def *cli, char *command, char *argv[], int argc)
 	            }
 	            END_PARSE_PORT_LIST_TO_PORT_NO_CHECK();
 	        }
-
-	        if(strcmp(argv[0],"disable") == 0)
+	        else if(strcmp(argv[0],"disable") == 0)
 	        {
 	            poe_ctl_val = 0;
 	            BEGIN_PARSE_PORT_LIST_TO_PORT_NO_CHECK(argv[1],lport,uni_port_num)
@@ -4857,6 +4856,11 @@ int poe_control_set(struct cli_def *cli, char *command, char *argv[], int argc)
 	                }
 	            }
 	            END_PARSE_PORT_LIST_TO_PORT_NO_CHECK();
+	        }
+	        else
+	        {
+	        	cli_print(cli,"para error\r\n");
+	        	return CLI_ERROR;
 	        }
 
 
