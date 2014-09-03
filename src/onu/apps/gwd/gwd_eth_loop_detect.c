@@ -699,7 +699,11 @@ OAM_ONU_LPB_DETECT_CTRL *getVlanLpbStasNode(cs_uint16 vid)
 	
 	while(pNode != NULL)
 	{
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+		if(pNode->ctrlnode->vid == vid)
+#else
 		if(pNode->ctrlnode->vid != 0)
+#endif
 			break;
 		pNode = pNode->next;
 	}
@@ -713,7 +717,11 @@ void deleteLpbStatsNode( cs_uint16 vid )
 
 	while(pNode != NULL)
 	{
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+		if(pNode->ctrlnode->vid == vid)
+#else
 		if(pNode->ctrlnode->vid != 0)
+#endif
 		{
 			if(pNode == g_lpb_detect_ctrl_head)
 			{
@@ -754,7 +762,11 @@ static void reportPortsLpbStatus( cs_uint16 vid, cs_int8 *session )
 	//cs_printf("report_status\n");
 	while(pNode != NULL)
 	{
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+		if(pNode->ctrlnode->vid == vid)
+#else
 		if(pNode->ctrlnode->vid != 0)
+#endif
 			break;
 		pNode = pNode->next;
 	}
