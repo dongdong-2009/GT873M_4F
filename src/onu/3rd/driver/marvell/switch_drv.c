@@ -2350,6 +2350,13 @@ GT_STATUS gsysGetFloodBCtmp
     return GT_OK;
 }
 
+GT_STATUS gstatsPortCounterClearGwd(
+	    IN  GT_QD_DEV       *dev,
+		IN  GT_LPORT		port
+		)
+{
+	return gstatsFlushAll(dev);
+}
 
 /*******************************************************************************
 * gstatsGetPortAllCouterGwd

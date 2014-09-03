@@ -881,6 +881,11 @@ GT_STATUS gprtGetPortInSeries
 );
 #endif /* _RELEASE_VERSION_ */
 
+GT_STATUS gstatsPortCounterClearGwd(
+	    IN  GT_QD_DEV       *dev,
+		IN  GT_LPORT		port
+		);
+
 /*******************************************************************************
 * gstatsGetPortAllCouterGwd
 *

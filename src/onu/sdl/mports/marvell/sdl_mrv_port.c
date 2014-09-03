@@ -1140,10 +1140,14 @@ cs_status epon_request_onu_port_stats_clr(
         port = L2P_PORT(port_id);
 //        mtodo added codes for port statistic reset
 //        ret = rtk_stat_port_reset(port);
-        if (GT_OK != ret) {
-            SDL_MIN_LOG("rtk_stat_port_reset return %d\n", ret);
-            rt = CS_E_ERROR;
-            goto END;
+        GT_32 unit, hwport;
+        gt_getswitchunitbylport(port, &unit, &hwport);
+
+        ret = gstatsPortCounterClearGwd(QD_DEV_PTR, hwport);
+        if(ret != GT_OK)
+        {
+        	rt = CS_ERROR;
+        	goto END;
         }
     }
     
