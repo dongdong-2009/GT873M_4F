@@ -176,6 +176,7 @@ cs_status app_pkt_filter(cs_pkt_t *pPkt)
     return CS_E_OK;
 }
 
+cs_int32 pkt_priority = APP_QUEUE_PRI_2;
 cs_status app_pkt_rx_handler(cs_pkt_t *pPkt)
 {
     cs_uint32 result = 0;
@@ -184,7 +185,7 @@ cs_status app_pkt_rx_handler(cs_pkt_t *pPkt)
         "app_pkt_rx len %d type %d port %d\n", pPkt->len, pPkt->frame_type, pPkt->port);
 
    pPkt->len -= 4;  /* remove crc field */
-   
+   pkt_priority = APP_QUEUE_PRI_2;
     if(app_pkt_l2hdr_parser(pPkt) ||
         app_pkt_parser(pPkt) ||
         app_pkt_filter(pPkt)) {
@@ -193,7 +194,7 @@ cs_status app_pkt_rx_handler(cs_pkt_t *pPkt)
     else {        
         pPkt->msg_type = IROS_MSG_PKT;
         result = cs_pri_queue_put(app_msg_q , (void *)&pPkt, 
-            sizeof(cs_uint32), CS_OSAL_NO_WAIT, APP_QUEUE_PRI_2);
+            sizeof(cs_uint32), CS_OSAL_NO_WAIT, pkt_priority);
     }
     
     if (result){

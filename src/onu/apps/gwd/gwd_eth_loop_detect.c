@@ -532,6 +532,8 @@ cs_uint8 gwd_loopdetect_pkt_proc(cs_pkt_t *pPkt)
 
     return 1;
 }
+#define PKT_INTERVAL_MILLISEC_1000	100
+#define PKT_INTERVAL_MILLISEC_100	10
 cs_status gwd_loopdetect_pkt_parser(cs_pkt_t *pPkt)
 /*                                                                           */
 /* INPUTS  : o frame_ptr - oam packet                                        */
@@ -585,11 +587,34 @@ cs_status gwd_loopdetect_pkt_parser(cs_pkt_t *pPkt)
     	offset = 12;
 
 	pdata = (LOOP_DETECT_FRAME_DATA*)(pPkt->data+pPkt->offset+offset);
-
+	static cyg_uint64 last_time_ticks =0;
+	static int loopPktStatics=0;
+	cyg_uint64 current_time_ticks = 0;
 	if(ntohs(pdata->Ethtype) == ETH_TYPE_LOOP_DETECT &&
 			ntohs(pdata->LoopFlag) == LOOP_DETECT_CHECK)
 	{
+		current_time_ticks = cyg_current_time();
+		if(PKT_INTERVAL_MILLISEC_1000 < (current_time_ticks - last_time_ticks))
+		{
+			loopPktStatics = 0;
+		}
+		else
+		{
+			loopPktStatics++;
+		}
+		last_time_ticks = current_time_ticks;
+		if(loopPktStatics >= 10)
+		{
+			if(loopPktStatics >=1000)
+			{
+				loopPktStatics = 0;
+			}
+			return CS_E_ERROR;
+		}
 		pPkt->pkt_type = CS_PKT_GWD_LOOPDETECT;
+		extern cs_int32 pkt_priority;
+		pkt_priority = APP_QUEUE_PRI_0;
+		cs_printf("pkt_priority is %d,loopPktStatics is %d\r\n",pkt_priority,loopPktStatics);
 		return CS_E_OK;
 	}
 #endif

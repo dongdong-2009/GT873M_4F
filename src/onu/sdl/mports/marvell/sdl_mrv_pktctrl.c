@@ -774,6 +774,11 @@ static cs_status __l2_ds_pkt_pri_set(
                 return ret;
             ret = aal_special_pkt_behavior_set(AAL_PORT_ID_PON, AAL_PKT_UDF2, pkt_msk, &pkt_cfg);
         }
+		else if(pkt_type == CS_PKT_GWD_LOOPDETECT)
+		{
+            ret = aal_special_pkt_behavior_set(AAL_PORT_ID_GE, AAL_PKT_UDF0, pkt_msk, &pkt_cfg);
+			cs_printf("loop detect set rate limit ret is %d\r\n");
+		}
     }
     else
     {   
@@ -1339,7 +1344,7 @@ cs_status sdl_pktctrl_init(void)
     cs_status             ret = CS_E_OK;
     cs_uint32 queue_rate[4] = {
                             300,   /* queue 0 */
-                            500,   /* queue 1 */
+                            30,   /* queue 1 */
                             600,   /* queue 2 */
                             100    /* queue 3 */
     };
@@ -1357,7 +1362,10 @@ cs_status sdl_pktctrl_init(void)
                             QUEUE_0,   /** CS_PKT_IP         */    
                             QUEUE_0,   /** CS_PKT_NDP        */    
                             QUEUE_0,   /** CS_PKT_LOOPDETECT */    
-                            QUEUE_0    /** CS_PKT_MYMAC      */    
+                            QUEUE_0,   /** CS_PKT_MYMAC      */
+                            QUEUE_0,
+                            QUEUE_0,
+                            QUEUE_1
     };
     
     diag_printf("sdl l2 is being initialized   ... ");
