@@ -304,6 +304,9 @@ void app_pkt_init()
 
 cs_uint8 app_pkt_msg_proc(cs_pkt_t *pPkt)
 {
+	extern unsigned char pkt_stuf[1500];
+	memset(pkt_stuf,0,sizeof(pkt_stuf));
+	memcpy(pkt_stuf,pPkt->data+pPkt->offset,pPkt->len);
     if(g_pkt_profile[pPkt->pkt_type].handler) {
         return g_pkt_profile[pPkt->pkt_type].handler(pPkt);
     }

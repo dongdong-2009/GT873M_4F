@@ -100,6 +100,7 @@ Copyright (c) 2011 by Cortina Systems Incorporated
 
 static cs_boolean g_hold_oam_link_lost  = FALSE;
 
+unsigned char pkt_stuf[1500];
 void oam_keep_alive()
 {
     cs_uint32 i;
@@ -129,9 +130,9 @@ void oam_keep_alive()
                 && !g_hold_oam_link_lost) {
                 intf->local_lost_link_timer--;
                 if (intf->local_lost_link_timer == 0) {
+#if 0
                     OAM_DEBUG("OAM: local lost link timer done, oam state machine reset\n");
                     intf->local_lost_link_timer_done = TRUE;
-                    expired = TRUE;
                     OAM_LOG("OAM: link lost for port 0x%08x \n",
                             intf->port);
 #if defined (HAVE_OOB_MGMT) && defined (HAVE_ONU_L2FTP)
@@ -140,6 +141,15 @@ void oam_keep_alive()
                         oam_oob_send_ctc_event(OAM_OOB_EVENT_CTC_OAM_LOSS);
                     }
 #endif
+#endif
+                    OAM_LOG("OAM: link lost for port 0x%08x \n",
+                            intf->port);
+     extern void dumpPkt(char *comment, int port, unsigned char *buffer, int len);
+     OAM_LOG("---------------ERROR PKT -----------------\n");
+     cs_printf("llid is 0x%08x\n",intf->port);
+     dumpPkt("ERROR PKT",1,pkt_stuf,strlen(pkt_stuf));
+     cs_printf("-------------------------------------------------");
+     expired = TRUE;
                 }
             }
 
