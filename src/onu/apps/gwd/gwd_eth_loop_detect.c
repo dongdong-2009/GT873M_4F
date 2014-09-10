@@ -614,7 +614,7 @@ cs_status gwd_loopdetect_pkt_parser(cs_pkt_t *pPkt)
 		pPkt->pkt_type = CS_PKT_GWD_LOOPDETECT;
 		extern cs_int32 pkt_priority;
 		pkt_priority = APP_QUEUE_PRI_0;
-		cs_printf("pkt_priority is %d,loopPktStatics is %d\r\n",pkt_priority,loopPktStatics);
+//		cs_printf("pkt_priority is %d,loopPktStatics is %d\r\n",pkt_priority,loopPktStatics);
 		return CS_E_OK;
 	}
 #endif
