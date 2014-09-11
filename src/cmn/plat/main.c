@@ -199,7 +199,7 @@ cs_uint32 ctc_trunk_vlan_ds_untag_enable_get()
 {
 	return g_ctc_vlan_trunk_ds_untag_enable;
 }
-#if 0
+#if(RPU_MODULE_PSE == MODULE_YES)
 extern cs_status cs_plat_i2c_write (
     	CS_IN   cs_callback_context_t    	context,
     	CS_IN   cs_dev_id_t              	device,
@@ -208,6 +208,7 @@ extern cs_status cs_plat_i2c_write (
     	CS_IN   cs_uint8                 	slave_offset,
     	CS_IN   cs_uint32                	len,
     	CS_IN   cs_uint8                 	*data);
+extern cs_status cs_i2c_speed_set(cs_uint8 slave_addr, cs_uint32 freq_khz);
 void pse_init()
 {
     cs_uint8 data = 0xff;
@@ -274,7 +275,7 @@ void plat_init(void)
     switch_init();
 #endif
 
-#if 0
+#if(RPU_MODULE_PSE == MODULE_YES)
     pse_init();
 #endif
 }
