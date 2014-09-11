@@ -1259,8 +1259,8 @@ cs_status sdl_switch_init(void)
 {
     cs_aal_cl_rule_cfg_t ce_entry;
     cs_aal_cl_fib_data_t fibdata;
-    cs_uint16 fib_index = 0;
-    cs_uint16 rule_offset = 0; //DOMAIN_ID_SWITCH has onlu one rule
+//    cs_uint16 fib_index = 0;
+//    cs_uint16 rule_offset = 0; //DOMAIN_ID_SWITCH has onlu one rule
     int i;
     cs_uint8    tmp_val=0;
     cs_callback_context_t  context;
@@ -1281,7 +1281,7 @@ cs_status sdl_switch_init(void)
     */
     memset(&ce_entry, 0, sizeof(cs_aal_cl_rule_cfg_t));  
     memset(&fibdata, 0, sizeof(cs_aal_cl_fib_data_t)); 
-
+#if 0  //delete switch module
     ce_entry.valid = 1;
     ce_entry.key_type = AAL_CL_PROTO_KEY;  
 
@@ -1311,7 +1311,7 @@ cs_status sdl_switch_init(void)
     fib_index = 8 * rule_offset + 0;
     if (aal_cl_fib_set(AAL_PORT_ID_GE, DOMAIN_ID_SWITCH, fib_index, &fibdata) != CS_E_OK)
         goto end;
-    
+#endif
     /*for the throughput and scheduling issue, suggested by realtek engineers*/
     for(i = 0; i<8; i++)
     {
@@ -1326,7 +1326,7 @@ cs_status sdl_switch_init(void)
     diag_printf("[done]\n");
     return CS_E_OK;
 
-end:
+//end:
     diag_printf("[fail]\n");
     return CS_E_ERROR;      
 }
