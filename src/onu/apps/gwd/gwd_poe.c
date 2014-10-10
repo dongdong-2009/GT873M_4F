@@ -404,7 +404,7 @@ epon_return_code_e gwdonu_port_poe_operation_table_init()
 }
 epon_return_code_e gwd_poe_module_init()
 {
-    memset(gucPoeDisablePerPort,1,sizeof(gucPoeDisablePerPort));
+    memset(gucPoeDisablePerPort,0,sizeof(gucPoeDisablePerPort)); //set poe disable at start
 	return EPON_RETURN_OK;
 }
 
