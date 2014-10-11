@@ -130,7 +130,7 @@ cs_status cs_plat_chipset_info_get (
 
     return CS_E_OK;
 }
-
+extern cs_status onu_software_version_get(char *sw_version, cs_uint16 sw_version_len);
 cs_status cs_plat_onu_info_get (
     CS_IN       cs_callback_context_t    context,
     CS_IN       cs_dev_id_t                  device,
@@ -147,7 +147,10 @@ cs_status cs_plat_onu_info_get (
     startup_config_read(CFG_ID_HW_VERSION,CTC_ONU_HW_LEN , pOnu_info->hardware_ver);
     startup_config_read(CFG_ID_MAC_ADDRESS, CS_MACADDR_LEN, pOnu_info->onu_id);
 	startup_config_read(CFG_ID_MDIO_DEVID,CTC_MODEL_ID_LEN,pOnu_info->onu_model);
-    strcpy( pOnu_info->software_ver,ONU_SW_VERSION);
+
+	cs_uint8 swver[CTC_ONU_SW_LEN +1];
+	onu_software_version_get(swver,CTC_ONU_SW_LEN);
+    memcpy( pOnu_info->software_ver,swver,CTC_ONU_SW_LEN);
 
     return CS_E_OK;
 }
