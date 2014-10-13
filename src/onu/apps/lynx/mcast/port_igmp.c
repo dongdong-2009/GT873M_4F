@@ -162,7 +162,7 @@ cs_status mc_ctrl_enable(cs_dev_id_t dev, cs_boolean enable)
 	
     port_num = mc_device_port_num_get(0);
     for(port_id = 0; port_id < port_num; port_id++) {
-        epon_request_onu_unknown_mc_forward_set(context, 0, 0, port_id, 1- enable);
+        epon_request_onu_unknown_mc_forward_set(context, 0, 0, port_id, enable);
     }
                 
     return CS_E_OK;
