@@ -1,4 +1,3 @@
-#ifdef HAVE_MC_CTRL
 #include "app_timer.h"
 #include "cs_cmn.h"
 #include "sdl_pktctrl.h"
@@ -9,7 +8,7 @@
 #include "mc_api.h"
 #include "app_vlan.h"
 #include "packet.h"
-
+#ifdef HAVE_MC_CTRL
 app_timer_msg_t  g_mc_static_tmr;
 mc_tmr_handler_t g_mc_static_tmr_handler = NULL;
 
