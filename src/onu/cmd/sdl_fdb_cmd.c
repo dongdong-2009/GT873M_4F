@@ -890,7 +890,7 @@ int fdb_static_list_del(char *mac, int vlan_id)
 		        &__fdb_static_entry[ii].mac, __fdb_static_entry[ii].vlan_id);
 		    if (rc) 
 			{
-		        diag_printf("epon_request_onu_fdb_static_entry_del failed\n");
+		        diag_printf("epon_request_onu_fdb_static_entry_del failed error is %d\n",rc);
 		    }
 			else
 			{

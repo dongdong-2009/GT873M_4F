@@ -1036,7 +1036,6 @@ cs_status epon_request_onu_fdb_entry_del(
 )
 {
     GT_ATU_ENTRY l2_data;
-    cs_port_id_t       portid;
     cs_uint8           index;
     GT_STATUS      gt_ret = 0;
     GT_BOOL           found = GT_FALSE;
@@ -1069,20 +1068,8 @@ cs_status epon_request_onu_fdb_entry_del(
         SDL_MIN_LOG("gfdbFindAtuMacEntry return %d\n", gt_ret);
         continue;
     }
-    
     for(port = 0; port < UNI_PORT_MAX; port++)
     {
-    	GT_U32 lunit = 0, lport=0;
-    	gt_getswitchunitbylport(port, &lunit, &lport );
-
-//    	if(lunit != unit)
-//    		continue;
-
-    	portid = lport2port(l2_data.portVec, lport);
-
-    	if(portid == GT_INVALID_PORT)
-    		continue;
-
 		if(!fdb_static_entry_find(port, mac, &index)){
 			if(port+1 == UNI_PORT_MAX)
 			{
@@ -1091,31 +1078,27 @@ cs_status epon_request_onu_fdb_entry_del(
 			}
 			continue;
 		}
-
 		memset(&__fdb_static_entry_table[port].entry[index], 0, sizeof(cs_sdl_fdb_entry_t));
 		__fdb_static_entry_table[port].valid_map &= ~((0x1)<<index);
-
 		g_fdb_port_cfg[port].static_mac_num = g_fdb_port_cfg[port].static_mac_num - 1;
-
 		/* after setting, re-config the mac limit Dynamic entries will be cleared there */
 		if(sdl_int_cfg.fdb_limit_include_static){
 			rt = epon_request_onu_fdb_mac_limit_set(context,
 				device_id, llidport, port+1, g_fdb_port_cfg[port].mac_limit);
 			if(rt){
-				SDL_MIN_LOG("In function:%s,line:%d invoke epon_request_onu_fdb_mac_limit_set fail!\n",__FUNCTION__, __LINE__);
+				cs_printf("In function:%s,line:%d invoke epon_request_onu_fdb_mac_limit_set fail!\n",__FUNCTION__, __LINE__);
 				goto END;
 			}
 		}
+		gt_ret = gfdbDelAtuEntry(QD_DEV_PTR, &l2_data);
+		if(GT_OK != gt_ret){
+			SDL_MIN_LOG("gfdbDelAtuEntry return %d\n", gt_ret);
+			rt = CS_E_ERROR;
+			goto END;
+		}
+		break;
     
     }
-
-	gt_ret = gfdbDelAtuEntry(QD_DEV_PTR, &l2_data);
-	if(GT_OK != gt_ret){
-		SDL_MIN_LOG("gfdbDelAtuEntry return %d\n", gt_ret);
-		rt = CS_E_ERROR;
-		goto END;
-	}
-
 	FOR_UNIT_END
 
 END:
