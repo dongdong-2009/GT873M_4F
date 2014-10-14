@@ -770,19 +770,72 @@ cs_status epon_request_onu_port_status_set(
     GT_LPORT             port;
 //    GT_STATUS          ret  = 0;
     cs_status              rt = CS_E_OK;
+    GT_32 unit, hwport;
+    GT_BOOL	lduplex;
+    GT_BOOL	fduplex = GT_TRUE;
+    GT_PORT_FORCED_SPEED_MODE			lspeed;
 
-    
+    cs_printf("port status set\n");
     UNI_PORT_CHECK(port_id);
     
     port = L2P_PORT(port_id);
+
     if (__port_cfg[port].port_cfg == speed_cfg) {
         goto END;
     }
+    gt_getswitchunitbylport(port, &unit, &hwport);
+    switch(speed_cfg){
+    	case SDL_PORT_AUTO_10_100_1000:
+    		fduplex = GT_FALSE;
+    		lspeed = PORT_DO_NOT_FORCE_SPEED;
+    		if (MAX_PORT_TRAFFIC_RATE == 100000)
+    		{
+    			speed_cfg = SDL_PORT_AUTO_10_100;
+    		}
 
-    if ((MAX_PORT_TRAFFIC_RATE == 100000) && (speed_cfg == SDL_PORT_AUTO_10_100_1000)) {
-        speed_cfg = SDL_PORT_AUTO_10_100;
+    		break;
+    	case SDL_PORT_10_FULL:
+    		lduplex = GT_TRUE;
+    		lspeed = PORT_FORCE_SPEED_10_MBPS;
+    		break;
+    	case SDL_PORT_10_HALF:
+    		lduplex = GT_FALSE;
+    		lspeed = PORT_FORCE_SPEED_10_MBPS;
+    		break;
+    	case SDL_PORT_100_FULL:
+    		lduplex = GT_TRUE;
+    		lspeed = PORT_FORCE_SPEED_100_MBPS;
+    		break;
+    	case SDL_PORT_100_HALF:
+    		lduplex = GT_FALSE;
+    		lspeed = PORT_FORCE_SPEED_100_MBPS;
+    		break;
+    	case SDL_PORT_1000_FULL:
+    		lduplex = GT_TRUE;
+    		lspeed = PORT_FORCE_SPEED_1000_MBPS;
+    		break;
+    	default:
+    		return CS_E_PARAM;
     }
 
+    rt = gpcsSetForcedDpx(QD_DEV_PTR,hwport,fduplex);
+    if (GT_OK != rt) {
+         cs_printf("gpcsSetForcedDpx return %d\n", rt);
+         return CS_E_ERROR;
+     }
+    if(GT_TRUE == fduplex)
+    {
+		rt = gpcsSetDpxValue(QD_DEV_PTR,hwport,lduplex);
+		if (GT_OK != rt) {
+				 cs_printf("gpcsSetDpxValue return %d\n", rt);
+				 return CS_E_ERROR;
+			 }
+    }
+    rt = gpcsSetForceSpeed(QD_DEV_PTR,hwport,lspeed);
+    if (GT_OK != rt) {
+         cs_printf("gpcsSetForceSpeed return %d\n", rt);
+         return CS_E_ERROR;
+     }
 
     __port_cfg[port].port_cfg = speed_cfg;
 
