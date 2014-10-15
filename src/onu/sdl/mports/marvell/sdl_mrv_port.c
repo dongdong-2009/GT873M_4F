@@ -775,7 +775,6 @@ cs_status epon_request_onu_port_status_set(
     GT_BOOL	fduplex = GT_TRUE;
     GT_PORT_FORCED_SPEED_MODE			lspeed;
 
-    cs_printf("port status set\n");
     UNI_PORT_CHECK(port_id);
     
     port = L2P_PORT(port_id);

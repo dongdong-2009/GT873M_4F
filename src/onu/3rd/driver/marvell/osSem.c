@@ -111,7 +111,7 @@ GT_SEM osSemCreate(GT_SEM_BEGIN_STATE state)
 
 		if(cs_semaphore_init((unsigned int*)&osSemId, name, state, 0) == CS_E_OK)
 		{
-			cs_printf("%s (%lu)\n", __func__, osSemId);
+//			cs_printf("%s (%lu)\n", __func__, osSemId);
 			setNameBit(namebit, GT_TRUE, osSemId);
 			return osSemId;
 		}

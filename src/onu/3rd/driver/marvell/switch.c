@@ -1586,7 +1586,7 @@ GT_STATUS switch_default_config(GT_QD_DEV * dev)
     	}
 #endif /* _SUPPORT_GT815_ */
 	}
-	MSG_OUT(( "Stage 3\r\n"));
+//	MSG_OUT(( "Stage 3\r\n"));
     if (IS_IN_DEV_GROUP(dev,DEV_88E6093_FAMILY))
     {
     	/* No mirror */
@@ -1601,7 +1601,7 @@ GT_STATUS switch_default_config(GT_QD_DEV * dev)
     		l_ret_val = result;
     	}
     }
-	MSG_OUT(( "Stage 4\r\n"));
+//	MSG_OUT(( "Stage 4\r\n"));
 	/* Default pri to traffic class */
 	for(pri = 0; pri < 8; pri++)
 	{
@@ -1669,7 +1669,7 @@ GT_STATUS switch_default_config(GT_QD_DEV * dev)
 			l_ret_val = result;
 		}
 	}
-	MSG_OUT(( "Stage 5\r\n"));
+//	MSG_OUT(( "Stage 5\r\n"));
 	/* Default dscp to traffic class */
 	for(pri = 0; pri < 64; pri++)
 	{
@@ -1725,7 +1725,7 @@ GT_STATUS switch_default_config(GT_QD_DEV * dev)
 #ifndef _SIMPLEST_
     /* set vlan default mode */
 
-	MSG_OUT(( "Stage 6\r\n"));
+//	MSG_OUT(( "Stage 6\r\n"));
   	for ( phyPort=0; phyPort<dev->maxPorts; phyPort++ )
     {
 #if (FOR_MRV_INDUSTRY_SW)
