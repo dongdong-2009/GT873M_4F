@@ -4,6 +4,16 @@
 #include "gpio.h"
 
 
+#define GWD_OAM_CAP_CTC_STATISTIC 		(0x80>>0)
+#define GWD_OAM_CAP_SNMP_TRANS			(0x80>>1)
+#define GWD_OAM_CAP_CTC_FAST_STATISTIC	(0x80>>2)
+
+typedef enum{
+	GWD_OAM_FAST_STATS_OCTECTS,
+	GWD_OAM_FAST_STATS_MAX
+}GWD_OAM_FAST_STATS_E;
+
+
 #define OK	                    0
 #define ERROR		-1
 #define FLASH_USER_DATA_MAX_SIZE     	(1024*20)
@@ -36,7 +46,7 @@ typedef struct gwtt_oam_header
 	cs_uint8 sessionId[8];		/* sesion id used by EMS */
 } __attribute__ ((packed)) GWTT_OAM_HEADER;
 
-/* ÖĞ¹úµçĞÅ¶¨Òå */
+/* ä¸­å›½ç”µä¿¡å®šä¹‰ */
 typedef struct ctc_oam_header
 {
 	cs_uint8 oui[3];				/* CTC's OUI is waiting define */
@@ -76,29 +86,29 @@ typedef struct TLV_Varialbe_Indication
 
 typedef struct TLV_Classification_Marking_Entry
 {
-	cs_uint8 field_sel;				/* µÚ1¸öÌõ¼ş¶ÔÓ¦µÄÓò£¨field£©£º
-										 * 0x00£º»ùÓÚDA MAC·ÖÀà£»
-										 * 0x01£º»ùÓÚSA MAC·ÖÀà£»
-										 * 0x02£º»ùÓÚÒÔÌ«ÍøÓÅÏÈ¼¶Pri£¨IEEE 802.1D£©·ÖÀà£»
-										 * 0x03£º»ùÓÚVLAN ID·ÖÀà£»
-										 * 0x04£º»ùÓÚÒÔÌ«ÍøÀàĞÍ£¨0x8808¡¢0x8809¡¢0x88A8µÈ¡£Ö÷ÒªÖ¸ÒÔÌ«Íø
-										 * Ö¡ÖĞµÄÔ­Ê¼µÄLength/EtherType£¬²»°üº¬VLAN tagÖĞµÄTPIDÓò£©£»
-										 * 0x05£º»ùÓÚÄ¿µÄIPµØÖ··ÖÀà£»
-										 * 0x06£º»ùÓÚÔ´IPµØÖ··ÖÀà£»
-										 * 0x07£º»ùÓÚIPĞ­ÒéÀàĞÍ£¨IP¡¢ICMP¡¢IGMPµÈ£©
-										 * 0x08£º»ùÓÚIP TOS/DSCP£¨IP V4£©·ÖÀà£»
-										 * 0x09£º»ùÓÚIP Precedence£¨IP V6£©·ÖÀà£»
-										 * 0x0A£º»ùÓÚL4 Ô´PORT·ÖÀà£»
-										 * 0x0B£º»ùÓÚL4 Ä¿µÄPORT·ÖÀà£»
-										 * ÆäËû·½Ê½´ı¶¨Òå¡£ */
-	cs_uint8 value[6];				/* µÚ1¸öÌõ¼şµÄÆ¥ÅäÖµ¡£Èç¹ûËù¶ÔÓ¦µÄÓòĞ¡ÓÚ6×Ö½Ú£¨ÈçÒÔVLAN Pri=1
-										 * ×÷ÎªÆ¥ÅäÓò£©£¬Ôò°´ÕÕ×îµÍÎ»¶ÔÆë½«ÆäÆ¥ÅäÖµ·ÅÔÚ±¾6×Ö½ÚµÄ
-										 * ×îµÍÎ»£¨¶ÔÓ¦µÄÆ¥ÅäÖµÎª0x00 00 00 00 00 01£©¡£ */
+	cs_uint8 field_sel;				/* ç¬¬1ä¸ªæ¡ä»¶å¯¹åº”çš„åŸŸï¼ˆfieldï¼‰ï¼š
+										 * 0x00ï¼šåŸºäºDA MACåˆ†ç±»ï¼›
+										 * 0x01ï¼šåŸºäºSA MACåˆ†ç±»ï¼›
+										 * 0x02ï¼šåŸºäºä»¥å¤ªç½‘ä¼˜å…ˆçº§Priï¼ˆIEEE 802.1Dï¼‰åˆ†ç±»ï¼›
+										 * 0x03ï¼šåŸºäºVLAN IDåˆ†ç±»ï¼›
+										 * 0x04ï¼šåŸºäºä»¥å¤ªç½‘ç±»å‹ï¼ˆ0x8808ã€0x8809ã€0x88A8ç­‰ã€‚ä¸»è¦æŒ‡ä»¥å¤ªç½‘
+										 * å¸§ä¸­çš„åŸå§‹çš„Length/EtherTypeï¼Œä¸åŒ…å«VLAN tagä¸­çš„TPIDåŸŸï¼‰ï¼›
+										 * 0x05ï¼šåŸºäºç›®çš„IPåœ°å€åˆ†ç±»ï¼›
+										 * 0x06ï¼šåŸºäºæºIPåœ°å€åˆ†ç±»ï¼›
+										 * 0x07ï¼šåŸºäºIPåè®®ç±»å‹ï¼ˆIPã€ICMPã€IGMPç­‰ï¼‰
+										 * 0x08ï¼šåŸºäºIP TOS/DSCPï¼ˆIP V4ï¼‰åˆ†ç±»ï¼›
+										 * 0x09ï¼šåŸºäºIP Precedenceï¼ˆIP V6ï¼‰åˆ†ç±»ï¼›
+										 * 0x0Aï¼šåŸºäºL4 æºPORTåˆ†ç±»ï¼›
+										 * 0x0Bï¼šåŸºäºL4 ç›®çš„PORTåˆ†ç±»ï¼›
+										 * å…¶ä»–æ–¹å¼å¾…å®šä¹‰ã€‚ */
+	cs_uint8 value[6];				/* ç¬¬1ä¸ªæ¡ä»¶çš„åŒ¹é…å€¼ã€‚å¦‚æœæ‰€å¯¹åº”çš„åŸŸå°äº6å­—èŠ‚ï¼ˆå¦‚ä»¥VLAN Pri=1
+										 * ä½œä¸ºåŒ¹é…åŸŸï¼‰ï¼Œåˆ™æŒ‰ç…§æœ€ä½ä½å¯¹é½å°†å…¶åŒ¹é…å€¼æ”¾åœ¨æœ¬6å­—èŠ‚çš„
+										 * æœ€ä½ä½ï¼ˆå¯¹åº”çš„åŒ¹é…å€¼ä¸º0x00 00 00 00 00 01ï¼‰ã€‚ */
 	cs_uint8 match_op;				/*  0x00 F Never match
 										 * 0x01 == Field Equal to value
 										 * 0x02 != Field Not equal to value
-										 * 0x03 <= Field Less than or equal to value(¿ÉÑ¡)
-										 * 0x04 >= Field Greater than or equal to value£¨¿ÉÑ¡£©
+										 * 0x03 <= Field Less than or equal to value(å¯é€‰)
+										 * 0x04 >= Field Greater than or equal to valueï¼ˆå¯é€‰ï¼‰
 										 * 0x05 exists True if field exists (value ignored)
 										 * 0x06 !exist True if field does not exist (value ignored)
 										 * 0x07 T Always match */
@@ -106,15 +116,15 @@ typedef struct TLV_Classification_Marking_Entry
 
 typedef struct TLV_Classification_Marking
 {
-	cs_uint8 precedence;			/* ¡°·ÖÀà¡¢ÅÅ¶Ó&±ê¼Ç¡±¹æÔòµÄÓÅÏÈ¼¶ÅÅĞò */
-	cs_uint8 rule_len;				/* ¹æÔòµÄ³¤¶È£¬µ¥Î»Îª×Ö½Ú */
-	cs_uint8 queue_mapped;			/* ·ûºÏ±¾¹æÔòµÄÒÔÌ«ÍøÖ¡ËùÒªÓ³ÉäµÄ¶ÓÁĞ±àºÅ */
-	cs_uint8 eth_pri_mark;			/* ¶Ô·ûºÏ±¾¹æÔòµÄÒÔÌ«ÍøÖ¡½øĞĞÓÅÏÈ¼¶±ê¼Ç£¨IEEE 802.1D£©£¬
-										 * ÆäÖµÎª0x00¡«0x07¡£±¾×Ö½ÚÈ±Ê¡ÖµÎª0x00£»Èç±¾×Ö½ÚµÄÖµ
-										 * Îª0xFF£¬ÔòÒâÎ¶×Å¶Ô·ûºÏ¸ÃÌõ¼şµÄÖ¡²»½øĞĞÓÅÏÈ¼¶±ê¼Ç¡£ */
-	cs_uint8 entry_num;			/* ±¾¹æÔòĞèÂú×ãµÄÌõ¼ş£¨entries£©ÊıÁ¿¡£Èç¹ûÓĞ¶à¸öÌõ¼ş£¬ÔòÏÂÃæ
-										 * Îª¶à¸öfield-value-operatorÓò£¬¼´ÒâÎ¶×Å±ØĞëÍ¬Ê±Âú×ãÏÂÊö¶à¸öÌõ¼ş
-										 * ²ÅÄÜÖ´ĞĞÉÏÊö²Ù×÷action¡£ */
+	cs_uint8 precedence;			/* â€œåˆ†ç±»ã€æ’é˜Ÿ&æ ‡è®°â€è§„åˆ™çš„ä¼˜å…ˆçº§æ’åº */
+	cs_uint8 rule_len;				/* è§„åˆ™çš„é•¿åº¦ï¼Œå•ä½ä¸ºå­—èŠ‚ */
+	cs_uint8 queue_mapped;			/* ç¬¦åˆæœ¬è§„åˆ™çš„ä»¥å¤ªç½‘å¸§æ‰€è¦æ˜ å°„çš„é˜Ÿåˆ—ç¼–å· */
+	cs_uint8 eth_pri_mark;			/* å¯¹ç¬¦åˆæœ¬è§„åˆ™çš„ä»¥å¤ªç½‘å¸§è¿›è¡Œä¼˜å…ˆçº§æ ‡è®°ï¼ˆIEEE 802.1Dï¼‰ï¼Œ
+										 * å…¶å€¼ä¸º0x00ï½0x07ã€‚æœ¬å­—èŠ‚ç¼ºçœå€¼ä¸º0x00ï¼›å¦‚æœ¬å­—èŠ‚çš„å€¼
+										 * ä¸º0xFFï¼Œåˆ™æ„å‘³ç€å¯¹ç¬¦åˆè¯¥æ¡ä»¶çš„å¸§ä¸è¿›è¡Œä¼˜å…ˆçº§æ ‡è®°ã€‚ */
+	cs_uint8 entry_num;			/* æœ¬è§„åˆ™éœ€æ»¡è¶³çš„æ¡ä»¶ï¼ˆentriesï¼‰æ•°é‡ã€‚å¦‚æœæœ‰å¤šä¸ªæ¡ä»¶ï¼Œåˆ™ä¸‹é¢
+										 * ä¸ºå¤šä¸ªfield-value-operatoråŸŸï¼Œå³æ„å‘³ç€å¿…é¡»åŒæ—¶æ»¡è¶³ä¸‹è¿°å¤šä¸ªæ¡ä»¶
+										 * æ‰èƒ½æ‰§è¡Œä¸Šè¿°æ“ä½œactionã€‚ */
 	TLV_CLASSIFICATION_MARKING_ENTRY entry[1];
 } __attribute__ ((packed)) TLV_CLASSIFICATION_MARKING;
 
@@ -201,6 +211,9 @@ typedef struct Igmp_oam_req
 #define GWD_RETURN_OK 0
 #define GWD_RETURN_ERR -1
 
+#define GWD_YES 1
+#define GWD_NO 0
+
 #define GWD_OAM_THREAD_PRIORITY 22
 
 extern cs_ulong32   gulDebugOamRx;
@@ -217,8 +230,8 @@ extern cs_ulong32   gulDebugOamFileOp;
 #define OAM_DATA_LEN				65535
 #define OAM_OVERHEAD_LEN_STD		22	/* DA/SA/Len/Sub/Flag/Code/FCS */
 #define OAM_OVERHEAD_LEN_GW			22	/* OUI/Op/Ser/WLen/POff/PLen/SnID/ */
-#define OAM_MAX_FRAM_SIZE 			(106-22)	/*GWË½ÓĞÖ¡¾»ºÉµÄ×î´ó³¤¶È */
-#define OAM_MIN_FRAM_SIZE			20	/*GWË½ÓĞÖ¡¾»ºÉµÄ×îĞ¡³¤¶È */
+#define OAM_MAX_FRAM_SIZE 			(106-22)	/*GWç§æœ‰å¸§å‡€è·çš„æœ€å¤§é•¿åº¦ */
+#define OAM_MIN_FRAM_SIZE			20	/*GWç§æœ‰å¸§å‡€è·çš„æœ€å°é•¿åº¦ */
 
 /* OAM opCode definations */
 #define EQU_DEVICE_INFO_REQ			0x01	/* Device information REQUEST */
@@ -250,8 +263,8 @@ extern cs_ulong32   gulDebugOamFileOp;
 #define  IGMP_TVM_REQ                      0x16
 #define  IGMP_TVM_RESP                     0x17
 #endif
-//ÒÔÏÂÉè±¸ÀàĞÍÖ»ÓĞÔÚGwOamInformationRequest()ºÍ»·Â·¼ì²âÖĞÓÃµ½£¬ÒÑ¾­ÓëÆäËûONU
-//ÀàĞÍ³åÍ»£¬ÒÔºó½ûÖ¹Ê¹ÓÃ
+//ä»¥ä¸‹è®¾å¤‡ç±»å‹åªæœ‰åœ¨GwOamInformationRequest()å’Œç¯è·¯æ£€æµ‹ä¸­ç”¨åˆ°ï¼Œå·²ç»ä¸å…¶ä»–ONU
+//ç±»å‹å†²çªï¼Œä»¥åç¦æ­¢ä½¿ç”¨
 #define DEVICE_TYPE_GT821			0x0005	/* GT821 */
 #define DEVICE_TYPE_GT831			0x0006	/* GT831 */
 #define DEVICE_TYPE_GT813			0x0008	/* GT813 */
@@ -314,31 +327,34 @@ extern cs_ulong32   gulDebugOamFileOp;
 #define DEVICE_CHIP_6301			0x6301
 #define DEVICE_CHIP_6201			0x6201
 
-#define ONU_TEMPRATURE_ALARM			2	/*ONUÎÂ¶È¸æ¾¯ */
-#define ONU_ETH_PORT_STATE				10	/*ONUÒÔÌ«Íø¶Ë¿Ú×´Ì¬¸æ¾¯ */
-#define ONU_ETH_PORT_ABILITY			20	/*ONUÒÔÌ«Íø¶Ë¿ÚĞÔÄÜ¸æ¾¯ */
-#define ONU_ETH_WORK_STOP				21	/*ONUÒÔÌ«Íø¶Ë¿ÚÒµÎñÖĞ¶Ï¸æ¾¯ */
-#define ONU_STP_EVENT					30	/*STPÊÂ¼ş */
-#define ONU_DEVICE_INFO_CHANGE			100	/*ONUÉè±¸ĞÅÏ¢ĞŞ¸ÄÊÂ¼ş */
-#define ONU_FILE_DOWNLOAD				50	/*ONUÊı¾İ¼ÓÔØÊÂ¼ş */
-#define ONU_DATAFILE_CHG				60	/*ONUÊı¾İÎÄ¼şĞŞ¸ÄÊÂ¼ş */
+#define ONU_TEMPRATURE_ALARM			2	/*ONUæ¸©åº¦å‘Šè­¦ */
+#define ONU_ETH_PORT_STATE				10	/*ONUä»¥å¤ªç½‘ç«¯å£çŠ¶æ€å‘Šè­¦ */
+#define ONU_ETH_PORT_ABILITY			20	/*ONUä»¥å¤ªç½‘ç«¯å£æ€§èƒ½å‘Šè­¦ */
+#define ONU_ETH_WORK_STOP				21	/*ONUä»¥å¤ªç½‘ç«¯å£ä¸šåŠ¡ä¸­æ–­å‘Šè­¦ */
+#define ONU_STP_EVENT					30	/*STPäº‹ä»¶ */
+#define ONU_DEVICE_INFO_CHANGE			100	/*ONUè®¾å¤‡ä¿¡æ¯ä¿®æ”¹äº‹ä»¶ */
+#define ONU_FILE_DOWNLOAD				50	/*ONUæ•°æ®åŠ è½½äº‹ä»¶ */
+#define ONU_DATAFILE_CHG				60	/*ONUæ•°æ®æ–‡ä»¶ä¿®æ”¹äº‹ä»¶ */
 #define ONU_PORT_LOOP_ALARM      		11  /*ONU or Switch port loop alarm*/
 #define ONU_PORT_BROADCAST_STORM		16	/*ONU broadcast storm*/
 #define ONU_PORT_BROADCAST_STORM_ALARM	22	/*ONU broadcast storm add by zhangjj 2014-8-14*/
-#define ONU_SWITCH_STATUS_CHANGE_ALARM  80  /*ONUÏÂ¹Ò½»»»»úµÄ×¢²áÀëÏß¸æ¾¯*/
-#define ONU_SWITCH_STATUS_CHANGE_ALARM_LEN  14  /*ONUÏÂ¹Ò½»»»»úµÄ×¢²áÀëÏß¸æ¾¯ÏûÏ¢³¤¶È*/
+#define ONU_SWITCH_STATUS_CHANGE_ALARM  80  /*ONUä¸‹æŒ‚äº¤æ¢æœºçš„æ³¨å†Œç¦»çº¿å‘Šè­¦*/
+#define ONU_SWITCH_STATUS_CHANGE_ALARM_LEN  14  /*ONUä¸‹æŒ‚äº¤æ¢æœºçš„æ³¨å†Œç¦»çº¿å‘Šè­¦æ¶ˆæ¯é•¿åº¦*/
 
-#define ONU_INFOR_GET				1	/*ONUÉè±¸ĞÅÏ¢²éÑ¯ */
-#define ONU_INFOR_SET				2	/*ONUÉè±¸ĞÅÏ¢ÉèÖÃ */
-#define ONU_REALTIME_SYNC			3	/*ONUÏµÍ³Ê±¼äÍ¬²½ */
+#define ONU_INFOR_GET				1	/*ONUè®¾å¤‡ä¿¡æ¯æŸ¥è¯¢ */
+#define ONU_INFOR_SET				2	/*ONUè®¾å¤‡ä¿¡æ¯è®¾ç½® */
+#define ONU_REALTIME_SYNC			3	/*ONUç³»ç»Ÿæ—¶é—´åŒæ­¥ */
 /*begin:
 added by wangxiaoyu 2008-05-05
 */
-#define ONU_LPB_DETECT					4	/*ONU»·»Ø¼ì²â*/
+#define ONU_LPB_DETECT					4	/*ONUç¯å›æ£€æµ‹*/
 /*end*/
+
+#define ONU_FAST_STATISTIC				201
+
 #define ONU_BOARD_GET					5	/*ONU board info get*/
 
-#define ACCESS_IDENTIFIER     8/*ONUÓÃ»§½ÓÈëÏßÂ·±êÊ¶*/
+#define ACCESS_IDENTIFIER     8/*ONUç”¨æˆ·æ¥å…¥çº¿è·¯æ ‡è¯†*/
 
 #define ONU_BOARD_GET_RESP_SUCCESS		1
 #define ONU_BOARD_GET_RESP_FAIL			2
@@ -362,12 +378,12 @@ modified by wangxiaoyu 2008-12-25 IP_RESOURCE_ALLOC value 10-->12
 #define IP_RESOURCE_FREE				11
 //#endif
 
-#define ONU_IGMP_REGISTER			1	/*ONU×¢²á±¨ÎÄ */
-#define ONU_IGMP_UNREGISTER			2	/*ONU×¢Ïú±¨ÎÄ */
-#define ONU_IGMP_LEAVE_REQ			3	/*ONUÇ¿ÖÆÀë¿ª±¨ÎÄ */
-#define ONU_IGMP_REGISTER_ACK		11	/*ONU×¢²áÓ¦´ğ±¨ÎÄ */
-#define ONU_IGMP_UNREGISTER_ACK		12	/*ONU×¢ÏúÓ¦´ğ±¨ÎÄ */
-#define ONU_IGMP_LEAVE_ACK			13	/*ONUÇ¿ÖÆÀë¿ªÓ¦´ğ±¨ÎÄ */
+#define ONU_IGMP_REGISTER			1	/*ONUæ³¨å†ŒæŠ¥æ–‡ */
+#define ONU_IGMP_UNREGISTER			2	/*ONUæ³¨é”€æŠ¥æ–‡ */
+#define ONU_IGMP_LEAVE_REQ			3	/*ONUå¼ºåˆ¶ç¦»å¼€æŠ¥æ–‡ */
+#define ONU_IGMP_REGISTER_ACK		11	/*ONUæ³¨å†Œåº”ç­”æŠ¥æ–‡ */
+#define ONU_IGMP_UNREGISTER_ACK		12	/*ONUæ³¨é”€åº”ç­”æŠ¥æ–‡ */
+#define ONU_IGMP_LEAVE_ACK			13	/*ONUå¼ºåˆ¶ç¦»å¼€åº”ç­”æŠ¥æ–‡ */
 
 #if(RPU_MODULE_VOICE == RPU_YES)		/* VM = Voice Module */
 #define ONU_VM_BASIC_SET			100	/*ONU Voice module chip-enable, DA, SA set*/
@@ -494,27 +510,27 @@ modified by wangxiaoyu 2008-12-25 IP_RESOURCE_ALLOC value 10-->12
 #define OAM_DATA_MTU	OAM_MAX_FRAM_SIZE
 #define OAM_FILE_OP_BASE_TIME		1000 	/* MS */
 /* ACK Codes */
-#define READ_DENY           0x100		/*  ¶Á¾Ü¾ø */
-#define READ_ACCEPT	    	0x101		/*  ¶ÁÔÊĞí */
-#define WRITE_DENY         0x200		/*  Ğ´¾Ü¾ø */
-#define WRITE_ACCEPT     	0x201		/*  Ğ´ÔÊĞí */
-#define TRANS_ERROR       	0x300		/*  ´«ËÍ´íÎó */
-#define TRANS_START      	0x301		/*  ´«ËÍ¿ªÊ¼£¨´«ËÍ¹ı³Ì¿ØÖÆÓ¦´ğ£¬Ò²±íÊ¾´«ËÍÕı³££© */
-#define TRANS_DOING      	0x302		/*  ´«ËÍÖĞ£¨´«ËÍ¹ı³Ì¿ØÖÆÓ¦´ğ£¬Ò²±íÊ¾´«ËÍÕı³££© */
-#define TRANS_DONE        	0x303		/*  ´«ËÍ½áÊø£¨´«ËÍ¹ı³Ì¿ØÖÆÓ¦´ğ£¬Ò²±íÊ¾´«ËÍÕı³££© */
+#define READ_DENY           0x100		/*  è¯»æ‹’ç» */
+#define READ_ACCEPT	    	0x101		/*  è¯»å…è®¸ */
+#define WRITE_DENY         0x200		/*  å†™æ‹’ç» */
+#define WRITE_ACCEPT     	0x201		/*  å†™å…è®¸ */
+#define TRANS_ERROR       	0x300		/*  ä¼ é€é”™è¯¯ */
+#define TRANS_START      	0x301		/*  ä¼ é€å¼€å§‹ï¼ˆä¼ é€è¿‡ç¨‹æ§åˆ¶åº”ç­”ï¼Œä¹Ÿè¡¨ç¤ºä¼ é€æ­£å¸¸ï¼‰ */
+#define TRANS_DOING      	0x302		/*  ä¼ é€ä¸­ï¼ˆä¼ é€è¿‡ç¨‹æ§åˆ¶åº”ç­”ï¼Œä¹Ÿè¡¨ç¤ºä¼ é€æ­£å¸¸ï¼‰ */
+#define TRANS_DONE        	0x303		/*  ä¼ é€ç»“æŸï¼ˆä¼ é€è¿‡ç¨‹æ§åˆ¶åº”ç­”ï¼Œä¹Ÿè¡¨ç¤ºä¼ é€æ­£å¸¸ï¼‰ */
 
 /* ACK ERROR Codes */
-#define SYS_NOERROR			0x00		/*  ÎŞ´íÎó */
-#define SYS_BUSY			0x01		/*  ÏµÍ³Ã¦ */
-#define SYS_NORESOURCE 	0x02			/*  ÏµÍ³×ÊÔ´²»×ã */
-#define SYS_PROCESSERR		0x03		/*  ÏµÍ³´¦Àí´íÎó */
-#define SYS_PROTOERR		0x04		/*  Á÷³Ì´íÎó */
-#define SYS_NOSUCHFILE		0x05		/*  ÎÄ¼ş²»´æÔÚ */
-#define SYS_FILETOOLONG	0x06			/*  ÎÄ¼şÌ«³¤ */
-#define SYS_FILETOOSHORT	0x07		/*  ÎÄ¼şÌ«¶Ì */
-#define SYS_FILEOPERR		0x08		/*  ³¤¶È»òÆ«ÒÆÆ¥Åä´íÎó */
-#define SYS_FILECKERR		0x09		/*  Êı¾İĞ£Ñé´íÎó */
-#define SYS_FILESAVEERR		0x0A		/*  ÎÄ¼ş±£´æ´íÎó */
+#define SYS_NOERROR			0x00		/*  æ— é”™è¯¯ */
+#define SYS_BUSY			0x01		/*  ç³»ç»Ÿå¿™ */
+#define SYS_NORESOURCE 	0x02			/*  ç³»ç»Ÿèµ„æºä¸è¶³ */
+#define SYS_PROCESSERR		0x03		/*  ç³»ç»Ÿå¤„ç†é”™è¯¯ */
+#define SYS_PROTOERR		0x04		/*  æµç¨‹é”™è¯¯ */
+#define SYS_NOSUCHFILE		0x05		/*  æ–‡ä»¶ä¸å­˜åœ¨ */
+#define SYS_FILETOOLONG	0x06			/*  æ–‡ä»¶å¤ªé•¿ */
+#define SYS_FILETOOSHORT	0x07		/*  æ–‡ä»¶å¤ªçŸ­ */
+#define SYS_FILEOPERR		0x08		/*  é•¿åº¦æˆ–åç§»åŒ¹é…é”™è¯¯ */
+#define SYS_FILECKERR		0x09		/*  æ•°æ®æ ¡éªŒé”™è¯¯ */
+#define SYS_FILESAVEERR		0x0A		/*  æ–‡ä»¶ä¿å­˜é”™è¯¯ */
 
 #define FILE_OP_PACKET		0x01
 #define FILE_OP_COMMAND		0x02
@@ -563,7 +579,7 @@ typedef struct _file_op_session_ctl_block
 	cs_int32     nextstate;					/* next state of the state machine */
 	cs_int32     timer0;						/* 2s timer */
 	cs_int32     timer1;						/* 15s timer */
-	cs_int32     AlarmRetran;				/*ÓÃÓÚÎÄ¼ş´«Êä½á¹ûAlarmÖØ´« ´ÎÊı */
+	cs_int32     AlarmRetran;				/*ç”¨äºæ–‡ä»¶ä¼ è¾“ç»“æœAlarmé‡ä¼  æ¬¡æ•° */
 	cs_ulong32 senderSerNo;		/* Sender's serial no, we used when we response */
 	cs_int8   *rcv_pkt;					/* received packet */
 	cs_int8   *retrans;					/* the packet waitting for retransmit */
@@ -589,66 +605,66 @@ typedef struct _file_op_session_ctl_block
 }
 
 /* Op-Code for CTC extend OAM */
-#define Extended_Variable_Request		0x1	/* ÓÃÓÚOLT ÏòONU ²éÑ¯À©Õ¹ÊôĞÔ */
-#define Extended_Variable_Response		0x2	/* ÓÃÓÚONUÏòOLT ·µ»ØÀ©Õ¹ÊôĞÔ */
-#define Extended_Variable_Set_Request	0x3	/* ÓÃÓÚOLT ÏòONU ÅäÖÃÀ©Õ¹ÊôĞÔ/²Ù×÷ */
-#define Extended_Variable_Set_Response	0x4	/* ÓÃÓÚONUÏòOLT·µ»Ø¶ÔÀ©Õ¹ÊôĞÔ/²Ù×÷ÅäÖÃµÄÈ·ÈÏ */
-#define Extended_Variable_Churning		0x5	/* ÓëTriply-Churning Ïà¹ØµÄÃÜÔ¿½»»¥ */
-#define Extended_Variable_DBA			0x6	/* DBA ²ÎÊıÅäÖÃÓë²éÑ¯ */
+#define Extended_Variable_Request		0x1	/* ç”¨äºOLT å‘ONU æŸ¥è¯¢æ‰©å±•å±æ€§ */
+#define Extended_Variable_Response		0x2	/* ç”¨äºONUå‘OLT è¿”å›æ‰©å±•å±æ€§ */
+#define Extended_Variable_Set_Request	0x3	/* ç”¨äºOLT å‘ONU é…ç½®æ‰©å±•å±æ€§/æ“ä½œ */
+#define Extended_Variable_Set_Response	0x4	/* ç”¨äºONUå‘OLTè¿”å›å¯¹æ‰©å±•å±æ€§/æ“ä½œé…ç½®çš„ç¡®è®¤ */
+#define Extended_Variable_Churning		0x5	/* ä¸Triply-Churning ç›¸å…³çš„å¯†é’¥äº¤äº’ */
+#define Extended_Variable_DBA			0x6	/* DBA å‚æ•°é…ç½®ä¸æŸ¥è¯¢ */
 
 /* Branch ID for CTC */
-#define Branch_Standard_Attribute1		0x07	/* IEEE 802.3 Clause 30¹æ¶¨µÄ±ê×¼ÊôĞÔ */
-#define Branch_Standard_Attribute2		0x09	/* IEEE 802.3 Clause 30¹æ¶¨µÄ²Ù×÷¹¦ÄÜ */
-#define Branch_Ctc_Extended_Attribute1	0xc7	/* CTCÀ©Õ¹µÄÊôĞÔ£¬¿ÉÒÔÖ´ĞĞGetºÍ(»ò)SetÃüÁî */
-#define Branch_Ctc_Extended_Attribute2	0xc9	/* CTCÀ©Õ¹µÄ²Ù×÷ */
-#define Branch_Instance_Index			0x36	/* ÊµÀıË÷Òı£¬ÆäºóÎªÊµÀıÊôĞÔ */
+#define Branch_Standard_Attribute1		0x07	/* IEEE 802.3 Clause 30è§„å®šçš„æ ‡å‡†å±æ€§ */
+#define Branch_Standard_Attribute2		0x09	/* IEEE 802.3 Clause 30è§„å®šçš„æ“ä½œåŠŸèƒ½ */
+#define Branch_Ctc_Extended_Attribute1	0xc7	/* CTCæ‰©å±•çš„å±æ€§ï¼Œå¯ä»¥æ‰§è¡ŒGetå’Œ(æˆ–)Setå‘½ä»¤ */
+#define Branch_Ctc_Extended_Attribute2	0xc9	/* CTCæ‰©å±•çš„æ“ä½œ */
+#define Branch_Instance_Index			0x36	/* å®ä¾‹ç´¢å¼•ï¼Œå…¶åä¸ºå®ä¾‹å±æ€§ */
 
 /* Leaf */
-#define Leaf_Index_Port			0x0001	/* ¶Ë¿ÚÊµÀıË÷ÒıµÄleafÖµ */
-#define Leaf_ONU_SN				0x0001	/* ONUµÄ±êÊ¶·û */
-#define Leaf_FirmwareVer		0x0002	/* ONUµÄ¹Ì¼ş°æ±¾ */
-#define Leaf_ChipsetID			0x0003	/* ONUµÄPONĞ¾Æ¬³§ÉÌºÍ°æ±¾ */
-#define Leaf_ONU_Capabilities		0x0004	/* ONUµÄ¶Ë¿Ú¡¢¹¦ÄÜ */
+#define Leaf_Index_Port			0x0001	/* ç«¯å£å®ä¾‹ç´¢å¼•çš„leafå€¼ */
+#define Leaf_ONU_SN				0x0001	/* ONUçš„æ ‡è¯†ç¬¦ */
+#define Leaf_FirmwareVer		0x0002	/* ONUçš„å›ºä»¶ç‰ˆæœ¬ */
+#define Leaf_ChipsetID			0x0003	/* ONUçš„PONèŠ¯ç‰‡å‚å•†å’Œç‰ˆæœ¬ */
+#define Leaf_ONU_Capabilities		0x0004	/* ONUçš„ç«¯å£ã€åŠŸèƒ½ */
 
-#define Leaf_EthLinkState			0x0011	/* ÒÔÌ«ÍøÓÃ»§¶Ë¿ÚµÄÁ´Â·×´Ì¬ */
-#define Leaf_EthPortPause		0x0012	/* ÒÔÌ«Íø¶Ë¿ÚµÄÁ÷¿Ø¹¦ÄÜ¼°²ÎÊı */
-#define Leaf_EthPortPolicing		0x0013	/* ÒÔÌ«Íø¶Ë¿ÚµÄÏŞËÙ¹¦ÄÜ£¨ÉÏĞĞ£© */
-#define Leaf_VoIP_Port			0x0014	/* VoIP¶Ë¿Ú¹ÜÀí */
+#define Leaf_EthLinkState			0x0011	/* ä»¥å¤ªç½‘ç”¨æˆ·ç«¯å£çš„é“¾è·¯çŠ¶æ€ */
+#define Leaf_EthPortPause		0x0012	/* ä»¥å¤ªç½‘ç«¯å£çš„æµæ§åŠŸèƒ½åŠå‚æ•° */
+#define Leaf_EthPortPolicing		0x0013	/* ä»¥å¤ªç½‘ç«¯å£çš„é™é€ŸåŠŸèƒ½ï¼ˆä¸Šè¡Œï¼‰ */
+#define Leaf_VoIP_Port			0x0014	/* VoIPç«¯å£ç®¡ç† */
 
-#define Leaf_VLAN				0x0021	/* ONUµÄVLAN¹¦ÄÜ */
+#define Leaf_VLAN				0x0021	/* ONUçš„VLANåŠŸèƒ½ */
 
-#define Leaf_ClassMarking		0x0031	/* ÒµÎñÁ÷·ÖÀàÓë±ê¼Ç */
+#define Leaf_ClassMarking		0x0031	/* ä¸šåŠ¡æµåˆ†ç±»ä¸æ ‡è®° */
 
-#define Leaf_Add_Del_Multicast_VLAN	0x0041	/* ONUµÄÒÔÌ«Íø¶Ë¿ÚµÄ×é²¥VLANÅäÖÃ */
-#define Leaf_MulticastTagStripe	0x0042	/* ONU¶ÔÏÂĞĞMulticastÊı¾İ±¨ÎÄµÄVLAN TAG´¦Àí */
-#define Leaf_MulticastSwitch		0x0043	/* ×é²¥Ğ­Òé¿ª¹Ø */
-#define Leaf_MulticastControl		0x0044	/* »ùÓÚÆµµÀµÄ×é²¥ÒµÎñ¿ØÖÆ */
-#define Leaf_Group_Num_Max		0x0045	/* ONU»ò¶Ë¿ÚÍ¬Ê±Ö§³ÖµÄ×é²¥×éÊıÁ¿ */
+#define Leaf_Add_Del_Multicast_VLAN	0x0041	/* ONUçš„ä»¥å¤ªç½‘ç«¯å£çš„ç»„æ’­VLANé…ç½® */
+#define Leaf_MulticastTagStripe	0x0042	/* ONUå¯¹ä¸‹è¡ŒMulticastæ•°æ®æŠ¥æ–‡çš„VLAN TAGå¤„ç† */
+#define Leaf_MulticastSwitch		0x0043	/* ç»„æ’­åè®®å¼€å…³ */
+#define Leaf_MulticastControl		0x0044	/* åŸºäºé¢‘é“çš„ç»„æ’­ä¸šåŠ¡æ§åˆ¶ */
+#define Leaf_Group_Num_Max		0x0045	/* ONUæˆ–ç«¯å£åŒæ—¶æ”¯æŒçš„ç»„æ’­ç»„æ•°é‡ */
 
 /* Leaf,  branch 0x07/0x09 */
-#define Leaf_aPhyAdminState		0x0025	/* ²éÑ¯ÒÔÌ«Íø¶Ë¿ÚµÄ×´Ì¬, 0x07 */
-#define Leaf_acPhyAdminControl	0x0005	/* ÉèÖÃ»ò¸ü¸ÄÒÔÌ«ÍøÎïÀí¶Ë¿ÚµÄ×´Ì¬, 0x09 */
-#define Leaf_aAutoNegAdminState	0x004f	/* ÒÔÌ«Íø¶Ë¿ÚµÄ×´Ì¬£¨×ÔĞ­ÉÌ£©, 0x07 */
+#define Leaf_aPhyAdminState		0x0025	/* æŸ¥è¯¢ä»¥å¤ªç½‘ç«¯å£çš„çŠ¶æ€, 0x07 */
+#define Leaf_acPhyAdminControl	0x0005	/* è®¾ç½®æˆ–æ›´æ”¹ä»¥å¤ªç½‘ç‰©ç†ç«¯å£çš„çŠ¶æ€, 0x09 */
+#define Leaf_aAutoNegAdminState	0x004f	/* ä»¥å¤ªç½‘ç«¯å£çš„çŠ¶æ€ï¼ˆè‡ªåå•†ï¼‰, 0x07 */
 #define Leaf_aAutoNegLocalTechnologyAbility	0x0052	/* actual port capabilities, 0x07 */
-#define Leaf_aAutoNegAdvertisedTechnologyAbility	0x0053	/* ¶Ë¿Ú×ÔĞ­ÉÌÄÜÁ¦Í¨¸æ, 0x07 */
-#define Leaf_acAutoNegRestartAutoConfig	0x000b	/* Ç¿ÖÆÁ´Â·ÖØĞÂĞ­ÉÌ, 0x09 */
-#define Leaf_acAutoNegAdminControl	0x000c	/* ´ò¿ª»òÕß¹Ø±ÕPHY¶Ë¿ÚµÄ×ÔĞ­ÉÌ¹¦ÄÜ, 0x09 */
-#define Leaf_aFECAbility			0x0139	/* FECÄÜÁ¦²éÑ¯£¨IEEE 802.3-2005 Clause 30.5.1.1.13£©, 0x07 */
-#define Leaf_aFECmode			0x013a	/* Ë«ÏòFEC¹¦ÄÜµÄ´ò¿ª/¹Ø±Õ£¨IEEE 802.3-2005 Clause30.5.1.1.14£©, 0x07 */
+#define Leaf_aAutoNegAdvertisedTechnologyAbility	0x0053	/* ç«¯å£è‡ªåå•†èƒ½åŠ›é€šå‘Š, 0x07 */
+#define Leaf_acAutoNegRestartAutoConfig	0x000b	/* å¼ºåˆ¶é“¾è·¯é‡æ–°åå•†, 0x09 */
+#define Leaf_acAutoNegAdminControl	0x000c	/* æ‰“å¼€æˆ–è€…å…³é—­PHYç«¯å£çš„è‡ªåå•†åŠŸèƒ½, 0x09 */
+#define Leaf_aFECAbility			0x0139	/* FECèƒ½åŠ›æŸ¥è¯¢ï¼ˆIEEE 802.3-2005 Clause 30.5.1.1.13ï¼‰, 0x07 */
+#define Leaf_aFECmode			0x013a	/* åŒå‘FECåŠŸèƒ½çš„æ‰“å¼€/å…³é—­ï¼ˆIEEE 802.3-2005 Clause30.5.1.1.14ï¼‰, 0x07 */
 
-#define TLV_SET_OK				0x80	/* ¶Ôset variable request»ò²Ù×÷£¨Action£©µÄÈ·ÈÏ */
-#define TLV_SET_PARAM_ERR		0x86	/* ÉèÖÃÇëÇó£¨Set Request£©»ò²Ù×÷£¨Action£©µÄ²ÎÊıÎŞĞ§ */
-#define TLV_SET_ERR				0x87	/* ÉèÖÃÇëÇó£¨Set Request£©»ò²Ù×÷£¨Action£©µÄ²ÎÊıÓĞĞ§£¬µ«ONUµÄµ±Ç°×´Ì¬Ê¹¸Ã²Ù×÷ÎŞ·¨Íê³É */
+#define TLV_SET_OK				0x80	/* å¯¹set variable requestæˆ–æ“ä½œï¼ˆActionï¼‰çš„ç¡®è®¤ */
+#define TLV_SET_PARAM_ERR		0x86	/* è®¾ç½®è¯·æ±‚ï¼ˆSet Requestï¼‰æˆ–æ“ä½œï¼ˆActionï¼‰çš„å‚æ•°æ— æ•ˆ */
+#define TLV_SET_ERR				0x87	/* è®¾ç½®è¯·æ±‚ï¼ˆSet Requestï¼‰æˆ–æ“ä½œï¼ˆActionï¼‰çš„å‚æ•°æœ‰æ•ˆï¼Œä½†ONUçš„å½“å‰çŠ¶æ€ä½¿è¯¥æ“ä½œæ— æ³•å®Œæˆ */
 
-#define CLASS_MARK_DEL			0x00	/* É¾³ıÏÂÊöµÄClassification¡¢Queuing&Marking¿ØÖÆ¹æÔò£¨ÓÃÓÚSet Variable RequestÏûÏ¢£©*/
-#define CLASS_MARK_ADD			0x01	/* Ôö¼ÓÏÂÊöµÄClassification¡¢Queuing&Marking¿ØÖÆ¹æÔò£¨ÓÃÓÚSet Variable RequestÏûÏ¢£©*/
-#define CLASS_MARK_CLR			0x02	/* Çå³ıONUµÄClassification¡¢Queuing&Marking¿ØÖÆ±í£¨¼´É¾³ı¸ÃONUËùÓĞ
-										    µÄ·ÖÀà¡¢ÅÅ¶ÓºÍ±ê¼Ç¹æÔò£©£»¸Ã²Ù×÷ÀàĞÍ½öÓÃÓÚSet Variable
-										    RequestÏûÏ¢¡£µ±±¾containerÎª´Ë²Ù×÷ÀàĞÍÊ±£¬±¾×Ö½ÚºóÃæÃ»ÓĞÆäËûÊı¾İ*/
-#define CLASS_MARK_GET			0x03	/* ÁĞ³ö¸ÃONUËùÓĞµÄClassification¡¢Queuing&Marking¿ØÖÆÌõÄ¿£¨ÓÃ
-										     ÓÚGet Variable Request/ResponseÏûÏ¢)£»µ±±¾containerÓÃÓÚGet Variable RequestÊ±£¬
-										     ±¾×Ö½ÚºóÃæÃ»ÓĞÆäËûÊı¾İ£»µ±±¾containerÓÃÓÚGet Variable ResponseÊ±£¬
-										     ±¾×Ö½ÚºóÃæÎª¸Ã¶Ë¿ÚµÄËùÓĞ·ÖÀà¡¢ÅÅ¶ÓºÍ±ê¼Ç¹æÔò*/
+#define CLASS_MARK_DEL			0x00	/* åˆ é™¤ä¸‹è¿°çš„Classificationã€Queuing&Markingæ§åˆ¶è§„åˆ™ï¼ˆç”¨äºSet Variable Requestæ¶ˆæ¯ï¼‰*/
+#define CLASS_MARK_ADD			0x01	/* å¢åŠ ä¸‹è¿°çš„Classificationã€Queuing&Markingæ§åˆ¶è§„åˆ™ï¼ˆç”¨äºSet Variable Requestæ¶ˆæ¯ï¼‰*/
+#define CLASS_MARK_CLR			0x02	/* æ¸…é™¤ONUçš„Classificationã€Queuing&Markingæ§åˆ¶è¡¨ï¼ˆå³åˆ é™¤è¯¥ONUæ‰€æœ‰
+										    çš„åˆ†ç±»ã€æ’é˜Ÿå’Œæ ‡è®°è§„åˆ™ï¼‰ï¼›è¯¥æ“ä½œç±»å‹ä»…ç”¨äºSet Variable
+										    Requestæ¶ˆæ¯ã€‚å½“æœ¬containerä¸ºæ­¤æ“ä½œç±»å‹æ—¶ï¼Œæœ¬å­—èŠ‚åé¢æ²¡æœ‰å…¶ä»–æ•°æ®*/
+#define CLASS_MARK_GET			0x03	/* åˆ—å‡ºè¯¥ONUæ‰€æœ‰çš„Classificationã€Queuing&Markingæ§åˆ¶æ¡ç›®ï¼ˆç”¨
+										     äºGet Variable Request/Responseæ¶ˆæ¯)ï¼›å½“æœ¬containerç”¨äºGet Variable Requestæ—¶ï¼Œ
+										     æœ¬å­—èŠ‚åé¢æ²¡æœ‰å…¶ä»–æ•°æ®ï¼›å½“æœ¬containerç”¨äºGet Variable Responseæ—¶ï¼Œ
+										     æœ¬å­—èŠ‚åé¢ä¸ºè¯¥ç«¯å£çš„æ‰€æœ‰åˆ†ç±»ã€æ’é˜Ÿå’Œæ ‡è®°è§„åˆ™*/
 #define CTC_OAM_RESPONSE_COPY(dest, src, len, proclen)  \
 { \
 	CTC_OAM_MESSAGE_NODE *_resp ;  \
@@ -757,19 +773,19 @@ typedef struct Mulicast_Group_Entry
 
 /*begin:
 added by wangxiaoyu 2008-05-05
-»·»Ø²âÊÔOAM °ü
+ç¯å›æµ‹è¯•OAM åŒ…
 */
 typedef struct Oam_Onu_Lpb_Detect_Frame{
-cs_uint8	type;		//¹¦ÄÜÀàĞÍ£¬4±íÊ¾Îª»·»Ø¼ì²â
-cs_uint8	result;		//²âÊÔ½á¹û£¬ÓÉONU¶ËÌí¼Ó
-cs_uint8	enable;		//ÊÇ·ñÊ¹ÄÜ¹¦ÄÜ£¬ÓÉOLT²àÌí¼Ó
-cs_uint16	vid;			//½øĞĞ²âÊÔµÄVLAN, 0:ONU±¾µØËùÓĞVLAN
-cs_uint8	smac[6];	//²âÊÔÓÃµÄÔ´MAC
-cs_uint16	interval;		//OLT·¢²âÊÔÖ¡µÄ¼ä¸ôÊ±¼äs
-cs_uint16	policy;		//¹æÔò£¬¼´ÊÇ·ñ¹Ø±Õ¶Ë¿Ú
+cs_uint8	type;		//åŠŸèƒ½ç±»å‹ï¼Œ4è¡¨ç¤ºä¸ºç¯å›æ£€æµ‹
+cs_uint8	result;		//æµ‹è¯•ç»“æœï¼Œç”±ONUç«¯æ·»åŠ 
+cs_uint8	enable;		//æ˜¯å¦ä½¿èƒ½åŠŸèƒ½ï¼Œç”±OLTä¾§æ·»åŠ 
+cs_uint16	vid;			//è¿›è¡Œæµ‹è¯•çš„VLAN, 0:ONUæœ¬åœ°æ‰€æœ‰VLAN
+cs_uint8	smac[6];	//æµ‹è¯•ç”¨çš„æºMAC
+cs_uint16	interval;		//OLTå‘æµ‹è¯•å¸§çš„é—´éš”æ—¶é—´s
+cs_uint16	policy;		//è§„åˆ™ï¼Œå³æ˜¯å¦å…³é—­ç«¯å£
 /*added by wangxiaoyu 2009-03-11*/
-cs_uint16  waitforwakeup; //µÈ´ıËÕĞÑµÄÖÜÆÚ£¬Îª²éÑ¯ÖÜÆÚµÄ±¶Êı
-cs_uint16  maxwakeup;		//×î´óËÕĞÑÖØÊÔ´ÎÊı
+cs_uint16  waitforwakeup; //ç­‰å¾…è‹é†’çš„å‘¨æœŸï¼Œä¸ºæŸ¥è¯¢å‘¨æœŸçš„å€æ•°
+cs_uint16  maxwakeup;		//æœ€å¤§è‹é†’é‡è¯•æ¬¡æ•°
 }__attribute__((packed))OAM_ONU_LPB_DETECT_FRAME;
 /*end*/
 
@@ -834,12 +850,12 @@ typedef struct alarm_loop
 #define LOOP_DETECT_CHECK 0x0080
 
 typedef struct Oam_Onu_Lpb_Detect_Ctrl{
-cs_uint16	vid;				//ÉÏÒ»´Î»·»Ø¼ì²âvlan
-cs_uint8	lpbnum;			//ÉÏÒ»´Î²éµ½µÄ»·»Ø¶Ë¿ÚÊı
-cs_uint8	lpbmask[NUM_PORTS_PER_SYSTEM+1];			//ÉÏÒ»´ÎµÄ»·»Ø¶Ë¿Ú×´Ì¬¼ÍÂ¼(1~15bit×î´ó´ú±í15¸ö¶Ë¿ÚµÄ»·»Ø×´Ì¬
-cs_uint8   lpbportdown[NUM_PORTS_PER_SYSTEM+1];	//ÊÇ·ñ¹Ø±Õ 0:Ã»ÓĞ¹Ø±Õ 1:ÒÑ¾­¹Ø±Õ
-cs_uint8	lpbStateChg[NUM_PORTS_PER_SYSTEM+1];	//¸æ¾¯×´Ì¬±ä»¯Î» added by wangxiaoyu 2009-03-17
-cs_uint8	lpbportwakeupcounter[NUM_PORTS_PER_SYSTEM+1];			//ÉÏÒ»´ÎµÄOAMÇëÇóÊ¹ÄÜ×´Ì¬
+cs_uint16	vid;				//ä¸Šä¸€æ¬¡ç¯å›æ£€æµ‹vlan
+cs_uint8	lpbnum;			//ä¸Šä¸€æ¬¡æŸ¥åˆ°çš„ç¯å›ç«¯å£æ•°
+cs_uint8	lpbmask[NUM_PORTS_PER_SYSTEM+1];			//ä¸Šä¸€æ¬¡çš„ç¯å›ç«¯å£çŠ¶æ€çºªå½•(1~15bitæœ€å¤§ä»£è¡¨15ä¸ªç«¯å£çš„ç¯å›çŠ¶æ€
+cs_uint8   lpbportdown[NUM_PORTS_PER_SYSTEM+1];	//æ˜¯å¦å…³é—­ 0:æ²¡æœ‰å…³é—­ 1:å·²ç»å…³é—­
+cs_uint8	lpbStateChg[NUM_PORTS_PER_SYSTEM+1];	//å‘Šè­¦çŠ¶æ€å˜åŒ–ä½ added by wangxiaoyu 2009-03-17
+cs_uint8	lpbportwakeupcounter[NUM_PORTS_PER_SYSTEM+1];			//ä¸Šä¸€æ¬¡çš„OAMè¯·æ±‚ä½¿èƒ½çŠ¶æ€
 cs_uint8   lpbClearCnt[NUM_PORTS_PER_SYSTEM+1];
 cs_int32				slpcounter[NUM_PORTS_PER_SYSTEM+1];
 ALARM_LOOP		alarmInfo[NUM_PORTS_PER_SYSTEM+1];

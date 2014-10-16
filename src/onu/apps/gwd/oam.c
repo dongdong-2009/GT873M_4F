@@ -19,6 +19,7 @@
 #include "sdl.h"
 #include "gwd_poe.h"
 #include "onu_uax.h"
+#include "sdl_port.h"
 
 #if (GE_RATE_LIMIT == MODULE_YES)
 #include "../../sdl/cmn/cmn/sdl.h"
@@ -871,6 +872,168 @@ int GwGetPonSlotPort(unsigned char *mac, GWD_OLT_TYPE type, unsigned long *slot,
 
 	return GWD_RETURN_OK;
 }
+
+static int setBitValueToArray(int bitNum,unsigned char array[])
+{
+	if(NULL ==  array)
+	{
+		return GWD_RETURN_ERR;
+	}
+
+	array[bitNum/8]|=(0x01<<(7-(bitNum%8)));
+
+	return GWD_RETURN_OK;
+}
+static int getBitValueFromArray(int bitNum, unsigned char array[], int *value)
+{
+	if((NULL == array)||(NULL == value))
+	{
+		return GWD_RETURN_ERR;
+	}
+
+	if (0 != ((array[bitNum/8])&(0x01<<(7-(bitNum%8)))))
+	{
+		*value = GWD_YES;
+	}
+	else
+	{
+		*value = GWD_NO;
+	}
+
+	 return GWD_RETURN_OK;
+}
+static int GwdOamFastStatsReqHandle(GWTT_OAM_MESSAGE_NODE *pReq, unsigned char *res, int *reslen)
+{
+	int ret = -1;
+	if(pReq && res && reslen)
+	{
+		unsigned short i=0;
+		unsigned short j=0;
+		unsigned int bitValue = GWD_NO;
+		unsigned long lPort = 0;
+		unsigned char *ptr = res;
+		unsigned char *rqs = pReq->pPayLoad;
+		unsigned char reqsportInfo[4]={0};
+		unsigned char repsportInfo[4]={0};
+		unsigned char typeInfo[8]={0};
+		unsigned char *res_portmap=NULL;
+		unsigned char testbuf[1600]={0};
+		unsigned int testlen=0;
+		unsigned long long Inval=0;
+		unsigned long long Outval=0;
+		unsigned int maxuniport=0;
+		unsigned char sendheadbuf[14]={0x0f,0x0f,0x0f,0x0f,0x0f,0x0f,0x0d,0x0d,0x0d,0x0d,0x0d,0x0d,0x08,0x00};
+		cs_callback_context_t     context;
+		cs_sdl_port_uni_stats_t phis;
+
+
+		maxuniport=UNI_PORT_MAX;
+		rqs++;
+		memcpy(typeInfo,rqs,sizeof(typeInfo));
+		rqs +=sizeof(typeInfo);
+		memcpy(reqsportInfo,rqs,sizeof(reqsportInfo));
+		rqs +=sizeof(reqsportInfo);
+
+		*ptr++ = ONU_FAST_STATISTIC;
+		*ptr++ = 1;/*success*/
+		memcpy(ptr,typeInfo,sizeof(typeInfo));
+		ptr +=sizeof(typeInfo);/*portinfo and typeinfo 4+8*/
+		res_portmap=ptr;
+		memcpy(ptr,reqsportInfo,sizeof(reqsportInfo));
+		ptr +=sizeof(reqsportInfo);
+//		enum port for statistic data
+		for(i=0;i<pReq->RevPktLen;i++)
+		{
+			if(i%16==0)
+			{
+				cs_printf("\r\n");
+			}
+			cs_printf("0x%02x ",pReq->pPayLoad[i]);
+		}
+		cs_printf("\r\n");
+		 for (i = 0; i < (sizeof(reqsportInfo)*8); i++)
+		 {
+			 if (GWD_RETURN_OK != getBitValueFromArray(i, reqsportInfo, &bitValue))
+				{
+					 cs_printf("error! %s,%d\r\n", __FILE__, __LINE__);
+					 return GWD_RETURN_ERR;
+				}
+
+			 if (GWD_YES == bitValue)
+			 {
+				 lPort = i + 1;
+				 if (lPort > maxuniport)
+				 {
+					 cs_printf("port too big(%d)!\r\n", lPort);
+					 break;
+				 }
+				 if(GWD_RETURN_OK != setBitValueToArray(i,repsportInfo))
+				 {
+					 cs_printf("error! %s,%d\r\n", __FILE__, __LINE__);
+					 return GWD_RETURN_ERR;
+				 }
+#if 0
+				 if(call_gwdonu_if_api(LIB_IF_PORT_STATISTIC_GET, 3, lPort, &data, &statsdatalen) == GW_OK)
+#else
+epon_request_onu_port_stats_get(context, 0, 0,lPort,FALSE,&phis);
+#endif
+				 {
+						for (j = 0; j < (sizeof(typeInfo)*8); j++)
+						{
+							if (GWD_RETURN_OK != getBitValueFromArray(j, typeInfo, &bitValue))
+							{
+							 cs_printf("error! %s,%d\r\n", __FILE__, __LINE__);
+							 return GWD_RETURN_ERR;
+							}
+
+							if (GWD_YES == bitValue)
+							{
+								cs_printf("get port %d type %d!\r\n", lPort, j);
+								switch(j)
+								{
+									 case GWD_OAM_FAST_STATS_OCTECTS:
+										Inval=htonll(phis.rxbyte_cnt);
+										memcpy(ptr,&Inval,sizeof(Inval));
+										ptr += sizeof(Inval);
+										Outval=htonll(phis.txbyte_cnt);
+										memcpy(ptr,&Outval,sizeof(Outval));
+										ptr += sizeof(Outval);
+
+										cs_printf("inval:%lld outval:%lld!\r\n", Inval, Outval);
+										break;
+								}
+							}
+						}
+				 }
+			 }
+		}
+		memset(res_portmap,0,sizeof(repsportInfo));
+		memcpy(res_portmap,repsportInfo,sizeof(repsportInfo));
+
+		cs_printf("repsportInfo:%02x%02x%02x%02x\r\n",repsportInfo[0],repsportInfo[1],repsportInfo[2],repsportInfo[3]);
+		ret = 0;
+		*reslen = ptr-res;
+		testlen=*reslen;
+		memset(testbuf,0,1600);
+		memcpy(testbuf,sendheadbuf,sizeof(sendheadbuf));
+		memcpy(&testbuf[14],res,testlen);
+#if 0
+		cs_printf("RESPON:\r\b");
+		for(i=0;i < 30;i++)
+		{
+			if(i%16 == 0)
+				cs_printf("\r\n");
+			cs_printf("0x%02x ",res[i]);
+		}
+		cs_printf("\r\n");
+		call_gwdonu_if_api(LIB_IF_PORTSEND, 3, 2, testbuf,14+testlen);
+#endif
+		cs_printf( "%s return reslen %d\n", __func__, *reslen);
+
+	}
+	return ret;
+}
+
 static int GwOamInformationRequest(GWTT_OAM_MESSAGE_NODE *pRequest )
 {
 	unsigned char ver[4] = {1, 1, 1, 1};
@@ -1004,7 +1167,8 @@ static int GwOamInformationRequest(GWTT_OAM_MESSAGE_NODE *pRequest )
 			
 			*ptr ++= 3;
 
-			*ptr ++= 0x80;
+//			*ptr ++= 0x80;
+			*ptr ++= GWD_OAM_CAP_CTC_STATISTIC | GWD_OAM_CAP_CTC_FAST_STATISTIC; /*added ctc statistic function surpport*/
 
 			ResLen = ((unsigned long)ptr-(unsigned long)Response);			
 
@@ -1453,7 +1617,14 @@ static int GwOamInformationRequest(GWTT_OAM_MESSAGE_NODE *pRequest )
 #endif
         break;
     }      
-
+    case ONU_FAST_STATISTIC:
+    {
+		if(GwdOamFastStatsReqHandle(pRequest, Response, &ResLen))
+		{
+			return GWD_RETURN_ERR;
+		}
+		break;
+    }
 		case ONU_LPB_DETECT:
 		{
 			int nv = 0;
