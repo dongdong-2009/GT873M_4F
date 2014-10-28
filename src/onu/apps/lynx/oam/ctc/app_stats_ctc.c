@@ -856,19 +856,19 @@ void gwd_portstats_thread(cyg_addrword_t p)
 				//	cs_printf("rxbyte:%lld txbatye:%lld\n",pcur.rxbyte_cnt,pcur.txbyte_cnt);
 					if((pcur.rxbyte_cnt - phis.rxbyte_cnt) >= 0)
 					{
-						rxrate = (pcur.rxbyte_cnt - phis.rxbyte_cnt)*8;
+						rxrate = (pcur.rxbyte_cnt - phis.rxbyte_cnt);
 					}
 					else
 					{
-						rxrate = (0xffffffff - (phis.rxbyte_cnt - pcur.rxbyte_cnt))*8;
+						rxrate = (0xffffffff - (phis.rxbyte_cnt - pcur.rxbyte_cnt));
 					}
 					if((pcur.txbyte_cnt - phis.txbyte_cnt) >= 0)
 					{
-						txrate = (pcur.txbyte_cnt - phis.txbyte_cnt)*8;
+						txrate = (pcur.txbyte_cnt - phis.txbyte_cnt);
 					}
 					else
 					{
-						txrate = (0xffffffff - (phis.txbyte_cnt - pcur.txbyte_cnt))*8;
+						txrate = (0xffffffff - (phis.txbyte_cnt - pcur.txbyte_cnt));
 					}
 
 					p->rxrate = rxrate;

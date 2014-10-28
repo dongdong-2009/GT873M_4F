@@ -456,7 +456,7 @@ extern int show_port_statistic(struct cli_def * cli, int portid)
 		return CLI_ERROR;
 	}
 	
-	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In bit rate", rxrate, "Out bit rate", txrate);
+	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In bytes rate", rxrate, "Out bytes rate", txrate);
 	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In bytes", uni_stats.rxbyte_cnt, "Out bytes", uni_stats.rxbyte_cnt);
 	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In total pkts", uni_stats.rxfrm_cnt, "Out total pkts", uni_stats.txfrm_cnt);
 	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In unicast pkts", uni_stats.rxucfrm_cnt, "Out unicast pkts", uni_stats.txucfrm_cnt);
