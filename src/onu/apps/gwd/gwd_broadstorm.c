@@ -230,9 +230,12 @@ static cs_status onu_port_stats_get_sdl(cs_port_id_t port_id, char *uni_status)
 	cs_status ret = CS_E_OK;
 	gw_onu_port_counter_t *pd = NULL;
 	pd = (gw_onu_port_counter_t *)uni_status;
-	oam_port_uni_stats_t uni_stats;
 	cs_port_id_t port = port_id;
-	ret = app_onu_port_stats_get(port, &uni_stats);
+//	ret = app_onu_port_stats_get(port, &uni_stats);
+	cs_callback_context_t     context;
+	cs_sdl_port_uni_stats_t uni_stats;
+   ret = epon_request_onu_port_stats_get(context, 0, 0,
+            port,FALSE, &uni_stats);
 	pd->counter.RxBroadcasts = uni_stats.rxbcfrm_cnt;
 	pd->counter.TxBroadcasts = uni_stats.txbcfrm_cnt;
 	return ret;

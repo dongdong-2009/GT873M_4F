@@ -852,6 +852,7 @@ void gwd_portstats_thread(cyg_addrword_t p)
 								next_port = 0;
 								FIRST = 1;
 							}
+						cyg_thread_delay(10);
 					}
 				//	cs_printf("rxbyte:%lld txbatye:%lld\n",pcur.rxbyte_cnt,pcur.txbyte_cnt);
 					if((pcur.rxbyte_cnt - phis.rxbyte_cnt) >= 0)
