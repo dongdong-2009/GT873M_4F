@@ -294,6 +294,9 @@ extern int igmp_control_table_init(void);
 extern void init_oam_pty(void);
 #endif
 
+#if (MPCP_REG_TIME_OUT_SUPPORT == MODULE_YES)
+extern void mpcp_reg_time_out_monitor();
+#endif
 #if (ARP_DOWN_INTO_CPU_LIMIT_SUPPORT == MODULE_YES)
 extern void arp_down_into_cpu_monitor(void);
 #endif
@@ -415,6 +418,9 @@ extern void gwd_portstats_thread(cyg_addrword_t p);
 	init_oam_pty();
 	#endif
 	
+	#if (MPCP_REG_TIME_OUT_SUPPORT == MODULE_YES)
+	mpcp_reg_time_out_monitor();
+	#endif
 
 	#if (ARP_DOWN_INTO_CPU_LIMIT_SUPPORT == MODULE_YES)
 	arp_down_into_cpu_monitor();

@@ -215,6 +215,10 @@ void onu_link_changed_led_proc(cs_uint16 dev, cs_int32 evt, void *msg)
 }
 
 #if 1
+#if (MPCP_REG_TIME_OUT_SUPPORT == MODULE_YES)
+extern cs_status mpcp_reg_status_setter(int enable);
+#endif
+
 void onu_reset(void)
 {
 	iros_system_reset(RESET_TYPE_FORCE);
@@ -229,9 +233,15 @@ void onu_pon_link_down_proc(cs_uint16 dev, cs_int32 evt, void *msg)
     if(pMsg->reg)
     {
     	//do nothing
+		#if (MPCP_REG_TIME_OUT_SUPPORT == MODULE_YES)
+		mpcp_reg_status_setter(1);
+		#endif
     }
 	else
 	{
+		#if (MPCP_REG_TIME_OUT_SUPPORT == MODULE_YES)
+		mpcp_reg_status_setter(0);
+		#endif
 		onu_reset();
 	}
 

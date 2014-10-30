@@ -5239,6 +5239,61 @@ cs_status onu_software_version_get(char *sw_version, cs_uint16 sw_version_len)
 }
 #endif
 
+
+#if (MPCP_REG_TIME_OUT_SUPPORT == MODULE_YES)
+#define TIME_OUT_DEFAULT	10000		//∫¡√Î
+
+extern void onu_reset(void);
+extern cs_status aal_pon_link_get(cs_boolean *link);
+
+int mpcp_reg_status = 0;
+cs_status mpcp_reg_status_setter(int enable)
+{
+	mpcp_reg_status = enable;
+
+	return CS_E_OK;
+}
+
+cs_status mpcp_reg_status_getter(int *enable)
+{
+	if(NULL == enable)
+	{
+		cs_printf("null pointer. FILE: %s, LINE: %d\n", __FILE__, __LINE__);
+		return CS_E_ERROR;
+	}
+
+	*enable = mpcp_reg_status;
+
+	return CS_E_OK;
+}
+
+void mpcp_reg_time_out_proc(void *data)
+{
+	cs_boolean link;
+
+	if(CS_E_OK == aal_pon_link_get(&link))
+	{
+		if(link)
+		{
+			int enable;
+			if(CS_E_OK == mpcp_reg_status_getter(&enable))
+			{
+				if(0 == enable)
+				{
+					onu_reset();
+				}
+			}
+
+		}
+	}
+}
+
+void mpcp_reg_time_out_monitor()
+{
+	cs_circle_timer_add(TIME_OUT_DEFAULT, mpcp_reg_time_out_proc, NULL);
+}
+#endif
+
 #if (ARP_DOWN_INTO_CPU_LIMIT_SUPPORT == MODULE_YES)
 #if (PRODUCT_CLASS == PRODUCTS_GT812C)
 extern int ARP_counter;
