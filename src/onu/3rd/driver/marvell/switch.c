@@ -530,7 +530,8 @@ void switch_init()
 			continue;
 		}
 #if (!(FOR_MRV_INDUSTRY_SW))
-		if(dev_cpuPort[i] != dev_wanPort[i])
+//		if(dev_cpuPort[i] != dev_wanPort[i])
+		if(1)	//limit ge port rate to 64K
 		{
 			MSG_OUT(("Set CPU port(%d) Egress rate to 64kbps...\r\n",dev_cpuPort[i]));
 			/* Egress 64kbps */
@@ -2946,20 +2947,18 @@ GT_STATUS switch_fpga_port_enable(GT_BOOL mode)
 
 
 /*set cpu egress rate to cut the download time.*/
-GT_STATUS cpu_rate_fast(int enable)
+int cpu_rate_fast(int enable)
 {
  	GT_ERATE_TYPE   gtEgressRateType;
     int unit = 0;
     if (0 != enable)/*set cpu egress rate no limit.*/
     {
     	/* Egress no limit */
-    	if (IS_IN_DEV_GROUP(qdMultiDev[unit],DEV_ELIMIT_FRAME_BASED))
-    		gtEgressRateType.kbRate = 0;
-    	else
-    		gtEgressRateType.definedRate = GT_NO_LIMIT;
-        if (GT_OK != grcSetEgressRate(qdMultiDev[unit], dev_cpuPort[unit], &gtEgressRateType))
+  		gtEgressRateType.kbRate = 0;
+  		gtEgressRateType.definedRate = GT_NO_LIMIT;
+      if (GT_OK != grcSetEgressRate(qdMultiDev[unit], dev_cpuPort[unit], &gtEgressRateType))
         {
-            printf(" set cpu rate no limit failed.\r\n");
+        		cs_printf(" set cpu rate no limit failed.\r\n");
             return 1;
         }
     }
@@ -2974,10 +2973,11 @@ GT_STATUS cpu_rate_fast(int enable)
 			gtEgressRateType.definedRate = GT_64K;
         if (GT_OK != grcSetEgressRate(qdMultiDev[unit], dev_cpuPort[unit], &gtEgressRateType))
     	{
-            printf(" set cpu rate limit failed.\r\n");
+            cs_printf(" set cpu rate limit failed.\r\n");
             return 1;
     	}
     }
+    cs_printf(" set cpu rate limit %s.\r\n",enable?"disable":"enable");
     return 0;
 }
 

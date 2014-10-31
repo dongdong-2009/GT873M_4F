@@ -89,7 +89,6 @@ Manufacturer is CORTINA.
 
 Copyright (c) 2009 by Cortina Systems Incorporated
 ****************************************************************************/
-#ifdef HAVE_IP_STACK
 #include <errno.h>
 #include "plat_common.h"
 #include "oam_api.h"
@@ -109,6 +108,7 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "app_ip_api.h"
 #include "app_ip_adapter.h"
 #include "app_ip_util.h"
+#ifdef HAVE_IP_STACK
 /*
 * if return code of these routines > 0, just return from the calling place.
 * otherwise, contine the code from the calling place
@@ -655,6 +655,7 @@ void ethdrv_tm_handle(void)
 *   Post-condition
 *   Note             
 */
+extern int cpu_rate_fast(int enable);
 cs_status app_ipintf_set_wan_cfg(
                                                     cs_uint8 enable, 
                                                     cs_uint8 pri,
@@ -689,7 +690,9 @@ cs_status app_ipintf_set_wan_cfg(
         APP_IPINTF_LOG(IROS_LOG_LEVEL_INF,"%s, down MYMAC/ARP : CPU, up MYMAC/ARP : FE, \n", __func__);
 
         app_ipintf_arp_keep_alive();
-
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+        cpu_rate_fast(1);	//limit disable by zhangjj 2014-10-31
+#endif
     }
     else {
         epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_DOWN_STREAM, CS_PKT_ARP, DST_FE);
@@ -697,7 +700,9 @@ cs_status app_ipintf_set_wan_cfg(
         epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_DOWN_STREAM, CS_PKT_MYMAC, DST_FE);
         epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_UP_STREAM, CS_PKT_MYMAC, DST_CPU);
         APP_IPINTF_LOG(IROS_LOG_LEVEL_INF,"%s, down MYMAC/ARP : FE, up MYMAC/ARP : CPU, \n", __func__);
-
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+        cpu_rate_fast(0);	//limit enable
+#endif
     }
 
     return CS_E_OK;
