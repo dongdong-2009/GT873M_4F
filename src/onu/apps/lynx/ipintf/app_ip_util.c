@@ -655,7 +655,10 @@ void ethdrv_tm_handle(void)
 *   Post-condition
 *   Note             
 */
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+int ifRegister = 0;
 extern int cpu_rate_fast(int enable);
+#endif
 cs_status app_ipintf_set_wan_cfg(
                                                     cs_uint8 enable, 
                                                     cs_uint8 pri,
@@ -691,6 +694,7 @@ cs_status app_ipintf_set_wan_cfg(
 
         app_ipintf_arp_keep_alive();
 #if (PRODUCT_CLASS == PRODUCTS_GT812C)
+        ifRegister = 1;
         cpu_rate_fast(1);	//limit disable by zhangjj 2014-10-31
 #endif
     }
@@ -701,6 +705,7 @@ cs_status app_ipintf_set_wan_cfg(
         epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_UP_STREAM, CS_PKT_MYMAC, DST_CPU);
         APP_IPINTF_LOG(IROS_LOG_LEVEL_INF,"%s, down MYMAC/ARP : FE, up MYMAC/ARP : CPU, \n", __func__);
 #if (PRODUCT_CLASS == PRODUCTS_GT812C)
+        ifRegister = 0;
         cpu_rate_fast(0);	//limit enable
 #endif
     }

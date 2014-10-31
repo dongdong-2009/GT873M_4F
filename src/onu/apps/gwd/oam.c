@@ -5240,7 +5240,10 @@ cs_status onu_software_version_get(char *sw_version, cs_uint16 sw_version_len)
 #endif
 
 #if (ARP_DOWN_INTO_CPU_LIMIT_SUPPORT == MODULE_YES)
-
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+extern int ARP_counter;
+extern int ifRegister;
+#endif
 #define ARP_MONITOR_INTERVAL_TIME	1000	//毫秒
 #define ARP_INTO_CPU_RATE_THRESHOLD	100		//每秒100个
 #define ARP_INTO_CPU_DELAY_PERIOD 	10		//arp 报文延时进入cpu 的周期
@@ -5261,7 +5264,23 @@ void arp_down_into_cpu_limit_proc(void *data)
 	cs_callback_context_t context;
 	cs_sdl_pkt_dst_t state;
 	static int period_count = 0;
-
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+	static int oper_status_2 = 0;
+	if((!ifRegister)&&(ARP_counter > 20))
+	{
+		oper_status_2 ++;
+		if(oper_status_2 > 10)
+		{
+			epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_UP_STREAM, CS_PKT_ARP, DST_CPU);
+			oper_status_2 = 0;
+			ARP_counter = 0;
+		}
+	}
+	else
+	{
+		ARP_counter = 0;
+	}
+#endif
 	interval_time = timeout/1000;
 	count_current = app_pkt_get_counter(CS_PKT_ARP);
 	arp_rate = (count_current - count_history)/interval_time;
