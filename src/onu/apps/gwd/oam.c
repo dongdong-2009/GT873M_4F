@@ -942,15 +942,15 @@ static int GwdOamFastStatsReqHandle(GWTT_OAM_MESSAGE_NODE *pReq, unsigned char *
 		memcpy(ptr,reqsportInfo,sizeof(reqsportInfo));
 		ptr +=sizeof(reqsportInfo);
 //		enum port for statistic data
-		for(i=0;i<pReq->RevPktLen;i++)
-		{
-			if(i%16==0)
-			{
-				cs_printf("\r\n");
-			}
-			cs_printf("0x%02x ",pReq->pPayLoad[i]);
-		}
-		cs_printf("\r\n");
+//		for(i=0;i<pReq->RevPktLen;i++)
+//		{
+//			if(i%16==0)
+//			{
+//				cs_printf("\r\n");
+//			}
+//			cs_printf("0x%02x ",pReq->pPayLoad[i]);
+//		}
+//		cs_printf("\r\n");
 		 for (i = 0; i < (sizeof(reqsportInfo)*8); i++)
 		 {
 			 if (GWD_RETURN_OK != getBitValueFromArray(i, reqsportInfo, &bitValue))
@@ -964,7 +964,7 @@ static int GwdOamFastStatsReqHandle(GWTT_OAM_MESSAGE_NODE *pReq, unsigned char *
 				 lPort = i + 1;
 				 if (lPort > maxuniport)
 				 {
-					 cs_printf("port too big(%d)!\r\n", lPort);
+//					 cs_printf("port too big(%d)!\r\n", lPort);
 					 break;
 				 }
 				 if(GWD_RETURN_OK != setBitValueToArray(i,repsportInfo))
@@ -988,7 +988,7 @@ epon_request_onu_port_stats_get(context, 0, 0,lPort,FALSE,&phis);
 
 							if (GWD_YES == bitValue)
 							{
-								cs_printf("get port %d type %d!\r\n", lPort, j);
+//								cs_printf("get port %d type %d!\r\n", lPort, j);
 								switch(j)
 								{
 									 case GWD_OAM_FAST_STATS_OCTECTS:
@@ -999,7 +999,7 @@ epon_request_onu_port_stats_get(context, 0, 0,lPort,FALSE,&phis);
 										memcpy(ptr,&Outval,sizeof(Outval));
 										ptr += sizeof(Outval);
 
-										cs_printf("inval:%lld outval:%lld!\r\n", Inval, Outval);
+//										cs_printf("inval:%lld outval:%lld!\r\n", Inval, Outval);
 										break;
 								}
 							}
@@ -1010,7 +1010,7 @@ epon_request_onu_port_stats_get(context, 0, 0,lPort,FALSE,&phis);
 		memset(res_portmap,0,sizeof(repsportInfo));
 		memcpy(res_portmap,repsportInfo,sizeof(repsportInfo));
 
-		cs_printf("repsportInfo:%02x%02x%02x%02x\r\n",repsportInfo[0],repsportInfo[1],repsportInfo[2],repsportInfo[3]);
+//		cs_printf("repsportInfo:%02x%02x%02x%02x\r\n",repsportInfo[0],repsportInfo[1],repsportInfo[2],repsportInfo[3]);
 		ret = 0;
 		*reslen = ptr-res;
 		testlen=*reslen;
@@ -1028,7 +1028,7 @@ epon_request_onu_port_stats_get(context, 0, 0,lPort,FALSE,&phis);
 		cs_printf("\r\n");
 		call_gwdonu_if_api(LIB_IF_PORTSEND, 3, 2, testbuf,14+testlen);
 #endif
-		cs_printf( "%s return reslen %d\n", __func__, *reslen);
+//		cs_printf( "%s return reslen %d\n", __func__, *reslen);
 
 	}
 	return ret;
