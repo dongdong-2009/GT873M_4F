@@ -77,7 +77,7 @@
 #if (PRODUCT_CLASS == PRODUCTS_GT812C)
 	const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
 	const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
-	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 10;
+	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 11;
 	const unsigned char SYS_SOFTWARE_DEBUG_VERSION_NO = 1;
 
 	const unsigned char SYS_HARDWARE_MAJOR_VERSION_NO = 1;
