@@ -530,22 +530,22 @@ void switch_init()
 			continue;
 		}
 #if (!(FOR_MRV_INDUSTRY_SW))
-//		if(dev_cpuPort[i] != dev_wanPort[i])
-		if(1)	//limit ge port rate to 64K
+		//limit ge port rate to 64K
+		MSG_OUT(("Set CPU port(%d) Egress rate to 64kbps...\r\n",dev_cpuPort[i]));
+		/* Egress 64kbps */
+		if (IS_IN_DEV_GROUP(qdMultiDev[i],DEV_ELIMIT_FRAME_BASED))
+			gtEgressRateType.kbRate = 64;
+     else if (!IS_IN_DEV_GROUP(qdMultiDev[i],DEV_GIGABIT_SWITCH|DEV_ENHANCED_FE_SWITCH))
+     	gtEgressRateType.definedRate = GT_128K;
+		else
+			gtEgressRateType.definedRate = GT_64K;
+		if ((status = grcSetEgressRate(qdMultiDev[i], dev_cpuPort[i], &gtEgressRateType)) != GT_OK)
 		{
-			MSG_OUT(("Set CPU port(%d) Egress rate to 64kbps...\r\n",dev_cpuPort[i]));
-			/* Egress 64kbps */
-			if (IS_IN_DEV_GROUP(qdMultiDev[i],DEV_ELIMIT_FRAME_BASED))
-				gtEgressRateType.kbRate = 64;
-           	 	else if (!IS_IN_DEV_GROUP(qdMultiDev[i],DEV_GIGABIT_SWITCH|DEV_ENHANCED_FE_SWITCH))
-                		gtEgressRateType.definedRate = GT_128K;
-			else
-				gtEgressRateType.definedRate = GT_64K;
-	        	if ((status = grcSetEgressRate(qdMultiDev[i], dev_cpuPort[i], &gtEgressRateType)) != GT_OK)
-	    		{
-		    		MSG_OUT(( "grcSetEgressRate return Failed(%d)\r\n", status));
-		    		l_ret_val = status;
-	    		}
+			MSG_OUT(( "grcSetEgressRate return Failed(%d)\r\n", status));
+			l_ret_val = status;
+		}
+		if(dev_cpuPort[i] != dev_wanPort[i])
+		{
 			/*
 			 * Set Egress Flood Mode to  Block Unknown DA on CPU Port. Libl,2012.3
 			*/
