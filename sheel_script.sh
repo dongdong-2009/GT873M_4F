@@ -46,7 +46,9 @@ echo "You select make ${PRODUCT}"
 sleep 2
 if make PRODUCT=${PRODUCT} USING_SW_TYPE=${USING_SW_TYPE}
 then
+	echo "============================="
 	echo "make ${PRODUCT} successfully!!"
+	echo "============================="
 else
 	echo "====================="
 	echo "======= Error ======="

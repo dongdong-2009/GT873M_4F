@@ -2643,7 +2643,7 @@ int cmd_onu_mgt_gpiodirect(struct cli_def *cli, char *command, char *argv[], int
                  NULL);
         case 2:
             return cli_arg_help(cli, 0,
-                "[0|1]", "0:output,1:input",
+                "[0|1|2|3]", "0:output,1:input,2:falling,3:rising",
                  NULL);
         default:
             return cli_arg_help(cli, argc > 1, NULL);
@@ -2683,7 +2683,7 @@ int cmd_onu_mgt_gpiodirect(struct cli_def *cli, char *command, char *argv[], int
 		if(num < 0 || num > 15)
 			return CLI_ERROR_ARG;
 
-		if(direct > 1)
+		if(direct > 4)
 			return CLI_ERROR_ARG;
 
 		if(cs_gpio_mode_set(num, direct) != EPON_RETURN_SUCCESS)
