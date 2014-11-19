@@ -741,6 +741,19 @@ cs_status ctc_oam_onu_port_mode_set_adapt(
 
 }
 
+int gwd_oam_onu_port_stats_get_adapt(unsigned char port, cs_uint64 *rxbyte_cnt, cs_uint64 *txbyte_cnt )
+{
+    oam_port_uni_stats_t uni_stats;
+
+    memset(&uni_stats, 0, sizeof(uni_stats));
+    if(CS_E_OK != app_onu_port_stats_get(port, &uni_stats))
+    {
+        return CS_E_ERROR;
+    }
+  *rxbyte_cnt = uni_stats.rxbyte_cnt;
+  *txbyte_cnt = uni_stats.txbyte_cnt;
+  return CS_E_OK;
+}
 
 cs_status ctc_oam_onu_port_stats_get_adapt(
         cs_port_id_t port,

@@ -902,6 +902,7 @@ static int getBitValueFromArray(int bitNum, unsigned char array[], int *value)
 
 	 return GWD_RETURN_OK;
 }
+extern int gwd_oam_onu_port_stats_get_adapt(unsigned char port, cs_uint64 *rxbyte_cnt, cs_uint64 *txbyte_cnt);
 static int GwdOamFastStatsReqHandle(GWTT_OAM_MESSAGE_NODE *pReq, unsigned char *res, int *reslen)
 {
 	int ret = -1;
@@ -923,8 +924,6 @@ static int GwdOamFastStatsReqHandle(GWTT_OAM_MESSAGE_NODE *pReq, unsigned char *
 		unsigned long long Outval=0;
 		unsigned int maxuniport=0;
 		unsigned char sendheadbuf[14]={0x0f,0x0f,0x0f,0x0f,0x0f,0x0f,0x0d,0x0d,0x0d,0x0d,0x0d,0x0d,0x08,0x00};
-		cs_callback_context_t     context;
-		cs_sdl_port_uni_stats_t phis;
 
 
 		maxuniport=UNI_PORT_MAX;
@@ -975,7 +974,11 @@ static int GwdOamFastStatsReqHandle(GWTT_OAM_MESSAGE_NODE *pReq, unsigned char *
 #if 0
 				 if(call_gwdonu_if_api(LIB_IF_PORT_STATISTIC_GET, 3, lPort, &data, &statsdatalen) == GW_OK)
 #else
-epon_request_onu_port_stats_get(context, 0, 0,lPort,FALSE,&phis);
+				cs_uint64 rxbyte_cnt = 0, txbyte_cnt = 0;
+				if(CS_E_OK != gwd_oam_onu_port_stats_get_adapt(lPort, &rxbyte_cnt, &txbyte_cnt))
+				{
+					return CS_E_ERROR;
+				}
 #endif
 				 {
 						for (j = 0; j < (sizeof(typeInfo)*8); j++)
@@ -992,10 +995,10 @@ epon_request_onu_port_stats_get(context, 0, 0,lPort,FALSE,&phis);
 								switch(j)
 								{
 									 case GWD_OAM_FAST_STATS_OCTECTS:
-										Inval=htonll(phis.rxbyte_cnt);
+										Inval=htonll(rxbyte_cnt);
 										memcpy(ptr,&Inval,sizeof(Inval));
 										ptr += sizeof(Inval);
-										Outval=htonll(phis.txbyte_cnt);
+										Outval=htonll(txbyte_cnt);
 										memcpy(ptr,&Outval,sizeof(Outval));
 										ptr += sizeof(Outval);
 
