@@ -114,6 +114,7 @@ unsigned long	gulGwOamConnect = 0;
 #ifndef DHCP_RELAY_PACKET_DEBUG
 #define DHCP_RELAY_PACKET_DEBUG(str) if( gulDebugEthDhcpSwitch ){ OAMDBGERR str ;}
 #endif
+#define GWD_OAM_PKT_LENGTH	128
 
 static int GwOamInformationRequest(GWTT_OAM_MESSAGE_NODE *pRequest );
 static int GwOamMessageListNodeRem(GWTT_OAM_MESSAGE_NODE *pNode);
@@ -569,13 +570,12 @@ static int GwCommOamHeadBuild(GWTT_OAM_HEADER *pHead,  unsigned char GwOpcode,un
 }
 int Gwd_OAM_get_length_negotiation(unsigned short *pusOAMFrameLen)
 {
-#define GWD_OAM_PKT_LENGTH	128
-
 	*pusOAMFrameLen = GWD_OAM_PKT_LENGTH;
 
 	return GWD_RETURN_OK;
 }
 
+#if 0
 /*******************************************************************
 * CommOnuMsgSend 
 *
@@ -656,7 +656,90 @@ int CommOnuMsgSend(unsigned char GwOpcode, unsigned int SendSerNo, unsigned char
 		return GWD_RETURN_OK;
 	}
 }
+#else
+//解决局部变量过大易造成线程栈溢出的问题 (以前OamFrame 过大)
 
+/*******************************************************************
+* CommOnuMsgSend
+*
+*******************************************************************/
+int CommOnuMsgSend(unsigned char GwOpcode, unsigned int SendSerNo, unsigned char *pSentData,const unsigned short SendDataSize, unsigned char  *pSessionIdfield)
+{
+	unsigned char OamFrame[GWD_OAM_PKT_LENGTH] = {0};
+	GWTT_OAM_HEADER *avender;
+	unsigned short DataLenSended=0;
+	unsigned short usOAMFrameLen;
+	unsigned short usOAMPayloadLenGW;
+	int	bSlowProtocol = FALSE;
+	int	iSendPacketNumber = 0;
+	cs_llid_t llid;
+	cs_callback_context_t context;
+	if(epon_request_onu_mpcp_llid_get(context, 0, 0, &llid) != CS_OK)
+		return GWD_RETURN_ERR;
+	if( GWD_RETURN_OK != Gwd_OAM_get_length_negotiation(&usOAMFrameLen) )
+	{
+		return GWD_RETURN_ERR;
+	}
+	else
+	{
+		usOAMPayloadLenGW = usOAMFrameLen - OAM_OVERHEAD_LEN_STD - OAM_OVERHEAD_LEN_GW;
+	}
+
+	if (CLI_RESP_TRANSMIT == GwOpcode)
+	{
+		bSlowProtocol = TRUE;
+	}
+
+	gulDebugOamTxCount = 0;
+	if(SendDataSize > (OAM_DATA_LEN-sizeof(GWTT_OAM_HEADER)))
+		return GWD_RETURN_ERR;
+	avender = (GWTT_OAM_HEADER *)OamFrame;
+	if(GWD_RETURN_OK != GwCommOamHeadBuild(avender,GwOpcode,SendSerNo,SendDataSize,pSessionIdfield))
+		return OAM_MESSAGE_SEND_ERROR;
+
+	if(usOAMPayloadLenGW < SendDataSize)
+	{
+		while((usOAMPayloadLenGW+DataLenSended) < SendDataSize)
+		{
+			avender->payLoadLength = usOAMPayloadLenGW;
+			avender->payloadOffset = DataLenSended;
+			memset(OamFrame+sizeof(GWTT_OAM_HEADER), '\0',GWD_OAM_PKT_LENGTH-sizeof(GWTT_OAM_HEADER));
+			memcpy(OamFrame+sizeof(GWTT_OAM_HEADER),pSentData+DataLenSended,usOAMPayloadLenGW);
+			oam_send(llid,active_pon_port, (unsigned char *)avender,(int)(usOAMPayloadLenGW + sizeof(GWTT_OAM_HEADER)));
+			gulDebugOamTxCount++;
+            OAM_TX_PACKET_DEBUG((avender, pSentData+DataLenSended));
+
+			DataLenSended+=usOAMPayloadLenGW;
+
+			iSendPacketNumber ++;
+			if ((0 == (iSendPacketNumber % 10)) && (TRUE == bSlowProtocol))
+			{
+				cyg_thread_delay(1); /* 1 tick 10ms */
+			}
+		}
+
+		avender->payLoadLength = SendDataSize-DataLenSended;
+		avender->payloadOffset = DataLenSended;
+		memset(OamFrame+sizeof(GWTT_OAM_HEADER), '\0',GWD_OAM_PKT_LENGTH-sizeof(GWTT_OAM_HEADER));
+		memcpy(OamFrame+sizeof(GWTT_OAM_HEADER),pSentData+DataLenSended,SendDataSize-DataLenSended);
+		oam_send(llid,active_pon_port, (unsigned char *)avender,(int)(sizeof(GWTT_OAM_HEADER) + SendDataSize - DataLenSended));
+		gulDebugOamTxCount++;
+        OAM_TX_PACKET_DEBUG((avender, pSentData+DataLenSended));
+		return GWD_RETURN_OK;
+	}
+	else
+	{
+		avender->payLoadLength = SendDataSize;
+		avender->payloadOffset = 0;
+		memcpy(OamFrame+sizeof(GWTT_OAM_HEADER),pSentData,SendDataSize);
+
+		oam_send(llid,active_pon_port, (unsigned char *)avender,(int)(sizeof(GWTT_OAM_HEADER)+SendDataSize));
+		gulDebugOamTxCount++;
+        OAM_TX_PACKET_DEBUG((avender, pSentData));
+		return GWD_RETURN_OK;
+	}
+}
+#endif
 
 void OamMessageRecevTimeOut(epon_timer_t *timer)
 {
