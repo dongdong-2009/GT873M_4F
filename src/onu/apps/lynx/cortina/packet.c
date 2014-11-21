@@ -156,7 +156,7 @@ cs_status app_pkt_parser(cs_pkt_t *pPkt)
       if(CS_PKT_GMP == pPkt->pkt_type)
       {
 		  GMP_counter++;
-		  if(GMP_counter > 20)
+		  if(GMP_counter > 100)
 		 {
 			  cs_printf("GMP into CPU overflow \n");
 			  epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_UP_STREAM, CS_PKT_GMP, DST_FE);
