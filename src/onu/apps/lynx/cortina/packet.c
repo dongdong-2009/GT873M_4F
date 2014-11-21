@@ -110,6 +110,7 @@ cs_status app_pkt_l2hdr_parser(cs_pkt_t *pPkt)
 }
 #if (PRODUCT_CLASS == PRODUCTS_GT812C)
 int ARP_counter = 0;
+int GMP_counter = 0;
 #endif
 cs_status app_pkt_parser(cs_pkt_t *pPkt)
 {
@@ -138,18 +139,30 @@ cs_status app_pkt_parser(cs_pkt_t *pPkt)
     if(pPkt->pkt_type != CS_PKT_TYPE_NUM) {
       g_pkt_profile[pPkt->pkt_type].counter++;
 #if (PRODUCT_CLASS == PRODUCTS_GT812C)
+      cs_callback_context_t     context;
+
       if(CS_PKT_ARP == pPkt->pkt_type)
-        {
-//    	  cs_printf("pPkt->port is %d\n",pPkt->port);
-    	  	  if(CS_PON_PORT_ID < pPkt->port)
-    	  		  ARP_counter++;
-    	  	  if(ARP_counter > 20)
-    	  	  {
-    	  		  cs_callback_context_t     context;
-    	  		  cs_printf("ARP into CPU overflow \n",ARP_counter);
-				  epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_UP_STREAM, CS_PKT_ARP, DST_FE);
-    	  	  }
-        }
+      {
+		//    	  cs_printf("pPkt->port is %d\n",pPkt->port);
+		  if(CS_PON_PORT_ID < pPkt->port)
+			  ARP_counter++;
+		  if(ARP_counter > 20)
+		  {
+
+			  cs_printf("ARP into CPU overflow \n");
+			  epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_UP_STREAM, CS_PKT_ARP, DST_FE);
+		  }
+      }
+      if(CS_PKT_GMP == pPkt->pkt_type)
+      {
+		  GMP_counter++;
+		  if(GMP_counter > 20)
+		 {
+			  cs_printf("GMP into CPU overflow \n");
+			  epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_UP_STREAM, CS_PKT_GMP, DST_FE);
+			  epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_DOWN_STREAM, CS_PKT_GMP, DST_FE);
+		 }
+    }
 #endif
     }
 

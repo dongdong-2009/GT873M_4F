@@ -5384,6 +5384,8 @@ void mpcp_reg_time_out_monitor()
 #if (PRODUCT_CLASS == PRODUCTS_GT812C)
 extern int ARP_counter;
 extern int ifRegister;
+extern int GMP_counter;
+extern unsigned char mc_ctl_enable_flag;
 #endif
 #define ARP_MONITOR_INTERVAL_TIME	1000	//ºÁÃë
 #define ARP_INTO_CPU_RATE_THRESHOLD	100		//Ã¿Ãë100¸ö
@@ -5406,20 +5408,41 @@ void arp_down_into_cpu_limit_proc(void *data)
 	cs_sdl_pkt_dst_t state;
 	static int period_count = 0;
 #if (PRODUCT_CLASS == PRODUCTS_GT812C)
-	static int oper_status_2 = 0;
+	static int oper_status_2 = 0, oper_status_igmp = 0;
 	if((!ifRegister)&&(ARP_counter > 20))
 	{
 		oper_status_2 ++;
 		if(oper_status_2 > 10)
 		{
-			epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_UP_STREAM, CS_PKT_ARP, DST_CPU);
 			oper_status_2 = 0;
 			ARP_counter = 0;
+			epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_UP_STREAM, CS_PKT_ARP, DST_CPU);
 		}
 	}
 	else
 	{
 		ARP_counter = 0;
+	}
+//	cs_printf("mc_ctl_enable_flag is %d GMP_counter is %d, oper_status_igmp is %d\n",mc_ctl_enable_flag,GMP_counter,oper_status_igmp);
+	if(GMP_counter > 20)
+	{
+		oper_status_igmp++;
+		if(oper_status_igmp > 10)
+		{
+//			cs_printf("mc_ctl_enable_flag is %d\n",mc_ctl_enable_flag);
+			oper_status_igmp = 0;
+			GMP_counter = 0;
+			if(mc_ctl_enable_flag)
+			{
+				epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_UP_STREAM, CS_PKT_GMP, DST_CPU);
+				epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_DOWN_STREAM, CS_PKT_GMP, DST_CPU);
+			}
+
+		}
+	}
+	else
+	{
+		GMP_counter = 0;
 	}
 #endif
 	interval_time = timeout/1000;

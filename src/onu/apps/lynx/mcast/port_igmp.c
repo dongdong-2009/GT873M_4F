@@ -129,6 +129,9 @@ cs_status mc_timer_init(mc_tmr_handler_t hdl)
     return CS_E_OK;
 }   
 
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+unsigned char mc_ctl_enable_flag = 0;
+#endif
 cs_status mc_ctrl_enable(cs_dev_id_t dev, cs_boolean enable)
 {
 #if 0
@@ -152,6 +155,11 @@ cs_status mc_ctrl_enable(cs_dev_id_t dev, cs_boolean enable)
     app_pkt_reg_handler(CS_PKT_GMP, handler);
 
     state = enable ? DST_CPU : DST_FE;    
+
+	#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+	mc_ctl_enable_flag = enable;
+	#endif
+
     epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_UP_STREAM, CS_PKT_GMP, state);
     epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_DOWN_STREAM, CS_PKT_GMP, state);
 
