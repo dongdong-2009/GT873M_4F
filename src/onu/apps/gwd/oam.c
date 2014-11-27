@@ -986,6 +986,7 @@ static int getBitValueFromArray(int bitNum, unsigned char array[], int *value)
 	 return GWD_RETURN_OK;
 }
 extern int gwd_oam_onu_port_stats_get_adapt(unsigned char port, cs_uint64 *rxbyte_cnt, cs_uint64 *txbyte_cnt);
+extern void app_uni_stats_count();
 static int GwdOamFastStatsReqHandle(GWTT_OAM_MESSAGE_NODE *pReq, unsigned char *res, int *reslen)
 {
 	int ret = -1;
@@ -1033,6 +1034,7 @@ static int GwdOamFastStatsReqHandle(GWTT_OAM_MESSAGE_NODE *pReq, unsigned char *
 //			cs_printf("0x%02x ",pReq->pPayLoad[i]);
 //		}
 //		cs_printf("\r\n");
+		app_uni_stats_count();
 		 for (i = 0; i < (sizeof(reqsportInfo)*8); i++)
 		 {
 			 if (GWD_RETURN_OK != getBitValueFromArray(i, reqsportInfo, &bitValue))

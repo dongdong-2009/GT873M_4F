@@ -283,7 +283,7 @@ static void app_pon_stats_count()
 /* BLOCK      : General                                                      */
 /* CHIP       : CS8030                                                       */
 /*                                                                           */
-static void app_uni_stats_count()
+void app_uni_stats_count()
 /*                                                                           */
 /* INPUTS  : N/A                                                             */
 /* OUTPUTS : N/A                                                             */
@@ -857,7 +857,7 @@ cs_status app_onu_port_stats_get(
                     &&  port_id != CS_DOWNLINK_PORT))
             ,CS_E_PARAM);
 
-    app_uni_stats_count();
+//    app_uni_stats_count();
 
     if(port_id == CS_DOWNLINK_PORT){
         if(g_app_max_uni_port == 1)
