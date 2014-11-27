@@ -1343,7 +1343,7 @@ cs_status sdl_pktctrl_init(void)
     cs_pkt_type_t         pkt_type;
     cs_status             ret = CS_E_OK;
     cs_uint32 queue_rate[4] = {
-                            300,   /* queue 0 */
+                            200,   /* queue 0 */
                             30,   /* queue 1 */
                             600,   /* queue 2 */
                             100    /* queue 3 */
@@ -1352,7 +1352,7 @@ cs_status sdl_pktctrl_init(void)
     cs_sdl_queue_t downstream_pkt[CS_PKT_TYPE_NUM] = {
                             QUEUE_0,   /** CS_PKT_BPDU       */     
                             QUEUE_3,   /** CS_PKT_8021X      */    
-                            QUEUE_2,   /** CS_PKT_GMP        */    
+                            QUEUE_0,   /** CS_PKT_GMP        */
                             QUEUE_0,   /** CS_PKT_ARP        */    
                             QUEUE_3,   /** CS_PKT_OAM        */    
                             QUEUE_2,   /** CS_PKT_MPCP       */    
