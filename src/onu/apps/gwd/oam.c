@@ -5142,6 +5142,98 @@ int poe_control_set(struct cli_def *cli, char *command, char *argv[], int argc)
 	return CLI_OK;
 }
 #endif
+#if(RPU_MODULE_PSE == MODULE_YES)
+extern cs_uint32 gwd_pse_mode_set(cs_uint8 port, cs_uint8 mode);
+extern cs_uint32 gwd_pse_mode_get(cs_uint8 port, cs_uint8* mode);
+extern cs_uint32 gwd_pse_mode_show(cs_uint32 port, cs_uint8 mode);
+int cmd_pse_mode(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	if(CLI_HELP_REQUESTED)
+	{
+		switch(argc)
+			{
+		case 1:
+			cli_arg_help(cli, 0,
+			"<cr>", "just enter to execuse command. (show pse mode)",
+			NULL);
+			cli_arg_help(cli, 0,
+				"port", "uni port (1-8)",
+				NULL);
+		case 2:
+			cli_arg_help(cli, 0,
+			"0", "shutdown",
+			NULL);
+			cli_arg_help(cli, 0,
+			"1", "manual",
+			NULL);
+			cli_arg_help(cli, 0,
+			"2", "semiauto",
+			NULL);
+			cli_arg_help(cli, 0,
+			"3", "auto (default)",
+			NULL);
+			return CLI_OK;
+		default:
+			return cli_arg_help(cli, argc > 1, NULL);
+			}
+	}
+	cs_uint8 mode = 0;
+	cs_uint8 ret = 0;
+	cs_uint32 port = 0;
+	if(0 == argc)
+	{
+		for(port=1;port<=UNI_PORT_MAX;port++)
+		{
+			ret = gwd_pse_mode_get(port, &mode);
+			if(CS_OK == ret)
+			{
+				gwd_pse_mode_show(port,mode);
+			}
+			else
+			{
+				cli_print(cli,"pse mode get failed\n");
+			}
+
+		}
+	}
+	else if(1 == argc)
+	{
+		port = iros_strtol(argv[0]);
+		ret = gwd_pse_mode_get(port, &mode);
+		if(CS_OK == ret)
+		{
+			gwd_pse_mode_show(port,mode);
+		}
+		else
+		{
+			cli_print(cli,"pse mode get failed\n");
+		}
+	}
+	else if(2 == argc)
+	{
+        BEGIN_PARSE_PORT_LIST_TO_PORT_NO_CHECK(argv[1],port,UNI_PORT_MAX)
+        {
+            if(gwd_pse_mode_set(port,mode) != CS_OK)
+            {
+            	cli_print(cli,"pse set port(%d) mode failed\r\n",port);
+                continue;
+            }
+        }
+        END_PARSE_PORT_LIST_TO_PORT_NO_CHECK();
+	}
+	else
+	{
+		cs_printf("Invalid put!!\n");
+		return CLI_ERROR;
+	}
+
+	return CLI_OK;
+}
+int cmd_pse_power(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	return CLI_OK;
+}
+#endif
 #if 1
 extern int cmd_laser(struct cli_def *cli, char *command, char *argv[], int argc);
 #endif
@@ -5211,6 +5303,12 @@ void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 		cli_register_command(cmd_root, 0, 		"ponReg", 		pon_reg_option,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "pon register R or W");
 #if (RPU_MODULE_POE == MODULE_YES)
 		cli_register_command(cmd_root, 0, 		"poe", 		poe_control_set,          PRIVILEGE_PRIVILEGED, MODE_EXEC, "poe");
+#endif
+#if (RPU_MODULE_PSE == MODULE_YES)
+		struct cli_command *pse;
+		pse = cli_register_command(cmd_root, 0,	"pse", NULL, PRIVILEGE_PRIVILEGED, MODE_EXEC, "pse");
+		cli_register_command(cmd_root, pse,	"mode", cmd_pse_mode, PRIVILEGE_PRIVILEGED, MODE_EXEC, "pse mode");
+		cli_register_command(cmd_root, pse,	"power", cmd_pse_power, PRIVILEGE_PRIVILEGED, MODE_EXEC, "pse power get");
 #endif
 		#endif
 	
