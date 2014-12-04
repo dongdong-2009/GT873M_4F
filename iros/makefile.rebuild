@@ -1,7 +1,7 @@
 
 ECOS_REPOSITORY=${SWHOME}/ecos/ecos-2.1/packages
 export ECOS_REPOSITORY
-ifeq ($(PRODUCT),GT812C)
+ifeq ($(USING_SW_TYPE),MRV)
 	RAM_CONFIG=${SWHOME}/targets/onu/arm9/asic/config-onu-arm9-asic-ram-32m-malloc-448k-lwip
 else
 	RAM_CONFIG=${SWHOME}/targets/onu/arm9/asic/config-onu-arm9-asic-ram-2m-malloc-448k-lwip
