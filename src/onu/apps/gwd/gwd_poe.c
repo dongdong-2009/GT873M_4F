@@ -435,16 +435,23 @@ void gwd_poe_init()
 #if (RPU_MODULE_PSE == MODULE_YES)
 #define GWD_PSE1_ADDR 	0x21
 #define GWD_PSE2_ADDR 	0x22
-#define MAX5980_REG_ID		0x1B
-#define MAX5980_REG_MODE	0x12
+
+#define MAX5980_REG_MODE		0x12
+#define MAX5980_REG_DET_CLASS	0x14
+#define MAX5980_REG_POWER_PUSH	0x19
+#define MAX5980_REG_GLOBAL		0x1A
+#define MAX5980_REG_ID			0x1B
+
+
 #define MAX5980_ID_LEGAL		0xd0
 
-#define PSE_SHUTDOWN		0x00
-#define PSE_MANUAL			0x01
-#define PSE_SEMIAUTO		0x10
-#define PSE_AUTO			0x11
+#define PSE_SHUTDOWN		0x0
+#define PSE_MANUAL			0x1
+#define PSE_SEMIAUTO		0x2
+#define PSE_AUTO			0x3
 
 cs_uint8 GwdPseMode[8] = {0};
+cs_uint8 GwdPseEnable[8] = {0};
 cs_uint32 GwdPsePower[8] = {0};
 cs_uint32 uni_port_num = UNI_PORT_MAX;
 
@@ -465,26 +472,81 @@ extern cs_status cs_plat_i2c_write (
     	CS_IN   cs_uint32                	len,
     	CS_IN   cs_uint8                 	*data);
 
-
-
-cs_uint32 gwd_pse_mode_set(cs_uint32 port, cs_uint32 mode)
+cs_uint32 gwd_pse_enable_set(cs_uint32 port, cs_uint8 mode)
 {
     cs_callback_context_t    	context;
-	cs_uint8 port_mode = 0, ret = 0;
+	cs_uint8 reg_val = 0, ret = 0;
 	cs_uint8 slave_addr = 0;
-	cs_uint32 phyPort = port - 1;
+	cs_uint8 phyPort = port - 1;
 	if((port<1) || (port >uni_port_num))
 	{
 		return CS_ERROR;
 	}
-	if((mode<PSE_SHUTDOWN) || (mode >PSE_AUTO))
+	if(mode >1)
 	{
+		cs_printf("mode error (%d)\n",mode);
+		return CS_ERROR;
+	}
+	if(GwdPseEnable[phyPort] == mode)
+	{
+		return CS_OK;
+	}
+	slave_addr = phyPort < 4 ?GWD_PSE1_ADDR:GWD_PSE2_ADDR;
+	if(0 == mode)
+	{
+		cs_plat_i2c_read(context, 0, 0, slave_addr, MAX5980_REG_POWER_PUSH, 1, &reg_val);
+		reg_val = 1<<(phyPort%4+4);
+//		cs_printf("reg_val is 0x%x\n",reg_val);
+		ret = cs_plat_i2c_write(context,0,0,slave_addr,MAX5980_REG_POWER_PUSH, 1,&reg_val);
+	}
+	else
+	{
+		cs_plat_i2c_read(context, 0, 0, slave_addr, MAX5980_REG_DET_CLASS, 1, &reg_val);
+		reg_val = (1<<(phyPort%4+4))|(1<<(phyPort%4));
+//		cs_printf("reg_val is 0x%x\n",reg_val);
+		ret = cs_plat_i2c_write(context,0,0,slave_addr,MAX5980_REG_DET_CLASS, 1,&reg_val);
+	}
+	if(CS_OK == ret)
+	{
+		GwdPseEnable[phyPort] = mode;
+	}
+	return CS_OK;
+}
+
+cs_uint32 gwd_pse_enable_get(cs_uint32 port, cs_uint8* mode)
+{
+	cs_uint32 phyPort = port - 1;
+	if((port<1) || (port >uni_port_num))
+		return CS_ERROR;
+	if(NULL == mode)
+	{
+		return CS_ERROR;
+	}
+	*mode = GwdPseEnable[phyPort];
+	return CS_OK;
+}
+
+cs_uint32 gwd_pse_mode_set(cs_uint32 port, cs_uint8 mode)
+{
+    cs_callback_context_t    	context;
+	cs_uint8 port_mode = 0, ret = 0;
+	cs_uint8 slave_addr = 0;
+	cs_uint8 phyPort = port - 1;
+	if((port<1) || (port >uni_port_num))
+	{
+		return CS_ERROR;
+	}
+	if(mode >PSE_AUTO)
+	{
+		cs_printf("mode error (%d)\n",mode);
 		return CS_ERROR;
 	}
 	slave_addr = phyPort < 4 ?GWD_PSE1_ADDR:GWD_PSE2_ADDR;
 	cs_plat_i2c_read(context, 0, 0, slave_addr, MAX5980_REG_MODE, 1, &port_mode);
-	port_mode &= ~(0x11 << (phyPort % 4));
-	port_mode |= mode << (phyPort % 4);
+
+	port_mode &= ~(0x3 << ((phyPort % 4)*2));
+
+	port_mode |= mode << ((phyPort % 4)*2);
 	ret = cs_plat_i2c_write(context,0,0,slave_addr,MAX5980_REG_MODE, 1,&port_mode);
 	if(CS_OK != ret)
 	{
@@ -508,7 +570,7 @@ cs_uint32 gwd_pse_mode_get(cs_uint32 port, cs_uint8* mode)
 	return CS_OK;
 }
 
-cs_uint32 gwd_pse_mode_show(cs_uint32 port, cs_uint8 pse_mode)
+cs_uint32 gwd_pse_info_show(cs_uint32 port, cs_uint8 pse_mode)
 {
 	cs_uint8 ret = 0;
 	cs_uint8 mode[15] = {0};
@@ -534,9 +596,18 @@ cs_uint32 gwd_pse_mode_show(cs_uint32 port, cs_uint8 pse_mode)
             strncpy(mode, "UNKNOW", sizeof(mode));
             break;
 	}
-	cs_printf("Port %d Mode %s \n",port, pse_mode);
+	cs_printf("Port %d Mode %s \n",port, mode);
 
 	return ret;
+}
+void gwd_pse_reset()
+{
+    cs_callback_context_t    	context;
+	cs_uint8 max_reset = 1<<4;
+
+	cs_plat_i2c_write(context,0,0,GWD_PSE1_ADDR,MAX5980_REG_GLOBAL, 1,&max_reset);
+	cs_plat_i2c_write(context,0,0,GWD_PSE2_ADDR,MAX5980_REG_GLOBAL, 1,&max_reset);
+	return;
 }
 extern cs_status cs_i2c_speed_set(cs_uint8 slave_addr, cs_uint32 freq_khz);
 void gwd_pse_init()
@@ -550,6 +621,9 @@ void gwd_pse_init()
     cs_i2c_speed_set(GWD_PSE1_ADDR,70);
     cs_i2c_speed_set(GWD_PSE2_ADDR,70);
     /* */
+    gwd_pse_reset();
+    cyg_thread_delay(100);
+
     cs_plat_i2c_read(context, 0, 0, GWD_PSE1_ADDR, MAX5980_REG_ID, 1, &reg_val1);
     cs_plat_i2c_read(context, 0, 0, GWD_PSE2_ADDR, MAX5980_REG_ID, 1, &reg_val2);
     if((MAX5980_ID_LEGAL != reg_val1)||(MAX5980_ID_LEGAL != reg_val2))
@@ -562,6 +636,7 @@ void gwd_pse_init()
     {
     	ret += gwd_pse_mode_set(i, PSE_AUTO);
     }
+    memset(GwdPseEnable,1,sizeof(GwdPseEnable));
     if(CS_OK == ret)
     	cs_printf("GWD PSE init successful!\n");
     else
