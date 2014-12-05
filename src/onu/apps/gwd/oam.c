@@ -5142,9 +5142,11 @@ int poe_control_set(struct cli_def *cli, char *command, char *argv[], int argc)
 	return CLI_OK;
 }
 #endif
+//#define RPU_MODULE_PSE  MODULE_YES
 #if(RPU_MODULE_PSE == MODULE_YES)
 extern cs_uint32 gwd_pse_enable_set(cs_uint32 port, cs_uint8 mode);
 extern cs_uint32 gwd_pse_enable_get(cs_uint32 port, cs_uint8* mode);
+extern cs_uint32 gwd_pse_info_show(cs_uint32 port);
 int cmd_pse_mode(struct cli_def *cli, char *command, char *argv[], int argc)
 {
 	if(CLI_HELP_REQUESTED)
@@ -5241,6 +5243,35 @@ int cmd_pse_power(struct cli_def *cli, char *command, char *argv[], int argc)
 {
 	return CLI_OK;
 }
+int cmd_pse_info(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	if(CLI_HELP_REQUESTED)
+	{
+		switch(argc)
+		{
+			case 1:
+				cli_arg_help(cli, 0,
+				"<cr>", "just enter to execuse command. (show pse info)",
+				NULL);
+			default:
+				return cli_arg_help(cli, argc > 1, NULL);
+		}
+	}
+	cs_uint32 port = 0;
+	if(0 == argc)
+	{
+		for(port = 1;port <= UNI_PORT_MAX;port ++)
+		{
+			gwd_pse_info_show(port);
+		}
+	}
+	else
+	{
+		cli_print(cli,"Invalid put!!\n");
+		return CLI_ERROR;
+	}
+	return CLI_OK;
+}
 #endif
 #if 1
 extern int cmd_laser(struct cli_def *cli, char *command, char *argv[], int argc);
@@ -5317,6 +5348,7 @@ void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 		pse = cli_register_command(cmd_root, 0,	"pse", NULL, PRIVILEGE_PRIVILEGED, MODE_EXEC, "pse");
 		cli_register_command(cmd_root, pse,	"mode", cmd_pse_mode, PRIVILEGE_PRIVILEGED, MODE_EXEC, "pse mode");
 		cli_register_command(cmd_root, pse,	"power", cmd_pse_power, PRIVILEGE_PRIVILEGED, MODE_EXEC, "pse power get");
+		cli_register_command(cmd_root, pse,	"info", cmd_pse_info, PRIVILEGE_PRIVILEGED, MODE_EXEC, "pse information");
 #endif
 		#endif
 	
