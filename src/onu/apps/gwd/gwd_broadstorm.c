@@ -819,17 +819,7 @@ extern cs_status port_bc_storm_no_limit(cs_port_id_t port)
 	rate.enable = 0;
 	rate.rate = 0;
 	ret = port_storm_limit_set(port, mode, type, rate);
-	if(CS_E_OK != ret)
-	{
-		gw_printf("Broadcast storm speed limit failure\n");
-		gw_printf("port_storm_limit_set failed\n");
-	}
-	else
-	{
-		#if 1
-		cs_printf("port :%d,broadcast packet no limit success\n", port);
-		#endif
-	}
+
 	return ret;
 }
 
@@ -845,7 +835,16 @@ extern cs_status all_port_bc_storm_no_limit(void)
 	for(i=0;i<uni_num;i++)
 	{
 		port = CS_UNI_PORT_ID1 + i;
-		port_bc_storm_no_limit(port);
+		ret += port_bc_storm_no_limit(port);
+	}
+	if(CS_E_OK == ret)
+	{
+		cs_printf("Init broadcast no limit success\n", port);
+	}
+	else
+	{
+		cs_printf("Broadcast storm speed limit failure\n");
+		cs_printf("port_storm_limit_set failed\n");
 	}
 	return ret;
 }
