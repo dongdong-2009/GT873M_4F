@@ -5147,6 +5147,7 @@ int poe_control_set(struct cli_def *cli, char *command, char *argv[], int argc)
 extern cs_uint32 gwd_pse_enable_set(cs_uint32 port, cs_uint8 mode);
 extern cs_uint32 gwd_pse_enable_get(cs_uint32 port, cs_uint8* mode);
 extern cs_uint32 gwd_pse_info_show(cs_uint32 port);
+extern cs_uint32 gwd_pse_power_get(cs_uint32 port,double *vol,double *cur,double *pow);
 int cmd_pse_mode(struct cli_def *cli, char *command, char *argv[], int argc)
 {
 	if(CLI_HELP_REQUESTED)
@@ -5184,7 +5185,7 @@ int cmd_pse_mode(struct cli_def *cli, char *command, char *argv[], int argc)
 //			cs_printf("mode is %d\n",mode);
 			if(CS_OK == ret)
 			{
-				cli_print(cli,"Port PSE is %s\n",mode?"enabled":"disabled");;
+				cli_print(cli,"Port PSE is %s\r\n",mode?"enabled":"disabled");;
 			}
 			else
 			{
@@ -5241,6 +5242,36 @@ int cmd_pse_mode(struct cli_def *cli, char *command, char *argv[], int argc)
 }
 int cmd_pse_power(struct cli_def *cli, char *command, char *argv[], int argc)
 {
+	if(CLI_HELP_REQUESTED)
+	{
+		switch(argc)
+		{
+			case 1:
+				cli_arg_help(cli, 0,
+				"<cr>", "just enter to execuse command. (show pse info)",
+				NULL);
+			default:
+				return cli_arg_help(cli, argc > 1, NULL);
+		}
+	}
+	cs_uint32 port = 0;
+	if(0 == argc)
+	{
+		double vol = 0, cur = 0, pow = 0;
+		for(port = 1;port <= UNI_PORT_MAX;port ++)
+		{
+			gwd_pse_power_get(port,&vol,&cur,&pow);
+			cli_print(cli,"\nPort %d :\r\n",port);
+			cli_print(cli,"VOLTAGE\t %4.2f V\r\n",vol);
+			cli_print(cli,"CURRENT\t %4.2f mA\r\n",cur);
+			cli_print(cli,"POWER\t %4.2f mW\r\n",pow);
+		}
+	}
+	else
+	{
+		cli_print(cli,"Invalid put!!\n");
+		return CLI_ERROR;
+	}
 	return CLI_OK;
 }
 int cmd_pse_info(struct cli_def *cli, char *command, char *argv[], int argc)

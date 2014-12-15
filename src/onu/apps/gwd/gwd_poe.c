@@ -446,6 +446,8 @@ void gwd_poe_init()
 #define MAX5980_REG_POWER_PUSH		0x19
 #define MAX5980_REG_GLOBAL			0x1A
 #define MAX5980_REG_ID				0x1B
+#define MAX5980_REG_CURRENT_BASE	0x30
+#define MAX5980_REG_VOLTAGE_BASE	0x32
 
 
 #define MAX5980_ID_LEGAL		0xd0
@@ -644,7 +646,54 @@ cs_uint32 gwd_pse_power_state_get(cs_uint32 port, cs_uint8* pg)
 	}
 	return CS_OK;
 }
+cs_uint32 gwd_pse_vlotage_get(cs_uint32 port, double* voltage)
+{
+	cs_callback_context_t    	context;
+	cs_uint32 phyPort = port - 1;
+	cs_uint8 slave_addr = 0, reg_addr = 0;
+	cs_uint8 reg_val1 = 0, reg_val2 = 0, ret = 0;
+	cs_uint8 reg_val[5]={0};
 
+	if((port<1) || (port >uni_port_num))
+		return CS_ERROR;
+	if(NULL == voltage)
+	{
+		return CS_ERROR;
+	}
+	slave_addr = phyPort < MAX5980_PORT_MAX ?GWD_PSE1_ADDR:GWD_PSE2_ADDR;
+	reg_addr = MAX5980_REG_VOLTAGE_BASE + phyPort%MAX5980_PORT_MAX*MAX5980_PORT_MAX;
+	ret = cs_plat_i2c_read(context, 0, 0, slave_addr, reg_addr, 1, &reg_val1);
+	ret = cs_plat_i2c_read(context, 0, 0, slave_addr, reg_addr+1, 1, &reg_val2);
+	sprintf(reg_val,"0x%x%x",reg_val2,reg_val1);
+	*voltage = iros_strtol(reg_val) *5835/1000000.0;
+
+//	cs_printf("voltagevv is %d\n",val);
+	return CS_OK;
+}
+cs_uint32 gwd_pse_current_get(cs_uint32 port, double* current)
+{
+	cs_callback_context_t    	context;
+	cs_uint32 phyPort = port - 1;
+	cs_uint8 slave_addr = 0, reg_addr = 0;
+	cs_uint8 reg_val1 = 0, reg_val2 = 0, ret = 0;
+	cs_uint8 reg_val[5]={0};
+
+	if((port<1) || (port >uni_port_num))
+		return CS_ERROR;
+	if(NULL == current)
+	{
+		return CS_ERROR;
+	}
+	slave_addr = phyPort < MAX5980_PORT_MAX ?GWD_PSE1_ADDR:GWD_PSE2_ADDR;
+	reg_addr = MAX5980_REG_CURRENT_BASE + phyPort%MAX5980_PORT_MAX*MAX5980_PORT_MAX;
+	ret = cs_plat_i2c_read(context, 0, 0, slave_addr, reg_addr, 1, &reg_val1);
+	ret = cs_plat_i2c_read(context, 0, 0, slave_addr, reg_addr+1, 1, &reg_val2);
+	sprintf(reg_val,"0x%x%x",reg_val2,reg_val1);
+	*current = iros_strtol(reg_val) *122.07/7.5/1000.0;
+//	cs_printf("voltagevv is %d\n",val);
+	return CS_OK;
+
+}
 cs_uint32 gwd_pse_info_show(cs_uint32 port)
 {
 	cs_uint8 mode[15] = {0},det_mode[15] = {0},class_mode[15]={0};
@@ -733,6 +782,21 @@ cs_uint32 gwd_pse_info_show(cs_uint32 port)
 	cs_printf("POWER STATE\t:%s \n", pg? "UP":"DOWN");
 	return CS_OK;
 }
+
+cs_uint32 gwd_pse_power_get(cs_uint32 port,double *vol,double *cur,double *pow)
+{
+//	cs_uint32 voltage = 0;
+//	cs_uint8 ret = 0;
+
+	gwd_pse_vlotage_get(port,vol);
+	gwd_pse_current_get(port,cur);
+	*pow = (*vol)*(*cur);
+
+	return CS_OK;
+
+}
+
+
 void gwd_pse_reset()
 {
     cs_callback_context_t    	context;
