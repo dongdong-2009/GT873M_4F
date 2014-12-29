@@ -1208,11 +1208,11 @@ static int GwOamInformationRequest(GWTT_OAM_MESSAGE_NODE *pRequest )
 			ptr += ResLen;
 
 			/*Description*/
-			ResLen = strlen("GT811-CTC-Ready");
+			ResLen = strlen("CTC-ONU-Ready");
 			if (ResLen > 128)
 				ResLen = 128;
 			*ptr++ = ResLen;
-			memcpy(ptr, "GT811-CTC-Ready", ResLen);
+			memcpy(ptr, "CTC-ONU-Ready", ResLen);
 			ptr += ResLen;
 
 			/*Location*/
