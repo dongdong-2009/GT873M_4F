@@ -2870,8 +2870,10 @@ cs_uint32 ctc_oam_onu_classification_get(
 {
     oam_ctc_onu_classification_t *pData = 
         (oam_ctc_onu_classification_t*)pOut;
+	#if 0
     oam_ctc_onu_classification_t * pInData = 
         (oam_ctc_onu_classification_t *) pRecV;
+	#endif
     cs_status ret = CS_E_OK;
     cs_uint32 num = 0, len = 0; 
     cs_uint32 i = 0, j = 0;
@@ -2888,12 +2890,15 @@ cs_uint32 ctc_oam_onu_classification_get(
         OAM_ORG_LOG("port index is invalid \n");
         goto ERROR_EXIT;
     } 
-
+	
+	#if 0
+	//由于olt 没有完全按照ctc协议，故不做action 检查(olt 所有的查询报文，只有branch 和 leaf,后面没有其他数据)
     if(pInData->action != CTC_CLASS_RULES_ACTION_LST){
         OAM_ORG_LOG("not support action %d \n",pData->action);
         goto ERROR_EXIT;
     }
-
+	#endif
+	
     ret = ctc_oam_onu_classification_get_adapt(index.idxValue,&num,pData->data);
 
     if(ret != CS_E_OK){
@@ -3030,8 +3035,10 @@ cs_uint32 ctc_oam_onu_mcvlan_get(
 {
     oam_ctc_onu_mc_vlan_t *pData = 
         (oam_ctc_onu_mc_vlan_t*)pOut;
+	#if 0
     oam_ctc_onu_mc_vlan_t * pInData = 
         (oam_ctc_onu_mc_vlan_t*) pRecV;
+	#endif
     cs_status ret = CS_E_OK;
     cs_uint16 mcVlan[CTC_MC_VLAN_MAX];
     cs_uint16 num = 0, i = 0;
@@ -3042,11 +3049,14 @@ cs_uint32 ctc_oam_onu_mcvlan_get(
         goto ERROR_EXIT;
     } 
 
+	#if 0
+	//由于olt 没有完全按照ctc协议，故不做action 检查(olt 所有的查询报文，只有branch 和 leaf,后面没有其他数据)
     if(pInData->vlanOper != CTC_MC_VLAN_OPR_LST){
         OAM_ORG_LOG("Unknow oper = %d \n",pInData->vlanOper);
         goto ERROR_EXIT;
     }
-
+	#endif
+	
     ret = ctc_oam_onu_mcvlan_get_adapt(index.idxValue,&num,mcVlan);
 
     if(ret != CS_E_OK ){
