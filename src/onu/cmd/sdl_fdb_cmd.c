@@ -245,7 +245,7 @@ void __show_fdb_sw_table(void)
     diag_printf("index   mac_address        vid   port type \n");
     
     for (index = 0; index < __fdb_static_entry_num; index++) {
-        diag_printf(" %2d   %2x_%2x_%2x_%2x_%2x_%2x %6d %2d %2d  \n", index,
+        diag_printf(" %2d   %02x%02x.%02x%02x.%02x%02x %8d %6d %6d  \n", index,
             __fdb_static_entry[index].mac.addr[0], 
             __fdb_static_entry[index].mac.addr[1], 
             __fdb_static_entry[index].mac.addr[2], 
@@ -920,7 +920,87 @@ int fdb_static_list_del(char *mac, int vlan_id)
 end:
 		return ret;   
 }
+extern int fdb_static_list_tlv_info_get(int *len, char **value, int *free_need)
+{
+	int ret = CS_E_OK;
+//    cs_uint16  ii = 0;
 
+	//入口规则检查
+	if(NULL == len)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		ret=-1;
+	}
+	else
+	{
+		*len = sizeof(cs_sdl_fdb_entry_t)*__fdb_static_entry_num;
+	}
+	if(NULL == value)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		ret=-1;
+	}
+	else
+	{
+//		char *static_mac_entry = NULL,*p = NULL;
+//		static_mac_entry = (char *)iros_malloc(IROS_MID_APP, sizeof(cs_sdl_fdb_entry_t)*__fdb_static_entry_num);
+//		p = static_mac_entry;
+//		for(ii = 0; ii <(__fdb_static_entry_num ) ;ii++)
+//		{
+//
+//			memcpy(p, __fdb_static_entry[ii].port, sizeof(cs_sdl_fdb_entry_t));
+//			p += sizeof(cs_sdl_fdb_entry_t);
+//		}
+		*value = (char *)&__fdb_static_entry[0];
+	}
+	if(NULL == free_need)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		ret=-1;
+	}
+	else
+	{
+		*free_need = 0;
+	}
+	return ret;
+
+}
+extern int fdb_static_list_tlv_info_handle(int length,char *value,int opcode)
+{
+    cs_uint16  ii = 0;
+	int ret = CS_E_OK;
+	cs_callback_context_t     context;
+
+	if(NULL == value)
+	{
+		return -1;
+	}
+	if(length > sizeof(cs_sdl_fdb_entry_t)*64)
+	{
+		return -1;
+	}
+	if(DATA_SHOW != opcode)
+	{
+		memcpy(&__fdb_static_entry[0],value,length);
+		__fdb_static_entry_num = length/sizeof(cs_sdl_fdb_entry_t);
+		for(ii = 0; ii <(__fdb_static_entry_num ) ;ii++)
+		{
+			ret = epon_request_onu_fdb_entry_add(context, 0, 0, &__fdb_static_entry[ii]);
+	        if (ret) {
+	            diag_printf("epon_request_onu_fdb_static_entry_add failed! rc :%d\n",ret);
+	        }
+	        cyg_thread_delay(10);
+		}
+	}
+	if(DATA_SHOW == opcode)
+	{
+		__show_fdb_sw_table();
+	}
+	return 0;
+}
 
 #if 1
 sal_cmd_result_t fdb_cmd_add(int argc, char **argv)

@@ -238,6 +238,7 @@ enum data_type
 #if (RPU_MODULE_POE == MODULE_YES)
 	POE_MODULE =8,
 #endif
+	STATIC_MAC = 9,
 	TYPE_NUM
 };
 #endif
