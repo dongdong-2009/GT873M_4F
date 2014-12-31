@@ -3393,7 +3393,64 @@ int fdb_aging_get(cs_uint32 *timer)
 
     return ret;
 }
-
+extern cs_uint32   g_fdb_aging_time;
+extern int gwd_atu_age_tlv_info_get(int *len, char **value, int *free_need)
+{
+	int ret = 0;
+	//入口规则检查
+	if(NULL == len)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		ret=-1;
+	}
+	else
+	{
+		*len = sizeof(g_fdb_aging_time);
+	}
+	if(NULL == value)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		ret=-1;
+	}
+	else
+	{
+		*value = (char *)&g_fdb_aging_time;
+	}
+	if(NULL == free_need)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		ret=-1;
+	}
+	else
+	{
+		*free_need = 0;
+	}
+	return ret;
+}
+extern int gwd_atu_age_tlv_info_handle(int length,char *value,int opcode)
+{
+	if(NULL == value)
+	{
+		return -1;
+	}
+	if(length!=sizeof(g_fdb_aging_time))
+	{
+		return -1;
+	}
+	if(DATA_SHOW != opcode)
+	{
+		memcpy(&g_fdb_aging_time,value,sizeof(g_fdb_aging_time));
+		fdb_aging_set(g_fdb_aging_time);
+	}
+	if(DATA_SHOW == opcode)
+	{
+		cs_printf("Atu Aging Time : %d \r\n",g_fdb_aging_time);
+	}
+	return 0;
+}
 int cmd_oam_atu_age(struct cli_def * cli, char *command, char *argv[], int argc)
 {
 	int ret = CS_E_OK;

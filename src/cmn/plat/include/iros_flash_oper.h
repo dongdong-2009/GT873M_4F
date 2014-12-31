@@ -239,6 +239,7 @@ enum data_type
 	POE_MODULE =8,
 #endif
 	STATIC_MAC = 9,
+	ATU_AGING = 10,
 	TYPE_NUM
 };
 #endif
