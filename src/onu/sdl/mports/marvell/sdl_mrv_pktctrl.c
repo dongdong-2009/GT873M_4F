@@ -728,7 +728,34 @@ static cs_status __l2_pkt_rate_set(
       
     return ret;
 }
+/*
+static cs_status __l2_sp_pkt_rate_set(
+    CS_IN cs_sdl_queue_t            queue,
+    CS_IN cs_uint32                 pkt_s
+)
+{
+    cs_status               ret = CS_E_OK;
+    cs_aal_rate_limit_msk_t rl_msk;
+    cs_aal_rate_limit_t     rate_limit;
 
+    memset(&rate_limit, 0, sizeof(cs_aal_rate_limit_t));
+
+    rl_msk.u = 0;
+
+    rl_msk.s.enable = 1;
+    rl_msk.s.rate   = 1;
+    rl_msk.s.cbs    = 1;
+    rl_msk.s.rlmode = 1;
+    rate_limit.rate = pkt_s;
+    rate_limit.ctrl.s.enable = (pkt_s == 0)? 0: 1;
+    rate_limit.ctrl.s.rlmode = AAL_RATE_LIMIT_MODE_PPS;
+    rate_limit.cbs = 50;
+
+    ret = aal_flow_rate_limit_set(__FLOW_ID_PRI(queue)-AAL_RATE_LIMIT_FLOW_0, &rl_msk, &rate_limit);
+
+    return ret;
+}
+*/
 static cs_status __l2_ds_pkt_pri_set(    
     CS_IN cs_pkt_type_t             pkt_type,
     CS_IN cs_sdl_queue_t            queue
@@ -1035,10 +1062,12 @@ cs_status epon_request_onu_spec_pkt_dst_set(
         if(state == DST_CPU)
         {
             ret = __l2_ds_pkt_pri_set( pkt_type, g_ds_pkt_queue[pkt_type]);    
+ //           ret = __l2_sp_pkt_rate_set(pkt_type, 50);
         }
         else
         {
             ret = __l2_ds_pkt_def_set( pkt_type);
+//            ret = __l2_sp_pkt_rate_set(pkt_type, 0);
         }
     }
               

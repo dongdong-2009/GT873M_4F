@@ -5429,7 +5429,7 @@ void arp_down_into_cpu_limit_proc(void *data)
 	if(GMP_counter > 20)
 	{
 		oper_status_igmp++;
-		if(oper_status_igmp > 10)
+		if(oper_status_igmp > 5)
 		{
 //			cs_printf("mc_ctl_enable_flag is %d\n",mc_ctl_enable_flag);
 			oper_status_igmp = 0;
