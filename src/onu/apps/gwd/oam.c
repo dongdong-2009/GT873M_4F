@@ -3405,7 +3405,7 @@ int cmd_oam_atu_age(struct cli_def * cli, char *command, char *argv[], int argc)
 		{
 			case 1:
 				return cli_arg_help(cli, 0,
-					"<0-600>", "l2 age time unit sec, 0: disable aging", NULL);
+					"<0-300>", "l2 age time unit sec, 0: disable aging", NULL);
 
 			default:
 				return cli_arg_help(cli, argc > 1, NULL  );
@@ -3415,7 +3415,7 @@ int cmd_oam_atu_age(struct cli_def * cli, char *command, char *argv[], int argc)
 	if(argc == 1)
 	{
 		age = atoi(argv[0]);
-		if(age < 0 ||age > 600)
+		if(age < 0 ||age > 300)
 			{
 				cli_print(cli,"set aging time error \n");
 				return CLI_ERROR;
