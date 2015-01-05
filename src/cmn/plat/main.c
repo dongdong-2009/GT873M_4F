@@ -199,29 +199,7 @@ cs_uint32 ctc_trunk_vlan_ds_untag_enable_get()
 {
 	return g_ctc_vlan_trunk_ds_untag_enable;
 }
-#if(RPU_MODULE_PSE == MODULE_YES)
-extern cs_status cs_plat_i2c_write (
-    	CS_IN   cs_callback_context_t    	context,
-    	CS_IN   cs_dev_id_t              	device,
-    	CS_IN   cs_llid_t                	llidport,
-    	CS_IN   cs_uint8                 	slave_addr,
-    	CS_IN   cs_uint8                 	slave_offset,
-    	CS_IN   cs_uint32                	len,
-    	CS_IN   cs_uint8                 	*data);
-extern cs_status cs_i2c_speed_set(cs_uint8 slave_addr, cs_uint32 freq_khz);
-void pse_init()
-{
-    cs_uint8 data = 0xff;
-    /* Init PSE speed */
-    cs_i2c_speed_set(0x20,70);
-    cs_i2c_speed_set(0x21,70);
-    cs_i2c_speed_set(0x22,70);
-    cs_i2c_speed_set(0x23,70);
-    cs_callback_context_t    	context;
-	cs_plat_i2c_write(context,0,0,iros_strtol("0x21"),iros_strtol("0x12"), 1,(unsigned char *)&data);
-	return;
-}
-#endif
+
 extern void storm_rate_init();
 
 void plat_init(void)
@@ -273,10 +251,6 @@ void plat_init(void)
 
 #if (PRODUCT_CLASS == PRODUCTS_GT812C)
     switch_init();
-#endif
-
-#if(RPU_MODULE_PSE == MODULE_YES)
-    pse_init();
 #endif
 }
 void mbox_init()
@@ -355,7 +329,7 @@ void cyg_user_start(void)
 #ifdef HAVE_UART_TEST
      uart_rx_thread_create();
 #endif
-    shell_init();
+
 #ifdef HAVE_IP_STACK
     init_ip_service();
 #endif
@@ -387,10 +361,14 @@ void cyg_user_start(void)
 
     cs_init_seq_done(INIT_STEP_SERVICE);
 
-	#if (RPU_MODULE_POE == MODULE_YES)
+#if (RPU_MODULE_POE == MODULE_YES)
 	extern void gwd_poe_init();
 	gwd_poe_init();
-	#endif
+#endif
+#if(RPU_MODULE_PSE == MODULE_YES)
+	extern void gwd_pse_init();
+	gwd_pse_init();
+#endif
 
 	#if 1
 	start_up_config_syn_to_running_config();
@@ -426,6 +404,7 @@ extern void gwd_portstats_thread(cyg_addrword_t p);
 	arp_down_into_cpu_monitor();
 	#endif
     cs_printf("Init system done, time %ld\n",cs_current_time());
+    shell_init();
 
     cs_circle_timer_add(1000 , cs_cpuload_warning , NULL);
 
