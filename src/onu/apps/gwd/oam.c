@@ -20,6 +20,7 @@
 #include "gwd_poe.h"
 #include "onu_uax.h"
 #include "sdl_port.h"
+#include "gw_access_identifier.h"
 
 #if (GE_RATE_LIMIT == MODULE_YES)
 #include "../../sdl/cmn/cmn/sdl.h"
@@ -1450,6 +1451,54 @@ static int GwOamInformationRequest(GWTT_OAM_MESSAGE_NODE *pRequest )
 
     case ACCESS_IDENTIFIER:
     {
+    	unsigned short pReqlen = 0;
+    	unsigned int ret = ERROR;
+    	access_identifier_admin_t req_AdminInfoHead;
+    	access_identifier_admin_t *response_AdminInfoHead;
+
+    	ptr = Response;
+    	pReq= pRequest->pPayLoad;
+    	pReqlen = pRequest->RevPktLen;
+    	ResLen = pReqlen;
+    	response_AdminInfoHead = (access_identifier_admin_t*)Response;
+    	memcpy(Response,pRequest->pPayLoad,pReqlen);
+    	memset(&req_AdminInfoHead,0,sizeof(access_identifier_admin_t));
+    	memcpy(&req_AdminInfoHead,pReq,sizeof(access_identifier_admin_t));
+		if(1)
+		{
+			unsigned int i=0;
+			printf("local dhcp admin rec %d:\r\n",pRequest->RevPktLen);
+			printf("----------------------------------------------------------------------------------------------\r\n");
+			for(i=0;i<pRequest->RevPktLen ;i++)
+			{
+				if(i%16 == 0)
+					printf("\r\n");
+				printf("0x%02x ",pReq[i]);
+			}
+			printf("\r\n");
+			printf("----------------------------------------------------------------------------------------------\r\n");
+		}
+    	switch(req_AdminInfoHead.identifiermode)
+    	{
+    		case PPPOE_IDENTIFIER_MODE:
+    			response_AdminInfoHead->returnstatus=ACCESS_IDENT_SET_FAIL;
+    			break;
+    		case DHCP_IDENTIFIER_MODE:
+    			ret = Gwd_Func_Dhcp_relay_Oam_Admin_Process(pReq,pRequest->RevPktLen);
+    			if(ret != OK)
+    			{
+    				response_AdminInfoHead->returnstatus=ACCESS_IDENT_SET_FAIL;
+    			}
+    			else
+    			{
+    				response_AdminInfoHead->returnstatus=ACCESS_IDENT_SET_SUCCUSS;
+    			}
+    			response_AdminInfoHead->opcode=ACCESS_IDENTIFIER;
+    			break;
+    		default:
+    			response_AdminInfoHead->returnstatus=ACCESS_IDENT_SET_FAIL;
+    			break;
+    	}
 #if 0
         int iret;
         extern PASONU_flow_desc_t rxEthTaskfdHigh;

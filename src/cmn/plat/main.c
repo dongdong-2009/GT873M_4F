@@ -403,6 +403,10 @@ extern void gwd_portstats_thread(cyg_addrword_t p);
 	#if (ARP_DOWN_INTO_CPU_LIMIT_SUPPORT == MODULE_YES)
 	arp_down_into_cpu_monitor();
 	#endif
+	#if(RPU_MODULE_GW_DHCPR == MODULE_YES)
+	extern int Gwd_func_dhcp_pkt_process_init();
+	Gwd_func_dhcp_pkt_process_init();
+	#endif
     cs_printf("Init system done, time %ld\n",cs_current_time());
     shell_init();
 
