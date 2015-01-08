@@ -1464,19 +1464,19 @@ static int GwOamInformationRequest(GWTT_OAM_MESSAGE_NODE *pRequest )
     	memcpy(Response,pRequest->pPayLoad,pReqlen);
     	memset(&req_AdminInfoHead,0,sizeof(access_identifier_admin_t));
     	memcpy(&req_AdminInfoHead,pReq,sizeof(access_identifier_admin_t));
-		if(1)
+		if(0)
 		{
 			unsigned int i=0;
-			printf("local dhcp admin rec %d:\r\n",pRequest->RevPktLen);
-			printf("----------------------------------------------------------------------------------------------\r\n");
+			cs_printf("local dhcp admin rec %d:\r\n",pRequest->RevPktLen);
+			cs_printf("----------------------------------------------------------------------------------------------\r\n");
 			for(i=0;i<pRequest->RevPktLen ;i++)
 			{
 				if(i%16 == 0)
-					printf("\r\n");
-				printf("0x%02x ",pReq[i]);
+					cs_printf("\r\n");
+				cs_printf("0x%02x ",pReq[i]);
 			}
-			printf("\r\n");
-			printf("----------------------------------------------------------------------------------------------\r\n");
+			cs_printf("\r\n");
+			cs_printf("----------------------------------------------------------------------------------------------\r\n");
 		}
     	switch(req_AdminInfoHead.identifiermode)
     	{

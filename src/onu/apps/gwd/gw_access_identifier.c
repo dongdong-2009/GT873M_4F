@@ -15,6 +15,8 @@
 #include "mempool.h"
 #include "cs_module.h"
 #include "sdl_pktctrl.h"
+#include "sdl_vlan_util.h"
+#include "app_vlan.h"
 
 #ifdef RPU_MODULE_GW_DHCPR
 
@@ -382,27 +384,39 @@ unsigned int Gwd_Func_Dhcp_Proxy_Mode_Process(unsigned char*option82_data,unsign
 	*option82len =cumulative_len;
 	if(GW_LOG_LEVEL_DEBUG >= getGwlogLevel())
 	{
-		printf("local dhcp info:\r\n");
-		printf("----------------------------------------------------------------------------------------------\r\n");
+		cs_printf("local dhcp info:\r\n");
+		cs_printf("----------------------------------------------------------------------------------------------\r\n");
 		for(i=0;i<re_len ;i++)
 		{
 			if(i%16 == 0)
-				printf("\r\n");
-			printf("0x%02x ",option82_data[i]);
+				cs_printf("\r\n");
+			cs_printf("0x%02x ",option82_data[i]);
 		}
-		printf("\r\n");
+		cs_printf("\r\n");
 
 		for(i=0;i< local_option82_data.datalen;i++)
 		{
 			if(i%16 == 0)
-				printf("\r\n");
-			printf("0x%02x ",local_option82_data.dhcprelayidentifierinfo[i]);
+				cs_printf("\r\n");
+			cs_printf("0x%02x ",local_option82_data.dhcprelayidentifierinfo[i]);
 		}
-		printf("\r\n");
-		printf("----------------------------------------------------------------------------------------------\r\n");
+		cs_printf("\r\n");
+		cs_printf("----------------------------------------------------------------------------------------------\r\n");
 	}
 	gw_log(GW_LOG_LEVEL_DEBUG,"%s %d sendlen:%d\r\n",__func__,__LINE__,*option82len);
 	return OK;
+}
+
+int Gwd_dhcp_relay_enable(int mode)
+{
+	cs_callback_context_t     context;
+	unsigned int ret = CS_OK;
+	unsigned int state = (mode==1)?DST_CPU:DST_FE;
+
+	ret = epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_UP_STREAM,CS_PKT_DHCP,state);
+	ret += epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_DOWN_STREAM, CS_PKT_DHCP, state);
+
+	return ret;
 }
 
 unsigned int GwdDhcpRelayAdmnSet(unsigned char *data,unsigned int len,unsigned int mode)
@@ -410,6 +424,7 @@ unsigned int GwdDhcpRelayAdmnSet(unsigned char *data,unsigned int len,unsigned i
 	unsigned int ret =ERROR;
 	unsigned char *ptr = NULL;
 	unsigned int i =0;
+	unsigned int olddhcpmode=0;
 	dhcp_option82_data_info_t gw_option82info;
 	if((data == NULL) || (mode >= DHCP_RELAY_GWD_MAX))
 	{
@@ -423,6 +438,33 @@ unsigned int GwdDhcpRelayAdmnSet(unsigned char *data,unsigned int len,unsigned i
 		cs_printf("%s %d return error\r\n",__func__,__LINE__);
 		return ret;
 	}
+
+	ret=Gwd_Func_Dhcp_Proxy_Mode_get(&olddhcpmode);
+	FUNC_RETURN_VALUE_CHECK(ret)
+	{
+		cs_printf("%s %d return error\r\n",__func__,__LINE__);
+		return ret;
+	}
+	if((olddhcpmode != DHCP_RELAY_DISABLE) && (mode==DHCP_RELAY_DISABLE))
+	{
+	   if(Gwd_dhcp_relay_enable(0) != CS_OK)
+		{
+			cs_printf("set dhcp relay rule mode fail\n");
+			return ret;
+		}
+	}else if((olddhcpmode == DHCP_RELAY_DISABLE) && (mode != DHCP_RELAY_DISABLE))
+	{
+		   if(Gwd_dhcp_relay_enable(1) != CS_OK)
+			{
+			   cs_printf("set dhcp relay rule mode fail\n");
+				return ret;
+			}
+	}
+	else
+	{
+
+	}
+
 	ret = Gwd_Func_Dhcp_Proxy_Mode_set(mode);
 	FUNC_RETURN_VALUE_CHECK(ret)
 	{
@@ -435,26 +477,26 @@ unsigned int GwdDhcpRelayAdmnSet(unsigned char *data,unsigned int len,unsigned i
 		ptr = (unsigned char*)gw_option82info.dhcprelayidentifierinfo;
 		memcpy(ptr,data,len);
 		gw_option82info.datalen=len;
-		if(GW_LOG_LEVEL_DEBUG >= getGwlogLevel())
+		if(0)
 		{
-			printf("local dhcp admin %d:\r\n",len);
-			printf("----------------------------------------------------------------------------------------------\r\n");
+			cs_printf("local dhcp admin %d:\r\n",len);
+			cs_printf("----------------------------------------------------------------------------------------------\r\n");
 			for(i=0;i<len ;i++)
 			{
 				if(i%16 == 0)
-					printf("\r\n");
-				printf("0x%02x ",data[i]);
+					cs_printf("\r\n");
+				cs_printf("0x%02x ",data[i]);
 			}
-			printf("\r\n");
+			cs_printf("\r\n");
 
 			for(i=0;i< gw_option82info.datalen;i++)
 			{
 				if(i%16 == 0)
-					printf("\r\n");
-				printf("0x%02x ",ptr[i]);
+					cs_printf("\r\n");
+				cs_printf("0x%02x ",ptr[i]);
 			}
-			printf("\r\n");
-			printf("----------------------------------------------------------------------------------------------\r\n");
+			cs_printf("\r\n");
+			cs_printf("----------------------------------------------------------------------------------------------\r\n");
 		}
 		ret = Gwd_func_dhcp_local_option82_data_info_set(&gw_option82info);
 		FUNC_RETURN_VALUE_CHECK(ret)
@@ -507,7 +549,7 @@ unsigned int Gwd_Func_Dhcp_relay_Oam_Admin_Process(unsigned char *pReq,unsigned 
 }
 cs_status Gwd_func_dhcp_pkt_parser(cs_pkt_t *pPkt)
 {
-  int ret = CS_PKT_TYPE_NUM;
+  int ret = CS_E_ERROR;
   unsigned int dhcpheadlen=0;
   unsigned short ethertype = 0;
   unsigned short dhcp_server_port = 0;
@@ -520,8 +562,19 @@ cs_status Gwd_func_dhcp_pkt_parser(cs_pkt_t *pPkt)
   unsigned int dhcp_len = 0;
   dhcp_pkt = (unsigned char *)(pPkt->data + pPkt->offset);
   dhcp_len = pPkt->len;
-
 #endif
+
+	//报文如果不是ip 报文则返回错误
+	if(1 != pkt_ip_check(dhcp_pkt))
+	{
+		return ret;
+	}
+	//报文是否有vlan tag
+	if(0 == pkt_vlan_tag_check(dhcp_pkt, dhcp_len))
+	{
+		push_vlan(1, dhcp_pkt, dhcp_pkt, &dhcp_len);
+		pPkt->len = dhcp_len;
+	}
 
   gwd_dhcp_pkt_info_head_t* dhcphead = NULL;
 
@@ -551,12 +604,15 @@ cs_status Gwd_func_dhcp_pkt_parser(cs_pkt_t *pPkt)
 
   if((ethertype != ETH_TYPE_IP) || (dhcp_server_port != DhcpSvrPortNum) || (dhcp_client_port != DhcpCliPortNum))
   {
-	  gw_log(GW_LOG_LEVEL_DEBUG,"%s %d ethertype:%0x04x dhcp_server_port:%d dhcp_client_port:%d\r\n",ethertype,dhcp_server_port,dhcp_client_port);
+	  pop_vlan(dhcp_pkt, dhcp_pkt, &dhcp_len);
+		pPkt->len = dhcp_len;
+		gw_log(GW_LOG_LEVEL_DEBUG,"%s %d ethertype:%0x04x dhcp_server_port:%d dhcp_client_port:%d\r\n",__func__,__LINE__,ethertype,dhcp_server_port,dhcp_client_port);
 	  return ret;
   }
 
-cs_printf("DHCP come eeein!!!!!!!!!!!!!!!!!!!\n");
-  return CS_PKT_DHCP;
+  pPkt->pkt_type = CS_PKT_DHCP;
+
+  return CS_E_OK;
 }
 #if 0
 static unsigned int crc_table[256];
@@ -832,14 +888,11 @@ int Gwd_func_dhcp_pkt_process_init()
 		cs_printf("%s %d return error\r\n",__func__,__LINE__);
 		return ret;
 	}
-	cs_callback_context_t     context;
-	epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_UP_STREAM,CS_PKT_DHCP,DST_CPU);
-	epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_DOWN_STREAM, CS_PKT_DHCP, DST_CPU);
-
-	cs_printf("dhcp init successful-----------------\n");
 
 	return OK;
 }
+
+
 #if 0
 int cmd_onu_rcp_dhcp_relay_set(struct cli_def *cli, char *command, char *argv[], int argc)
 {
