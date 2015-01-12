@@ -279,6 +279,7 @@ int cmd_laser_set(struct cli_def *cli, char *command, char *argv[], int argc)
     return CLI_OK;
 }
 extern cs_boolean gwd_portstats_get_rate(cs_port_id_t portid, cs_uint64 *txrate, cs_uint64 * rxrate);
+#if 0
 int cmd_statistics_uni(struct cli_def *cli, char *command, char *argv[], int argc)
 {
      cs_port_id_t portid=0;
@@ -410,7 +411,7 @@ int cmd_statistics_uni(struct cli_def *cli, char *command, char *argv[], int arg
 		}
 		
 		cli_print(cli, "%-30s: %-20lld \t %-30s: %-20lld", "In bit rate", rxrate, "Out bit rate", txrate);
-		cli_print(cli, "%-30s: %-20lld \t %-30s: %-20lld", "In bytes", uni_stats.rxbyte_cnt, "Out bytes", uni_stats.rxbyte_cnt);
+		cli_print(cli, "%-30s: %-20lld \t %-30s: %-20lld", "In bytes", uni_stats.rxbyte_cnt, "Out bytes", uni_stats.txbyte_cnt);
 		cli_print(cli, "%-30s: %-20lld \t %-30s: %-20lld", "In total pkts", uni_stats.rxfrm_cnt, "Out total pkts", uni_stats.txfrm_cnt);
 		cli_print(cli, "%-30s: %-20lld \t %-30s: %-20lld", "In unicast pkts", uni_stats.rxucfrm_cnt, "Out unicast pkts", uni_stats.txucfrm_cnt);
 		cli_print(cli, "%-30s: %-20lld \t %-30s: %-20lld", "In multicast pkts", uni_stats.rxmcfrm_cnt, "Out multicast pkts", uni_stats.txmcfrm_cnt);
@@ -429,7 +430,7 @@ int cmd_statistics_uni(struct cli_def *cli, char *command, char *argv[], int arg
 
     return CLI_OK;
 }
-
+#endif
 #if 1
 extern int show_port_statistic(struct cli_def * cli, int portid)
 {
@@ -457,7 +458,7 @@ extern int show_port_statistic(struct cli_def * cli, int portid)
 	}
 	
 	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In bytes rate", rxrate, "Out bytes rate", txrate);
-	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In bytes", uni_stats.rxbyte_cnt, "Out bytes", uni_stats.rxbyte_cnt);
+	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In bytes", uni_stats.rxbyte_cnt, "Out bytes", uni_stats.txbyte_cnt);
 	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In total pkts", uni_stats.rxfrm_cnt, "Out total pkts", uni_stats.txfrm_cnt);
 	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In unicast pkts", uni_stats.rxucfrm_cnt, "Out unicast pkts", uni_stats.txucfrm_cnt);
 	cli_print(cli, "%-30s: %lld \t %-30s: %lld", "In multicast pkts", uni_stats.rxmcfrm_cnt, "Out multicast pkts", uni_stats.txmcfrm_cnt);
@@ -471,7 +472,7 @@ extern int show_port_statistic(struct cli_def * cli, int portid)
 }
 
 #endif
-
+#if 0
 int cmd_statistics_cpu(struct cli_def *cli, char *command, char *argv[], int argc)
 {
 	/*cs_uint32 zero_cnt = 0;*/
@@ -510,6 +511,45 @@ int cmd_statistics_cpu(struct cli_def *cli, char *command, char *argv[], int arg
 
     return CLI_OK;
 }
+#else
+int show_statistics_cpu(struct cli_def *cli)
+{
+	/*cs_uint32 zero_cnt = 0;*/
+
+	/*cli_print(cli,"%-30s: %d", "frm_tx_ok", zero_cnt);
+	cli_print(cli,"%-30s: %d", "frm_tx_olt", zero_cnt);
+	cli_print(cli,"%-30s: %d", "frm_tx_imstar", zero_cnt);
+	cli_print(cli,"%-30s: %d", "frm_tx_err", zero_cnt);
+	cli_print(cli,"%-30s: %d", "frm_rx_err", zero_cnt);
+	cli_print(cli,"%-30s: %d", "frm_rx_onu", zero_cnt);*/
+	cli_print(cli,"%-30s: %d", "frm_rx_eapol", app_pkt_get_counter(CS_PKT_8021X));
+	cli_print(cli,"%-30s: %d", "frm_rx_igmp", app_pkt_get_counter(CS_PKT_GMP));
+	cli_print(cli,"%-30s: %d", "frm_rx_imstar", app_pkt_get_counter(CS_PKT_MYMAC));
+	/*cli_print(cli,"%-30s: %d", "frm_rx_mgmt", app_pkt_get_counter(CS_PKT_MYMAC));
+	cli_print(cli,"%-30s: %d", "frm_rx_dropped", zero_cnt);
+	cli_print(cli,"%-30s: %d", "frm_rx_flushed", zero_cnt);*/
+	cli_print(cli,"%-30s: %d", "frm_rx_ip", app_pkt_get_counter(CS_PKT_IP));
+	cli_print(cli,"%-30s: %d", "frm_rx_arp",app_pkt_get_counter(CS_PKT_ARP));
+	cli_print(cli,"%-30s: %d", "frm_rx_dhcp",app_pkt_get_counter(CS_PKT_DHCP));
+	cli_print(cli,"%-30s: %d", "frm_rx_stp",app_pkt_get_counter(CS_PKT_BPDU));
+	/*cli_print(cli,"%-30s: %d", "frm_rx_onu_mii", zero_cnt);
+	cli_print(cli,"%-30s: %d", "frm_rx_imstar_mii", zero_cnt);
+	cli_print(cli,"%-30s: %d", "frm_rx_dropped_mii", zero_cnt);*/
+
+    return CLI_OK;
+}
+int app_stats_cpu_clr()
+{
+	app_pkt_clr_counter(CS_PKT_8021X);
+	app_pkt_clr_counter(CS_PKT_GMP);
+	app_pkt_clr_counter(CS_PKT_MYMAC);
+	app_pkt_clr_counter(CS_PKT_IP);
+	app_pkt_clr_counter(CS_PKT_ARP);
+	app_pkt_clr_counter(CS_PKT_DHCP);
+	app_pkt_clr_counter(CS_PKT_BPDU);
+	return 0;
+}
+#endif
 
 #if 1
 cs_status uni_port_check(cs_port_id_t port);
@@ -526,11 +566,11 @@ int cmd_statistics_uni_clear(struct cli_def *cli, char *command, char *argv[], i
         {
         	case 1:
 				cli_arg_help(cli, 0,
-	                "all", "all uni port",
+	                "all", "CPU & UNI Port",
 	                 NULL);
 		#ifdef HAVE_MPORTS
 	            return cli_arg_help(cli, 0,
-	                "<uni id>", "value in  (1, 4)",
+	                "<uni id>", "value in  (1, 8)",
 	                 NULL);
 		#else
 	            return cli_arg_help(cli, 0,
@@ -559,6 +599,7 @@ int cmd_statistics_uni_clear(struct cli_def *cli, char *command, char *argv[], i
 				port_id  = CS_UNI_PORT_ID1 + i;
 				app_stats_reset_uni(port_id);
 			}
+			app_stats_cpu_clr();
 		}
 		else
 		{
@@ -1518,8 +1559,8 @@ void user_register_command_entry(struct cli_command **cmd_root)
     struct cli_command *ping;
 	struct cli_command *ifconfig;
 #endif
-    struct cli_command *statistics, * statistics_cpu;
-    struct cli_command *portstats;
+//    struct cli_command *statistics, * statistics_cpu;
+//    struct cli_command *portstats;
 
     if(CS_E_OK != startup_config_read(CFG_ID_SWITCH_PORT_NUM, 1, &uni_max_port_num))
     {
@@ -1542,7 +1583,7 @@ cs_printf("uni_max_port_num is %d\r\n",uni_max_port_num);
 	#endif
 	
 #endif
-
+#if 0
     /*statistics*/
     statistics = cli_register_command(cmd_root, NULL, "statistics",  NULL,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "Show system statistics information");
     /*statistics_pon = cli_register_command(cmd_root, statistics, "pon",  cmd_statistics_pon,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "Show pon statistics");*/
@@ -1555,7 +1596,7 @@ cs_printf("uni_max_port_num is %d\r\n",uni_max_port_num);
 		cli_register_command(cmd_root, portstats, "clear", cmd_statistics_uni_clear, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "clear port statistics");
 
     statistics_cpu = cli_register_command(cmd_root, statistics, "cpu",  cmd_statistics_cpu,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "Show cpu statistics");
-
+#endif
 #if 0
     /*GPIO*/
     gpio = cli_register_command(cmd_root, NULL, "gpio",  NULL,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "GPIO configuration");

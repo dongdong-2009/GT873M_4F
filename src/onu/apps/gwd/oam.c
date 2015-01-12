@@ -3675,8 +3675,7 @@ int cmd_static_mac_del_fdb(struct cli_def *cli, char *command, char *argv[], int
 
 
 extern int show_port_statistic(struct cli_def * cli, int portid);
-
-
+extern int show_statistics_cpu(struct cli_def *cli);
 #define NUM_PORTS_MINIMUM_SYSYTEM 1
 int cmd_stat_port_show(struct cli_def *cli, char *command, char *argv[], int argc)
 {
@@ -3688,7 +3687,7 @@ int cmd_stat_port_show(struct cli_def *cli, char *command, char *argv[], int arg
 		{
 			case 1:
 				return cli_arg_help(cli, 0,
-					"<port_list>", "Input one fe port number", NULL );
+					"<0-8>", "0: CPU, 1-8: UNI", NULL );
 				break;
 
 			default:
@@ -3701,13 +3700,15 @@ int cmd_stat_port_show(struct cli_def *cli, char *command, char *argv[], int arg
 	{
 		portid = atoi(argv[0]);
 		
-		if(portid < NUM_PORTS_MINIMUM_SYSYTEM || portid >= NUM_PORTS_PER_SYSTEM)
+		if(portid < 0 || portid >= NUM_PORTS_PER_SYSTEM)
 		{
 			cli_print(cli,"input port error <1-4>\n");
 			return CLI_ERROR;
 		}
-		
-		show_port_statistic(cli, portid);
+		if(0 == portid)
+			show_statistics_cpu(cli);
+		else
+			show_port_statistic(cli, portid);
 	}
 	else
 	{		
@@ -5415,6 +5416,7 @@ extern int cmd_laser(struct cli_def *cli, char *command, char *argv[], int argc)
 #endif
 extern int mrv_reg_option(struct cli_def *cli, char *command, char *argv[], int argc);
 extern int pon_reg_option(struct cli_def *cli, char *command, char *argv[], int argc);
+extern int cmd_statistics_uni_clear(struct cli_def *cli, char *command, char *argv[], int argc);
 void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 {
 	extern void cli_reg_rcp_cmd(struct cli_command **cmd_root);
@@ -5467,6 +5469,7 @@ void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 		
 		stat = cli_register_command(cmd_root, NULL, "stat", NULL,  PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "stat command");
 		cli_register_command(cmd_root, stat, "port_show", cmd_stat_port_show, PRIVILEGE_UNPRIVILEGED, MODE_ANY, "port statistic show");
+		cli_register_command(cmd_root, stat, "port_flush", cmd_statistics_uni_clear, PRIVILEGE_UNPRIVILEGED, MODE_ANY, "port statistic flush");
 
 		vlan = cli_register_command(cmd_root, NULL, "vlan", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "vlan command");
 		cli_register_command(cmd_root, vlan, "port_isolate", cmd_oam_port_isolate, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "isolate command");
