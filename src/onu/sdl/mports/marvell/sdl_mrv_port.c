@@ -1027,6 +1027,7 @@ cs_status epon_request_onu_port_stats_get(
 		uni_stats->rxstatsfrm256_511_cnt = sts.Octets511;
 		uni_stats->rxstatsfrm512_1023_cnt = sts.Octets1023;
 		uni_stats->rxfrm_cnt = uni_stats->rxucfrm_cnt + uni_stats->rxmcfrm_cnt + uni_stats->rxbcfrm_cnt;
+		uni_stats->txfrm_cnt = uni_stats->txucfrm_cnt + uni_stats->txmcfrm_cnt + uni_stats->txbcfrm_cnt;
 
 		if(read_clear)
 			gstatsFlushPort(QD_DEV_PTR, hwport);
