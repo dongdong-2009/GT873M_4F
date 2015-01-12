@@ -150,6 +150,8 @@ cs_status app_pkt_parser(cs_pkt_t *pPkt)
 		  {
 
 //			  cs_printf("ARP into CPU overflow \n");
+			  pPkt->pkt_type = CS_PKT_TYPE_NUM;
+			  g_pkt_profile[pPkt->pkt_type].counter--;
 			  epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_UP_STREAM, CS_PKT_ARP, DST_FE);
 		  }
       }
@@ -159,6 +161,8 @@ cs_status app_pkt_parser(cs_pkt_t *pPkt)
 		  if(GMP_counter > 20)
 		 {
 //			  cs_printf("GMP into CPU overflow \n");
+			  pPkt->pkt_type = CS_PKT_TYPE_NUM;
+			  g_pkt_profile[pPkt->pkt_type].counter--;
 			  epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_UP_STREAM, CS_PKT_GMP, DST_FE);
 			  epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_DOWN_STREAM, CS_PKT_GMP, DST_FE);
 		 }
