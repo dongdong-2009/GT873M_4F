@@ -3035,7 +3035,7 @@ cs_uint32 ctc_oam_onu_mcvlan_get(
 {
     oam_ctc_onu_mc_vlan_t *pData = 
         (oam_ctc_onu_mc_vlan_t*)pOut;
-	#if 0
+	#if 1
     oam_ctc_onu_mc_vlan_t * pInData = 
         (oam_ctc_onu_mc_vlan_t*) pRecV;
 	#endif
@@ -3049,7 +3049,7 @@ cs_uint32 ctc_oam_onu_mcvlan_get(
         goto ERROR_EXIT;
     } 
 
-	#if 0
+	#if 1
 	//由于olt 没有完全按照ctc协议，故不做action 检查(olt 所有的查询报文，只有branch 和 leaf,后面没有其他数据)
     if(pInData->vlanOper != CTC_MC_VLAN_OPR_LST){
         OAM_ORG_LOG("Unknow oper = %d \n",pInData->vlanOper);
