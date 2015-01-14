@@ -822,7 +822,9 @@ cs_status epon_request_onu_port_status_set(
     		return CS_E_PARAM;
     }
 
+#if 0
     rt = gpcsSetForcedDpx(QD_DEV_PTR,hwport,fduplex);
+//    cs_printf("1rt is %d\n",rt);
     if (GT_OK != rt) {
          cs_printf("gpcsSetForcedDpx return %d\n", rt);
          return CS_E_ERROR;
@@ -830,12 +832,42 @@ cs_status epon_request_onu_port_status_set(
     if(GT_TRUE == fduplex)
     {
 		rt = gpcsSetDpxValue(QD_DEV_PTR,hwport,lduplex);
+//	    cs_printf("2rt is %d\n",rt);
 		if (GT_OK != rt) {
 				 cs_printf("gpcsSetDpxValue return %d\n", rt);
 				 return CS_E_ERROR;
 			 }
     }
     rt = gpcsSetForceSpeed(QD_DEV_PTR,hwport,lspeed);
+//    cs_printf("3rt is %d\n",rt);
+#else
+    if(GT_FALSE == fduplex)
+    {
+		/* Port mode is Auto */
+		if ((rt = gprtSetPortAutoMode(QD_DEV_PTR, hwport, SPEED_AUTO_DUPLEX_AUTO)) != GT_OK)
+		{
+			cs_printf( "gprtSetPortAutoMode return Failed(%lu,%d)\r\n", hwport,rt);
+
+		}
+		if ((rt = gprtPortAutoNegEnable(QD_DEV_PTR, hwport, GT_TRUE)) != GT_OK)
+		{
+			MSG_OUT(( "gprtPortAutoNegEnable return Failed(%lu,%d))\r\n", hwport,rt));
+
+		}
+		if ((rt = gprtPortRestartAutoNeg(QD_DEV_PTR, hwport)) != GT_OK)
+		{
+			MSG_OUT(( "gprtPortRestartAutoNeg return Failed(%lu,%d)\r\n", hwport,rt));
+		}
+    }
+    else
+    {
+    	rt = gprtPortAutoNegEnable(QD_DEV_PTR, hwport, GT_FALSE);
+    	rt = gpcsSetForceSpeed(QD_DEV_PTR,hwport,lspeed);
+    	rt = gpcsSetForcedDpx(QD_DEV_PTR,hwport,fduplex);
+    	rt = gpcsSetDpxValue(QD_DEV_PTR,hwport,lduplex);
+    }
+
+#endif
     if (GT_OK != rt) {
          cs_printf("gpcsSetForceSpeed return %d\n", rt);
          return CS_E_ERROR;

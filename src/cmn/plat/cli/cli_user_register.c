@@ -1568,7 +1568,7 @@ void user_register_command_entry(struct cli_command **cmd_root)
 
         uni_max_port_num = CS_UNI_NUMBER;
     }
-cs_printf("uni_max_port_num is %d\r\n",uni_max_port_num);
+//cs_printf("uni_max_port_num is %d\r\n",uni_max_port_num);
 #ifdef HAVE_IP_STACK
     /*ARP*/
     arp = cli_register_command(cmd_root, NULL, "arp",  NULL,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "ARP configuration");
