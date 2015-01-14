@@ -1451,6 +1451,7 @@ static int GwOamInformationRequest(GWTT_OAM_MESSAGE_NODE *pRequest )
 
     case ACCESS_IDENTIFIER:
     {
+#ifdef RPU_MODULE_GW_DHCPR
     	unsigned short pReqlen = 0;
     	unsigned int ret = ERROR;
     	access_identifier_admin_t req_AdminInfoHead;
@@ -1499,6 +1500,7 @@ static int GwOamInformationRequest(GWTT_OAM_MESSAGE_NODE *pRequest )
     			response_AdminInfoHead->returnstatus=ACCESS_IDENT_SET_FAIL;
     			break;
     	}
+#endif
 #if 0
         int iret;
         extern PASONU_flow_desc_t rxEthTaskfdHigh;
