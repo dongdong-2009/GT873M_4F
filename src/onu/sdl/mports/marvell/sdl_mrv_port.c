@@ -841,9 +841,9 @@ cs_status epon_request_onu_port_status_set(
     rt = gpcsSetForceSpeed(QD_DEV_PTR,hwport,lspeed);
 //    cs_printf("3rt is %d\n",rt);
 #else
-    cs_printf("fduplex is %d\n",fduplex);
-    cs_printf("lduplex is %d\n",lduplex);
-    cs_printf("lspeed is %d\n",lspeed);
+//    cs_printf("fduplex is %d\n",fduplex);
+//    cs_printf("lduplex is %d\n",lduplex);
+//    cs_printf("lspeed is %d\n",lspeed);
     if(GT_FALSE == fduplex)
     {
 //    	rt = gpcsSetForceSpeed(QD_DEV_PTR,hwport,lspeed);

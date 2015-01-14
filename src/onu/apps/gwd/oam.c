@@ -78,7 +78,7 @@
 #if (PRODUCT_CLASS == PRODUCTS_GT812C)
 	const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
 	const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
-	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 215;
+	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 15;
 	const unsigned char SYS_SOFTWARE_DEBUG_VERSION_NO = 1;
 
 	const unsigned char SYS_HARDWARE_MAJOR_VERSION_NO = 1;
@@ -5480,7 +5480,7 @@ int port_mode_set(int port, int mode)
          int ret = 0;
 
          port_id = port;
-         cs_printf("mode is %d\n",mode);
+//         cs_printf("mode is %d\n",mode);
          switch(mode)
          {
 		   case 0:
