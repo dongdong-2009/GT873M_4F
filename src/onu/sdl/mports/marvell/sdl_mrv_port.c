@@ -793,6 +793,11 @@ cs_status epon_request_onu_port_status_set(
     		}
 
     		break;
+    	case SDL_PORT_AUTO_10_100:
+    		fduplex = GT_FALSE;
+    		lspeed = PORT_DO_NOT_FORCE_SPEED;
+			speed_cfg = SDL_PORT_AUTO_10_100;
+			break;
     	case SDL_PORT_10_FULL:
     		lduplex = GT_TRUE;
     		lspeed = PORT_FORCE_SPEED_10_MBPS;

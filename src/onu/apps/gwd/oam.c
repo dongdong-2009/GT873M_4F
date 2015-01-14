@@ -5413,6 +5413,233 @@ int cmd_pse_info(struct cli_def *cli, char *command, char *argv[], int argc)
 	return CLI_OK;
 }
 #endif
+
+int port_mode_get(int port, int *mode)
+{
+         cs_callback_context_t context;
+         cs_port_id_t port_id;
+         cs_sdl_port_speed_cfg_t speed_cfg;
+         int ret = 0;
+
+         if(NULL == mode)
+         {
+                   return -1;
+         }
+
+         port_id = port;
+         if(CS_E_OK == epon_request_onu_port_status_get(context, 0, 0, port_id, &speed_cfg))
+         {
+                   switch(speed_cfg)
+                   {
+                            case SDL_PORT_AUTO_10_100:
+                                     *mode = 0;
+                                     break;
+                            case SDL_PORT_AUTO_10_100_1000:
+                                     *mode = 0;
+                                     break;
+                             case SDL_PORT_10_FULL:
+                                     *mode = 10;
+                                     break;
+                             case SDL_PORT_10_HALF:
+                                     *mode = 11;
+                                     break;
+                             case SDL_PORT_100_FULL:
+                                     *mode = 8;
+                                     break;
+                             case SDL_PORT_100_HALF:
+                                     *mode = 9;
+                                     break;
+                             case SDL_PORT_1000_FULL:
+                                     *mode = 12;
+                                     break;
+                            default:
+                                     ret = -1;
+                                     break;
+                   }
+         }
+         else
+         {
+                   ret = -1;
+         }
+
+         return ret;
+}
+
+int port_mode_set(int port, int mode)
+{
+         cs_port_id_t port_id;
+         cs_sdl_port_speed_cfg_t speed_cfg;
+         int status = 0;
+         int ret = 0;
+
+         port_id = port;
+         cs_printf("mode is %d\n",mode);
+         switch(mode)
+         {
+		   case 0:
+					#if (HAVE_PHY_SPEED_1000 == MODULE_YES)
+					speed_cfg = SDL_PORT_AUTO_10_100_1000;
+					#else
+					speed_cfg = SDL_PORT_AUTO_10_100;
+					#endif
+					break;
+		   case 10:
+					speed_cfg = SDL_PORT_10_FULL;
+					break;
+
+		   case 11:
+					speed_cfg = SDL_PORT_10_HALF;
+					break;
+
+		   case 12:
+					speed_cfg = SDL_PORT_1000_FULL;
+					break;
+
+		   case 8:
+					speed_cfg = SDL_PORT_100_FULL;
+					break;
+		   case 9:
+					speed_cfg = SDL_PORT_100_HALF;
+					break;
+		   default:
+					status = -1;
+					break;
+         }
+//cs_printf("status is %d\n",status);
+         if(0 == status)
+         {
+			cs_callback_context_t context;
+
+			if(CS_E_OK == epon_request_onu_port_status_set(context, 0, 0, port_id, speed_cfg))
+			{
+					ret = 0;
+			}
+			else
+			{
+				cs_printf("error\n");
+					ret = -1;
+			}
+         }
+         else
+         {
+                   ret = -1;
+         }
+
+         return ret;
+}
+
+extern cs_status epon_request_onu_port_status_set(
+    CS_IN cs_callback_context_t     context,
+    CS_IN cs_int32                  device_id,
+    CS_IN cs_int32                  llidport,
+    CS_IN cs_port_id_t              port_id,
+    CS_IN cs_sdl_port_speed_cfg_t   speed_cfg
+);
+int cmd_port_mode(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+    int port = 0;
+    int mode = 0;
+
+	if(CLI_HELP_REQUESTED)
+	{
+			switch(argc)
+			{
+				case 1:
+						return cli_arg_help(cli, 0,
+						"<port_list>", "Please input the port number",
+						NULL);
+				case 2:
+						cli_arg_help(cli, 0,
+						"<cr>", "Enter to show port mode",
+						NULL);
+						cli_arg_help(cli, 0,
+						"0", "Auto negotiation",
+						NULL);
+						cli_arg_help(cli, 0,
+						"10", "10M/FD",
+						NULL);
+						cli_arg_help(cli, 0,
+						"11", "10M/HD",
+						NULL);
+						cli_arg_help(cli, 0,
+						"12", "1000M/FD",
+						NULL);
+						cli_arg_help(cli, 0,
+						"8", "100M/FD",
+						NULL);
+						return cli_arg_help(cli, 0,
+						"9", "100M/HD",
+						NULL);
+				case 3:
+						return cli_arg_help(cli, 0,
+						"<cr>", "Just press enter to execute command!",
+						NULL);
+				default:
+				return cli_arg_help(cli, argc > 1, NULL);
+			}
+	}
+
+    if(1==argc)
+    {
+		//get
+		port = atoi(argv[0]);
+		if(0 == port_mode_get(port, &mode))
+		{
+			   char *mode_string = NULL;
+			   switch(mode)
+			   {
+						case 0:
+								  mode_string = "Auto negotiation";
+								  break;
+						case 10:
+								  mode_string = "10M/FD";
+								  break;
+						case 11:
+								  mode_string = "10M/HD";
+								  break;
+						case 12:
+								  mode_string = "1000M/FD";
+								  break;
+						case 8:
+								  mode_string = "100M/FD";
+								  break;
+						case 9:
+								  mode_string = "100M/HD";
+								  break;
+						default:
+								  mode_string = "wrong mode";
+								  break;
+			   }
+			   cli_print(cli, "port :%d, mode :%s\n", port, mode_string);
+		}
+		else
+		{
+			   cli_print(cli, "get port mode failed!, port :%d\n", port);
+		}
+    }
+    else if(2==argc)
+    {
+              //set
+              port = atoi(argv[0]);
+              mode = atoi(argv[1]);
+              if(0 == port_mode_set(port, mode))
+              {
+                       cli_print(cli, "set port mode success!\n");
+              }
+              else
+              {
+                       cli_print(cli, "set port mode failed!\n");
+              }
+
+              cli_print(cli, "port :%d, mode :%d\n", port, mode);
+    }
+    else
+    {
+              cli_print(cli, "%% Invalid input.");
+    }
+
+    return CLI_OK;
+}
 #if 1
 extern int cmd_laser(struct cli_def *cli, char *command, char *argv[], int argc);
 #endif
@@ -5435,6 +5662,7 @@ void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 
 	struct cli_command *stat = NULL;
 	struct cli_command *vlan = NULL;
+	struct cli_command *port = NULL;
 
     // set cmds in config mode
     set = cli_register_command(cmd_root, NULL, "set", NULL, PRIVILEGE_UNPRIVILEGED, MODE_CONFIG, "Set system information");
@@ -5472,6 +5700,9 @@ void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 		stat = cli_register_command(cmd_root, NULL, "stat", NULL,  PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "stat command");
 		cli_register_command(cmd_root, stat, "port_show", cmd_stat_port_show, PRIVILEGE_UNPRIVILEGED, MODE_ANY, "port statistic show");
 		cli_register_command(cmd_root, stat, "port_flush", cmd_statistics_uni_clear, PRIVILEGE_UNPRIVILEGED, MODE_ANY, "port statistic flush");
+
+		port = cli_register_command(cmd_root, NULL, "port", NULL,  PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "port command");
+		cli_register_command(cmd_root, port, "mode", cmd_port_mode, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "port mode");
 
 		vlan = cli_register_command(cmd_root, NULL, "vlan", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "vlan command");
 		cli_register_command(cmd_root, vlan, "port_isolate", cmd_oam_port_isolate, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "isolate command");
