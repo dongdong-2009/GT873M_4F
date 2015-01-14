@@ -800,23 +800,23 @@ cs_status epon_request_onu_port_status_set(
 			break;
     	case SDL_PORT_10_FULL:
     		lduplex = GT_TRUE;
-    		lspeed = PORT_FORCE_SPEED_10_MBPS;
+    		lspeed = PHY_SPEED_10_MBPS;
     		break;
     	case SDL_PORT_10_HALF:
     		lduplex = GT_FALSE;
-    		lspeed = PORT_FORCE_SPEED_10_MBPS;
+    		lspeed = PHY_SPEED_10_MBPS;
     		break;
     	case SDL_PORT_100_FULL:
     		lduplex = GT_TRUE;
-    		lspeed = PORT_FORCE_SPEED_100_MBPS;
+    		lspeed = PHY_SPEED_100_MBPS;
     		break;
     	case SDL_PORT_100_HALF:
     		lduplex = GT_FALSE;
-    		lspeed = PORT_FORCE_SPEED_100_MBPS;
+    		lspeed = PHY_SPEED_100_MBPS;
     		break;
     	case SDL_PORT_1000_FULL:
     		lduplex = GT_TRUE;
-    		lspeed = PORT_FORCE_SPEED_1000_MBPS;
+    		lspeed = PHY_SPEED_1000_MBPS;
     		break;
     	default:
     		return CS_E_PARAM;
@@ -841,8 +841,13 @@ cs_status epon_request_onu_port_status_set(
     rt = gpcsSetForceSpeed(QD_DEV_PTR,hwport,lspeed);
 //    cs_printf("3rt is %d\n",rt);
 #else
+    cs_printf("fduplex is %d\n",fduplex);
+    cs_printf("lduplex is %d\n",lduplex);
+    cs_printf("lspeed is %d\n",lspeed);
     if(GT_FALSE == fduplex)
     {
+//    	rt = gpcsSetForceSpeed(QD_DEV_PTR,hwport,lspeed);
+//    	rt = gpcsSetForcedDpx(QD_DEV_PTR,hwport,fduplex);
 		/* Port mode is Auto */
 		if ((rt = gprtSetPortAutoMode(QD_DEV_PTR, hwport, SPEED_AUTO_DUPLEX_AUTO)) != GT_OK)
 		{
@@ -861,10 +866,13 @@ cs_status epon_request_onu_port_status_set(
     }
     else
     {
+//    	rt = gpcsSetForceSpeed(QD_DEV_PTR,hwport,lspeed);
+//    	rt = gpcsSetForcedDpx(QD_DEV_PTR,hwport,fduplex);
+//    	rt = gpcsSetDpxValue(QD_DEV_PTR,hwport,lduplex);
     	rt = gprtPortAutoNegEnable(QD_DEV_PTR, hwport, GT_FALSE);
-    	rt = gpcsSetForceSpeed(QD_DEV_PTR,hwport,lspeed);
-    	rt = gpcsSetForcedDpx(QD_DEV_PTR,hwport,fduplex);
-    	rt = gpcsSetDpxValue(QD_DEV_PTR,hwport,lduplex);
+    	rt = gprtSetPortDuplexMode(QD_DEV_PTR, hwport, lduplex);
+    	rt = gprtSetPortSpeed(QD_DEV_PTR, hwport, lspeed);
+    	rt = gprtPortAutoNegEnable(QD_DEV_PTR, hwport, GT_FALSE);
     }
 
 #endif
