@@ -538,7 +538,6 @@ gw_int32 gw_circle_timer_add(gw_uint32 timeout, void (*callback)(void *), void *
 	return cs_circle_timer_add(timeout, callback, data);
 }
 
-
 //pty 接口
 
 /*create a new pty added to the existing link */
@@ -2178,7 +2177,14 @@ static gw_status oam_pty_pkt_freereq_proc(GWTT_OAM_SESSION_INFO *pSeInf, char *p
 			strcpy(bQuitCmd, "quit\r");
 			for(i=0; i<strlen(bQuitCmd); i++)
 			{
+#if 0
 				write_to_console(bQuitCmd+i, 1);
+#else
+				//delete cli_loop thread first,redirect cli->channel to serial zhangjj 2015-1-13
+				//关闭oam pty 模式
+				oam_pty_shell_close();
+
+#endif
 			}
 	            
 		}
@@ -2393,6 +2399,9 @@ static void OamPtyNotiMsgProcess(long int flag, long int fd)
 
 		//关闭命令解析线程
 		end_oamPtyCliThread();
+		//进入shell 模式
+		extern void cli_serial_set(void);
+		cli_serial_set();
 	}
 	else
 	{

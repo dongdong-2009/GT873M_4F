@@ -478,6 +478,16 @@ int cli_show_help(struct cli_def *cli, struct cli_command *c)
 
     return CLI_OK;
 }
+void cli_serial_set(void)
+{
+	struct cli_def *cli;
+
+	cli=&g_cli_console;
+	//进入shell 模式
+	cli->channel = CHANNEL_SERIAL;
+	cur_chan = CHANNEL_SERIAL;
+
+}
 
 struct cli_def *cli_init(struct cli_command *cmd_root, int channel)
 {

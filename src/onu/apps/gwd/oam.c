@@ -78,7 +78,7 @@
 #if (PRODUCT_CLASS == PRODUCTS_GT812C)
 	const unsigned char SYS_SOFTWARE_MAJOR_VERSION_NO = 1;
 	const unsigned char SYS_SOFTWARE_RELEASE_VERSION_NO = 1;
-	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 14;
+	const unsigned char SYS_SOFTWARE_BRANCH_VERSION_NO = 215;
 	const unsigned char SYS_SOFTWARE_DEBUG_VERSION_NO = 1;
 
 	const unsigned char SYS_HARDWARE_MAJOR_VERSION_NO = 1;
@@ -3294,7 +3294,7 @@ int cmd_show_atu(struct cli_def * cli, char *command, char *argv[], int argc)
 	cs_uint16 idx = 0, next = 0;
 
 	cs_sdl_fdb_entry_t entry;
-	cs_uint8 c = 0;
+	cs_uint32 c = 0;
 
 	memset(&entry, 0, sizeof(cs_sdl_fdb_entry_t));
 
@@ -3325,10 +3325,17 @@ int cmd_show_atu(struct cli_def * cli, char *command, char *argv[], int argc)
             vid,
             entry.port,
             entry.type);
-        if(++c > 20)
+        if(0 == (++c)%10)
         {
-        	cs_thread_delay(100);
-        	c = 0;
+        	if(CHANNEL_PTY == cli->channel)
+        		cs_thread_delay(500);
+        	else
+        		cs_thread_delay(100);
+        	if(c > 8192)
+        	{
+        		c = 0;
+        		break;
+        	}
         }
     }
     cli_print(cli, "====== Totally %2d SW entries====\n", idx);
