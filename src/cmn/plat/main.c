@@ -329,7 +329,7 @@ void cyg_user_start(void)
 #ifdef HAVE_UART_TEST
      uart_rx_thread_create();
 #endif
-
+     shell_init();
 #ifdef HAVE_IP_STACK
     init_ip_service();
 #endif
@@ -408,7 +408,6 @@ extern void gwd_portstats_thread(cyg_addrword_t p);
 	Gwd_func_dhcp_pkt_process_init();
 	#endif
     cs_printf("Init system done, time %ld\n",cs_current_time());
-    shell_init();
 
     cs_circle_timer_add(1000 , cs_cpuload_warning , NULL);
 

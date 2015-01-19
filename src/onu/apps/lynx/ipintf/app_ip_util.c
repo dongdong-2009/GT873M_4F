@@ -706,6 +706,7 @@ cs_status app_ipintf_set_wan_cfg(
         APP_IPINTF_LOG(IROS_LOG_LEVEL_INF,"%s, down MYMAC/ARP : FE, up MYMAC/ARP : CPU, \n", __func__);
 #if (PRODUCT_CLASS == PRODUCTS_GT812C)
         ifRegister = 0;
+        cs_thread_delay(1000);
         cpu_rate_fast(0);	//limit enable
 #endif
     }

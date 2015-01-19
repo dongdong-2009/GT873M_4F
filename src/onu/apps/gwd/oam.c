@@ -5847,7 +5847,7 @@ cs_status onu_software_version_get(char *sw_version, cs_uint16 sw_version_len)
 
 
 #if (MPCP_REG_TIME_OUT_SUPPORT == MODULE_YES)
-#define TIME_OUT_DEFAULT	10000		//∫¡√Î
+#define TIME_OUT_DEFAULT	20000		//∫¡√Î
 
 extern void onu_reset(void);
 extern cs_status aal_pon_link_get(cs_boolean *link);
