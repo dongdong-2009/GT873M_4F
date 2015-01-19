@@ -954,6 +954,9 @@ extern int start_up_show(void);
 extern int fdb_static_list_tlv_info_get(int *len, char **value, int *free_need);
 extern int gwd_atu_age_tlv_info_get(int *len, char **value, int *free_need);
 extern int gwd_atu_age_tlv_info_handle(int length,char *value,int opcode);
+extern int gwd_port_mode_tlv_info_get(int *len, char **value, int *free_need);
+extern int gwd_port_mode_tlv_info_handle(int length,char *value,int opcode);
+
 extern int save_user_tlv_data_to_flash(void)
 {
 	#if 1
@@ -1022,6 +1025,9 @@ extern int save_user_tlv_data_to_flash(void)
 				break;
 			case ATU_AGING:
 				gwd_atu_age_tlv_info_get(&len,&value,&free_need);
+				break;
+			case PORT_MODE:
+				gwd_port_mode_tlv_info_get(&len,&value,&free_need);
 				break;
 			default:
 				len = 0;
@@ -1300,6 +1306,9 @@ extern int get_user_tlv_data_from_flash(int opcode)
 						break;
 					case ATU_AGING:
 						gwd_atu_age_tlv_info_handle(len,value,opcode);
+						break;
+					case PORT_MODE:
+						gwd_port_mode_tlv_info_handle(len,value,opcode);
 						break;
 					default:
 						break;

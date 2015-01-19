@@ -758,6 +758,110 @@ cs_status epon_request_onu_port_lpbk_get(
 
     return CS_E_OK;
 }
+extern int port_mode_get(int port, int *mode);
+extern int gwd_port_mode_tlv_info_handle(int length,char *value,int opcode)
+{
+	if(NULL == value)
+	{
+		return -1;
+	}
+	if(length!=sizeof(__port_cfg))
+	{
+		return -1;
+	}
+
+	unsigned char portid = CS_UNI_PORT_ID1;
+
+	if(DATA_SHOW != opcode)
+	{
+		cs_callback_context_t     context;
+		__sdl_port_config_t port_cfg[UNI_PORT_MAX];
+
+		memcpy(port_cfg,value,sizeof(port_cfg));
+		for(portid = CS_UNI_PORT_ID1;portid<=UNI_PORT_MAX;portid++)
+			epon_request_onu_port_status_set(context, 0, 0, portid, port_cfg[portid-1].port_cfg);
+	}
+	if(DATA_SHOW == opcode)
+	{
+//		cs_printf("Atu Aging Time : %d \r\n",__port_cfg);
+		for(portid = CS_UNI_PORT_ID1;portid<=UNI_PORT_MAX;portid++)
+		{
+			unsigned int mode;
+			if(0 == port_mode_get(portid, &mode))
+			{
+				   char *mode_string = NULL;
+				   switch(mode)
+				   {
+							case 0:
+									  mode_string = "Auto negotiation";
+									  break;
+							case 10:
+									  mode_string = "10M/FD";
+									  break;
+							case 11:
+									  mode_string = "10M/HD";
+									  break;
+							case 12:
+									  mode_string = "1000M/FD";
+									  break;
+							case 8:
+									  mode_string = "100M/FD";
+									  break;
+							case 9:
+									  mode_string = "100M/HD";
+									  break;
+							default:
+									  mode_string = "wrong mode";
+									  break;
+				   }
+				   cs_printf("port :%d, mode :%s\n", portid, mode_string);
+			}
+			else
+			{
+				cs_printf("get port mode failed!, port :%d\n", portid);
+			}
+		}
+	}
+	return 0;
+}
+extern int gwd_port_mode_tlv_info_get(int *len, char **value, int *free_need)
+{
+	int ret = 0;
+	//入口规则检查
+	if(NULL == len)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		ret=-1;
+	}
+	else
+	{
+		*len = sizeof(__port_cfg);
+	}
+	if(NULL == value)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		ret=-1;
+	}
+	else
+	{
+		*value = (char *)__port_cfg;
+	}
+	if(NULL == free_need)
+	{
+		cs_printf("arg check err!\n");
+		cs_printf("in %s, line :%d\n", __func__, __LINE__);
+		ret=-1;
+	}
+	else
+	{
+		*free_need = 0;
+	}
+	return ret;
+}
+
+
 
 cs_status epon_request_onu_port_status_set(
     CS_IN cs_callback_context_t     context,

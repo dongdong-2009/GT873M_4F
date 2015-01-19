@@ -240,6 +240,7 @@ enum data_type
 #endif
 	STATIC_MAC = 9,
 	ATU_AGING = 10,
+	PORT_MODE = 11,
 	TYPE_NUM
 };
 #endif
