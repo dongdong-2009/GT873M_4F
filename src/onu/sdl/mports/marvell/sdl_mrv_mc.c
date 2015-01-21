@@ -286,7 +286,7 @@ cs_status epon_request_onu_unknown_mc_forward_set(
 				case GT_BLOCK_EGRESS_UNKNOWN:
 					if(!enable)
 					{
-						mode = GT_BLOCK_EGRESS_NONE;
+						mode = GT_BLOCK_EGRESS_UNKNOWN_UNICAST;
 					}
 					break;
 				case GT_BLOCK_EGRESS_UNKNOWN_MULTICAST:
@@ -296,13 +296,9 @@ cs_status epon_request_onu_unknown_mc_forward_set(
 					}
 					break;
 				case GT_BLOCK_EGRESS_UNKNOWN_UNICAST:
-					if(!enable)
+					if(enable)
 					{
-						mode = GT_BLOCK_EGRESS_NONE;
-					}
-					else
-					{
-						mode = GT_BLOCK_EGRESS_UNKNOWN_MULTICAST;
+						mode = GT_BLOCK_EGRESS_UNKNOWN;
 					}
 					break;
 #endif
