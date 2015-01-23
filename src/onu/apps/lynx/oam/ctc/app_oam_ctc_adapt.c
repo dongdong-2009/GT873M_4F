@@ -2208,7 +2208,7 @@ cs_status ctc_oam_onu_mc_switch_set_adapt(
 		#if 0
 		cs_printf(" mc_mode = MC_SNOOPING;\n");
 		#endif
-        mc_vlan_lrn_set(0, MC_SVL);
+        mc_vlan_lrn_set(0, MC_IVL);
         mc_set_port_ingress_filter(0, mc_snoop_ingress_filter);
         mc_set_port_egress_filter(0, mc_egress_filter);
     }

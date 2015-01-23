@@ -134,7 +134,7 @@ cs_status mc_node_init(mc_node_t *mc_node, cs_dev_id_t device)
     mc_node->mode = MC_DISABLE;
 
     mc_node->ipv6_aware = 1;
-    mc_node->vlan_lrn_mode = MC_SVL;
+    mc_node->vlan_lrn_mode = MC_IVL;
     mc_node->grp_cap = mc_device_grp_cap(device);
     mc_node->port_grp_cap = mc_device_port_grp_cap(device);
     mc_node->max_grp_num = mc_node->grp_cap;
