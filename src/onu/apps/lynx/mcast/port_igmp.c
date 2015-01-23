@@ -167,13 +167,59 @@ cs_status mc_ctrl_enable(cs_dev_id_t dev, cs_boolean enable)
 	cs_printf("in mc_ctrl_enable, state :0x%x\n", state);
 	#endif
 	
+
+
     port_num = mc_device_port_num_get(0);
-    for(port_id = 0; port_id < port_num; port_id++) {
-#if (PRODUCT_CLASS == PRODUCTS_GT812C)
-        epon_request_onu_unknown_mc_forward_set(context, 0, 0, port_id, 1-enable);
-#else
-        epon_request_onu_unknown_mc_forward_set(context, 0, 0, port_id, enable);
+
+#if 0
+    cs_sdl_mc_l2_entry_t entry;
+    cs_port_id_t port;
+    entry.mac.addr[0] = 0x01;
+    entry.mac.addr[1] = 0x00;
+    entry.mac.addr[2] = 0x5e;
+    entry.mac.addr[3] = 0x00;
+    entry.mac.addr[4] = 0x00;
+    entry.mac.addr[5] = 0x01;
+    cs_uint16 def_vlan = 0;
+	def_vlan = port_def_vlan_id_get(port_id);
+    entry.vlan = def_vlan;
 #endif
+
+    for(port_id = 1; port_id < port_num; port_id++) {
+#if 0
+    	port = port_id;
+    	FOR_UNIT_START(GT_U32, unit)
+    	InternalVlanInit(QD_DEV_PTR, __c_vlan_table[i].vlan.vid);
+    	FOR_UNIT_END
+		/* Broadcast atu entry */
+	    atuEntryBc.DBNum = vid;
+	    atuEntryBc.exPrio.macFPri = 0;
+	    atuEntryBc.exPrio.macQPri = 0;
+	    atuEntryBc.exPrio.useMacFPri = GT_FALSE;
+	    atuEntryBc.prio = 0;
+	    atuEntryBc.trunkMember = GT_FALSE;
+	    for (i=0; i<GT_ETHERNET_HEADER_SIZE; i++)
+	        atuEntryBc.macAddr.arEther[i] = 0xFF;
+	    atuEntryBc.portVec = 0;
+	    atuEntryBc.portVec |= (1<<(dev->cpuPortNum));
+#if (FOR_ONU_PON)
+	    atuEntryBc.portVec |= (1<<(dev_wanPort[0]));	/* Need change */
+#endif
+
+	    atuEntryBc.entryState.mcEntryState = GT_MC_STATIC;
+	    if ((result = gfdbAddMacEntry(dev, &atuEntryBc)) != GT_OK)
+		{
+			MSG_OUT(( "gfdbAddMacEntry return Failed(%d)\r\n", result));
+			l_ret_val = result;
+		}
+#endif
+
+    	/*if enable block unknow multicast pkts(data or rule),disable wiil be igmp transparent mode*/
+        epon_request_onu_unknown_mc_forward_set(context, 0, 0, port_id, enable);
+
+        /*no matter igmp is snooping or transparent sw snoop should always being disabled,
+         if it is snooping, igmp report pkt will be removed vlan tag zhangjj 2015-1-21*/
+        epon_request_sw_snoop_set(context,0,0,port_id,enable);
     }
                 
     return CS_E_OK;
@@ -276,7 +322,32 @@ cs_status  mc_port_fdb_add(mc_fdb_entry_t *fdb)
                 return CS_E_ERROR;
             }
         }
-        
+#if 0
+
+        cs_printf("portmap is %x\n",portmap);
+        cs_printf("portid is %x\n",fdb->portid);
+        cs_sdl_mc_l2_entry_t entry_normal;
+        entry_normal.vlan = fdb->vlanid;
+        entry_normal.mac.addr[0] = 0x01;
+        entry_normal.mac.addr[1] = 0x00;
+        entry_normal.mac.addr[2] = 0x5e;
+        entry_normal.mac.addr[3] = 0x00;
+        entry_normal.mac.addr[4] = 0x00;
+        entry_normal.mac.addr[5] = 0x01;
+
+        portmap = 0;
+        ret = epon_request_onu_mc_l2_port_get(context, 0, 0, &entry_normal, &portmap);
+        if(ret != CS_E_NOT_FOUND) {
+            if( ret || (portmap.bits[0] & (1<<(fdb->portid-1)))) {
+                return CS_E_ERROR;
+            }
+        }
+
+        epon_request_onu_mc_l2_entry_add(context, 0, 0, fdb->portid, &entry_normal);
+#else
+        extern void __get_port_by_vlan(unsigned int vid);
+        __get_port_by_vlan(fdb->vlanid);
+#endif
         ret = epon_request_onu_mc_l2_entry_add(context, 0, 0, fdb->portid, &entry);
 
     }
@@ -348,6 +419,18 @@ cs_status  mc_port_fdb_update(mc_fdb_entry_t *old_entry, mc_fdb_entry_t *new_ent
         mc_fdb_map_to_mac(new_entry, entry.mac.addr);
         entry.vlan = new_entry->vlanid;
         
+#if 1
+        entry_normal.vlan = new_entry->vlanid;
+        entry_normal.mac.addr[0] = 0x01;
+        entry_normal.mac.addr[1] = 0x00;
+        entry_normal.mac.addr[2] = 0x5e;
+        entry_normal.mac.addr[3] = 0x00;
+        entry_normal.mac.addr[4] = 0x00;
+        entry_normal.mac.addr[5] = 0x01;
+
+        epon_request_onu_mc_l2_entry_add(context, 0, 0, new_entry->portid, &entry_normal);
+#endif
+
         return epon_request_onu_mc_l2_entry_add(context, 0, 0, new_entry->portid, &entry);
     }
     else if(MC_ENGINE_IP == engine) {

@@ -89,7 +89,6 @@ Manufacturer is CORTINA.
 
 Copyright (c) 2009 by Cortina Systems Incorporated
 ****************************************************************************/
-#ifdef HAVE_CTC_OAM
 #include "plat_common.h"
 #include "cs_utils.h"
 #include "oam_control.h"
@@ -106,7 +105,7 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "app_oam_ctc_adapt.h"
 #include "oam_ctc_client.h"
 #include "app_ip_init.h"
-
+#ifdef HAVE_CTC_OAM
 #ifdef HAVE_ZTE_OAM
 #include "app_oam_zte.h"
 #include "sys_cfg.h"

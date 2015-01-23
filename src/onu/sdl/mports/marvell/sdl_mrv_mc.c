@@ -106,6 +106,7 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "switch_expo.h"
 #include "gtDrvSwRegs.h"
 #include "switch_drv.h"
+#include "msApiPrototype.h"
 
 #define __DEFAULT_FID        0
 #define __SVL                0
@@ -310,6 +311,33 @@ cs_status epon_request_onu_unknown_mc_forward_set(
 	}
     return ret;
 }
+
+cs_status epon_request_sw_snoop_set(
+	CS_IN cs_callback_context_t     context,
+	CS_IN cs_int32                  device_id,
+	CS_IN cs_int32                  llidport,
+	CS_IN cs_port_id_t              portid,
+	CS_IN cs_boolean                enable
+)
+{
+	cs_status ret = CS_E_ERROR;
+
+	GT_32 unit, port;
+
+	if(portid == CS_PON_PORT_ID)
+		portid = CS_UPLINK_PORT;
+
+	if(gt_getswitchunitbylport(L2P_PORT(portid), &unit, &port) == GT_OK)
+	{
+		GT_STATUS ret = GT_OK;
+		if(gprtSetIGMPSnoop(QD_DEV_PTR, port, enable) == GT_OK)
+		{
+			ret = CS_E_OK;
+		}
+	}
+	return ret;
+}
+
 #if 0
 cs_status epon_request_onu_igmpsnoop_set(
     CS_IN cs_callback_context_t     context,

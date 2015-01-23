@@ -119,6 +119,14 @@ cs_status epon_request_onu_unknown_mc_forward_set(
     CS_IN cs_boolean                enable
 );
 
+cs_status epon_request_sw_snoop_set(
+	CS_IN cs_callback_context_t     context,
+	CS_IN cs_int32                  device_id,
+	CS_IN cs_int32                  llidport,
+	CS_IN cs_port_id_t              portid,
+	CS_IN cs_boolean                enable
+);
+
 cs_status epon_request_onu_mc_l2_entry_add(
     CS_IN  cs_callback_context_t     context,
     CS_IN  cs_uint32                 device_id,

@@ -110,6 +110,7 @@ Copyright (c) 2009 by Cortina Systems Incorporated
 #include "MARVELL_BSP_expo.h"
 #include "switch_expo.h"
 #include "switch_drv.h"
+#include "sdl_mc.h"
 
 #define __MC_VLAN_PER_PORT_MAX          8
 
@@ -689,6 +690,52 @@ static void __clear_uc(cs_port_id_t port_id)
 	__rule_table_clr_w(__port_vlan_table[port_id].mc_vlan);
 
 }
+unsigned int traverse_vlan_current_vlan_num(unsigned int i)
+{
+	unsigned int ret = -1;
+	if(i >= __VLAN_MAX)
+		return ret;
+	if(__s_vlan_table[i].valid)
+	{
+		ret = __s_vlan_table[i].vlan.vid;
+	}
+	return ret;
+}
+void __get_port_by_vlan(unsigned int vid)
+{
+	cs_sdl_mc_l2_entry_t entry_normal;
+	unsigned char lport = 0;
+	cs_callback_context_t     context;
+    int i;
+
+    entry_normal.mac.addr[0] = 0x01;
+    entry_normal.mac.addr[1] = 0x00;
+    entry_normal.mac.addr[2] = 0x5e;
+    entry_normal.mac.addr[3] = 0x00;
+    entry_normal.mac.addr[4] = 0x00;
+    entry_normal.mac.addr[5] = 0x01;
+    cs_printf("add mc vlan port =================\n");
+	for(i = 0; i < __VLAN_MAX; ++i)
+	{
+		if(__s_vlan_table[i].valid)
+		{
+			for(lport = 0;lport<__MC_VLAN_SWAP_PER_PORT_MAX; lport++)
+			{
+				if(__s_vlan_table[i].vlan.mbr & (1<<lport))
+				{
+					entry_normal.vlan = __s_vlan_table[i].vlan.vid;
+//					        ret = epon_request_onu_mc_l2_port_get(context, 0, 0, &entry_normal, &portmap);
+//					        if(ret != CS_E_NOT_FOUND) {
+//					            if( ret || (portmap.bits[0] & (1<<(fdb->portid-1)))) {
+//					                return CS_E_ERROR;
+//					            }
+//					        }
+					epon_request_onu_mc_l2_entry_add(context, 0, 0, lport+1, &entry_normal);
+				}
+			}
+		}
+	}
+}
 
 static void __update_hw_mc(cs_port_id_t port_id)
 {
@@ -747,6 +794,45 @@ static void __update_hw_mc(cs_port_id_t port_id)
                 }
             }
         }
+#if 0
+        if(SDL_VLAN_MODE_TRUNK == port_vlan->vlan_mode)
+        {
+        	cs_sdl_mc_l2_entry_t entry_normal;
+        	unsigned char lport = 0;
+        	cs_callback_context_t     context;
+
+            entry_normal.mac.addr[0] = 0x01;
+            entry_normal.mac.addr[1] = 0x00;
+            entry_normal.mac.addr[2] = 0x5e;
+            entry_normal.mac.addr[3] = 0x00;
+            entry_normal.mac.addr[4] = 0x00;
+            entry_normal.mac.addr[5] = 0x01;
+            cs_printf("add mc vlan port =================\n");
+			for(i = 0; i < __VLAN_MAX; ++i)
+			{
+				if(__s_vlan_table[i].valid)
+				{
+					for(lport = 0;lport<__MC_VLAN_SWAP_PER_PORT_MAX; lport++)
+					{
+						if(__s_vlan_table[i].vlan.mbr & (1<<lport))
+						{
+							entry_normal.vlan = __s_vlan_table[i].vlan.vid;
+//					        ret = epon_request_onu_mc_l2_port_get(context, 0, 0, &entry_normal, &portmap);
+//					        if(ret != CS_E_NOT_FOUND) {
+//					            if( ret || (portmap.bits[0] & (1<<(fdb->portid-1)))) {
+//					                return CS_E_ERROR;
+//					            }
+//					        }
+					        cs_printf("portmap is %d\n",lport+1);
+					        cs_printf("vlan is %x\n",entry_normal.vlan);
+					        /*down query pkt should be sent in port default vlan and add query pkt with pvid*/
+							epon_request_onu_mc_l2_entry_add(context, 0, 0, lport+1, &entry_normal);
+						}
+					}
+				}
+			}
+        }
+#endif
     }
     /* END: delete overlap vlan rule */
 
@@ -758,6 +844,7 @@ static void __update_hw_mc(cs_port_id_t port_id)
             {
                 /* svlan member */
 //            	mtodo: ¶à²¥±£Áôvlan±êÇ©
+
             }
         }
     }
@@ -973,7 +1060,7 @@ static void __update_hw_uc(cs_port_id_t port_id)
 	gvlnSetPortVlanDBNum(QD_DEV_PTR, port, port_vlan->def_vlan.vid);
 
 }
-
+//extern unsigned char mc_ctl_enable_flag;
 static void __update_sw
 (
     CS_IN cs_port_id_t                  port_id,
@@ -988,7 +1075,11 @@ static void __update_sw
     __port_vlan_table[port_id].vlan_mode = vlan_mode;
     __port_vlan_table[port_id].def_vlan.vid = def_vlan.vid;
     __port_vlan_table[port_id].def_vlan.pri = def_vlan.pri;
+#if 0
     __port_vlan_table[port_id].mc_vlan_en = EPON_FALSE;
+#else
+    __port_vlan_table[port_id].mc_vlan_en = EPON_TRUE;
+#endif
 	__port_vlan_table[port_id].mc_act = SDL_MC_VLAN_TAG_KEEP;
     if(SDL_VLAN_MODE_TRANSPARENT != vlan_mode)
     {
