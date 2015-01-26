@@ -1200,8 +1200,8 @@ static cs_int32 mrv_cpu_rx_parse(cs_uint8 *pkt, cs_uint16 in_len, cs_uint16 *out
 {
 	cs_status ret = CS_E_ERROR;
 
-	extern void __cpu_packet_dump(cs_uint8 *buf, cs_uint16 len);
-	__cpu_packet_dump(pkt, in_len);
+//	extern void __cpu_packet_dump(cs_uint8 *buf, cs_uint16 len);
+//	__cpu_packet_dump(pkt, in_len);
 	if(pkt && out_len && s_port)
 	{
 		GT_ATU_ENTRY entry;
@@ -1225,7 +1225,7 @@ static cs_int32 mrv_cpu_rx_parse(cs_uint8 *pkt, cs_uint16 in_len, cs_uint16 *out
 		FOR_UNIT_START(GT_32, unit)
 		if((*pkt == 0x01)&&(*(pkt+1) == 0x00)&&(*(pkt+2) == 0x5e))//if it is a multicast pkt
 		{
-			cs_printf("come in \n");
+//			cs_printf("come in \n");
 			unsigned int mul_vid = 0;
 			unsigned int vlan_id = 0;
 
@@ -1240,7 +1240,7 @@ static cs_int32 mrv_cpu_rx_parse(cs_uint8 *pkt, cs_uint16 in_len, cs_uint16 *out
 					if(GT_TRUE == found)
 					{
 						GT_U8 i = 0;
-						cs_printf("portVec11 is 0x%x\n",entry.portVec);
+//						cs_printf("portVec11 is 0x%x\n",entry.portVec);
 						for(i=0; i<QD_DEV_PTR->maxPorts; i++)
 						{
 							if(entry.portVec&(1<<i))
@@ -1256,7 +1256,7 @@ static cs_int32 mrv_cpu_rx_parse(cs_uint8 *pkt, cs_uint16 in_len, cs_uint16 *out
 					}
 				}
 			}
-			cs_printf("s_port is %d\n",*s_port);
+//			cs_printf("s_port is %d\n",*s_port);
 			if(CS_E_OK == ret)
 				break;
 		}
@@ -1267,7 +1267,7 @@ static cs_int32 mrv_cpu_rx_parse(cs_uint8 *pkt, cs_uint16 in_len, cs_uint16 *out
 				if(GT_TRUE == found)
 				{
 					GT_U8 i = 0;
-					cs_printf("portVec22 is 0x%x\n",entry.portVec);
+//					cs_printf("portVec22 is 0x%x\n",entry.portVec);
 					for(i=0; i<QD_DEV_PTR->maxPorts; i++)
 					{
 						if(entry.portVec&(1<<i))

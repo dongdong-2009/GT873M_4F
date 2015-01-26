@@ -714,7 +714,7 @@ void __get_port_by_vlan(unsigned int vid)
     entry_normal.mac.addr[3] = 0x00;
     entry_normal.mac.addr[4] = 0x00;
     entry_normal.mac.addr[5] = 0x01;
-    cs_printf("add mc vlan port =================\n");
+//    cs_printf("add mc vlan port =================\n");
 	for(i = 0; i < __VLAN_MAX; ++i)
 	{
 		if(__s_vlan_table[i].valid)

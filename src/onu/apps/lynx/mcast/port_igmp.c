@@ -420,6 +420,7 @@ cs_status  mc_port_fdb_update(mc_fdb_entry_t *old_entry, mc_fdb_entry_t *new_ent
         entry.vlan = new_entry->vlanid;
         
 #if 1
+        cs_sdl_mc_l2_entry_t entry_normal;
         entry_normal.vlan = new_entry->vlanid;
         entry_normal.mac.addr[0] = 0x01;
         entry_normal.mac.addr[1] = 0x00;
