@@ -599,6 +599,20 @@ void switch_init()
 
 	gulTypeUc   = BUCKET_TRAFFIC_UNKNOWN_UNICAST;
 
+//add for ͬά
+#if 1
+	int pro_ret = 0;
+	extern int TongWeiBoardSet();
+	if(1 == (pro_ret = TongWeiBoardSet()))
+	{
+		cs_printf("Init TONGW Board successful\n");
+	}
+	else
+		cs_printf("Init DblWing Board successful\n");
+
+#endif
+
+
 	return;
 #else
 	extern GT_BOOL boards_unit_to_slot(GT_U32 unit, GT_U8 *slot);

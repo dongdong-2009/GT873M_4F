@@ -2748,6 +2748,51 @@ int cmd_onu_mgt_gpiodirect(struct cli_def *cli, char *command, char *argv[], int
     return CLI_OK;
 }
 
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+extern int mrv_reg_read(unsigned char dev_addr, unsigned char reg_addr, unsigned short *data);
+extern int mrv_reg_write(unsigned char dev_addr, unsigned char reg_addr, unsigned short data);
+
+int TongWeiBoardSet()
+{
+	gpio_mode_t direct = GPIO_INPUT;
+	unsigned char level10 = 0,level6 = 0;
+	unsigned char ret = 0;
+
+	if(cs_gpio_mode_set(GPIO_PIN10, direct) != EPON_RETURN_SUCCESS)
+	{
+		ret = -1;
+		cs_printf("gpio direction set fail!");
+	}
+	if(cs_gpio_mode_set(GPIO_PIN6, direct) != EPON_RETURN_SUCCESS)
+	{
+		ret = -1;
+		cs_printf("gpio direction set fail!");
+	}
+
+	if(cs_gpio_read(GPIO_PIN10, &level10) == EPON_RETURN_SUCCESS)
+	{
+		cs_printf("current level is %s", level10?"high":"low");
+	}
+	if(cs_gpio_read(GPIO_PIN6, &level6) == EPON_RETURN_SUCCESS)
+	{
+		cs_printf("current level is %s", level10?"high":"low");
+	}
+
+	if((level10 == 1)&&(level6 == 0))
+	{
+		cs_uint32 dev_addr = 0x16;
+		cs_uint32 reg_addr = 0x1a;
+		unsigned short reg_data;
+
+		mrv_reg_read(dev_addr, reg_addr, &reg_data);
+		reg_data |= 1<<10;
+		reg_data &= ~(1<<9);
+		mrv_reg_write(dev_addr, reg_addr, reg_data);
+		ret = 1;
+	}
+	return ret;
+}
+#endif
 
 int cmd_onu_mgt_config_product_date(struct cli_def *cli, char *command, char *argv[], int argc)
 {
