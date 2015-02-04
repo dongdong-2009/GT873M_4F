@@ -168,9 +168,11 @@ cs_status mc_flood_msg(mc_node_t *mc_node, mc_object_t *pObj)
     else {
         frame = pObj->frame;
     }
-        
+#if (PRODUCT_CLASS != PRODUCTS_GT812C)
     for(port_id = 0; port_id < mc_node->port_num; port_id++) {            
-
+#else
+    	port_id = 0;
+#endif
         if(!mc_is_uplink_port(mc_node, port_id)) {
             /* not host port */
             port = mc_port_find(mc_node, port_id);
@@ -186,7 +188,9 @@ cs_status mc_flood_msg(mc_node_t *mc_node, mc_object_t *pObj)
                 MC_LOG(IROS_LOG_LEVEL_DBG3, "%s,forward query to port %d,ret %d\n",__func__,port_id,ret);
             }
         }
+#if (PRODUCT_CLASS != PRODUCTS_GT812C)
     }
+#endif
 
     if(frame != pObj->frame) {
         mc_free(frame);
