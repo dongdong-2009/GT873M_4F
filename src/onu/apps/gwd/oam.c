@@ -5866,7 +5866,7 @@ int cmd_port_mirror_from(struct cli_def *cli, char *command, char *argv[], int a
 				}
 				else
 				{
-					cli_print(cli,"Mirror ingress successfully\r\n",port_array);
+					cli_print(cli,"Mirror ingress successfully\r\n");
 				}
 
 			}
@@ -5878,7 +5878,7 @@ int cmd_port_mirror_from(struct cli_def *cli, char *command, char *argv[], int a
 				}
 				else
 				{
-					cli_print(cli,"Mirror ingress successfully\r\n",port_array);
+					cli_print(cli,"Mirror ingress successfully\r\n");
 				}
 			}
 			else if(strcmp(argv[0],"a") == 0)
@@ -5889,7 +5889,7 @@ int cmd_port_mirror_from(struct cli_def *cli, char *command, char *argv[], int a
 				}
 				else
 				{
-					cli_print(cli,"Mirror all direct successfully\r\n",port_array);
+					cli_print(cli,"Mirror all direct successfully\r\n");
 				}
 			}
 			else
