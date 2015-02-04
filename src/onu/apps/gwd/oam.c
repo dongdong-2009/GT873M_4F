@@ -5598,7 +5598,7 @@ int cmd_port_mode(struct cli_def *cli, char *command, char *argv[], int argc)
 			{
 				case 1:
 						return cli_arg_help(cli, 0,
-						"<port_list>", "Please input the port number",
+						"<port>", "Please input the port number",
 						NULL);
 				case 2:
 						cli_arg_help(cli, 0,
@@ -5692,6 +5692,230 @@ int cmd_port_mode(struct cli_def *cli, char *command, char *argv[], int argc)
 
     return CLI_OK;
 }
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+extern cs_status epon_request_onu_mirror_get(
+	CS_IN cs_callback_context_t     context,
+	CS_IN cs_int32                  device_id,
+	CS_IN cs_int32                  llidport,
+	CS_IN cs_int32                  *stat,
+	CS_IN cs_int32                  *destPort
+);
+extern cs_status epon_request_onu_mirror_dest_set(
+	CS_IN cs_callback_context_t     context,
+	CS_IN cs_int32                  device_id,
+	CS_IN cs_int32                  llidport,
+    CS_IN cs_port_id_t              mirror_port
+);
+extern cs_status epon_request_onu_mirror_source_set(
+    CS_IN cs_callback_context_t     context,
+    CS_IN cs_int32                  device_id,
+    CS_IN cs_int32                  llidport,
+    CS_IN cs_uint32                 rx_port_msk,
+    CS_IN cs_uint32                 tx_port_msk
+);
+int cmd_port_mirror_show(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	int ret = CLI_OK;
+	cs_callback_context_t context;
+	cs_uint32 i;
+
+	// deal with help
+    if(CLI_HELP_REQUESTED)
+    {
+        switch(argc)
+        {
+        default:
+            return cli_arg_help(cli, 1, NULL);
+        }
+    }
+
+    cli_print(cli, "====== Port Mirror table is shown:======");
+    cli_print(cli, "index      in/eg/all        dest port ");
+
+    i = 1;
+    while(i<=UNI_PORT_MAX)
+    {
+    	unsigned int stat, destPort;
+		if(epon_request_onu_mirror_get(context, 0, i, &stat, &destPort) == CS_OK)
+		{
+
+			cli_print(cli, " %2d\t\t%s\t\t%2d  ", i,
+            stat>1?"all":stat<1?"in":"eg",destPort);
+
+        	cs_thread_delay(100);
+        }
+		i++;
+    }
+    cli_print(cli, "\n");
+
+	return ret;
+}
+int cmd_port_mirror_to(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	if(CLI_HELP_REQUESTED)
+	{
+		switch(argc)
+		{
+			case 1:
+				return cli_arg_help(cli, 0,
+						"<port>", "0: disable mirror to port, <1-8> port number",NULL);
+				break;
+			default:
+				return cli_arg_help(cli, argc > 1, NULL);
+				break;
+		}
+	}
+	if(argc == 1)
+	{
+	    unsigned int ulPort=0;
+	  	cs_callback_context_t     context;
+
+	  	if(('8'<argv[0][0])||('0'>argv[0][0]))
+		{
+			cli_print(cli,"%% valid input error.");
+			return CLI_OK;
+		}
+		ulPort = atoi(argv[0]);
+
+		if((0<=ulPort)&&(ulPort<UNI_PORT_MAX+1))
+		{
+			if(epon_request_onu_mirror_dest_set(context,0,0,ulPort) != CS_E_OK)
+			{
+				cli_print(cli,"set mirror source port fail\n");
+				return CLI_OK;
+			}
+			if(ulPort == 0)
+				cli_print(cli,"Clear Mirror Dest Port Successfully\n");
+			else
+				cli_print(cli,"Set Mirror Dest Port %d Successfully\n",ulPort);
+		}
+		else
+			cli_print(cli," Invalid input!(Mirror dest port only can set one port!)\r\n");
+	}
+	else
+		cli_print(cli,"  Invalid input!\r\n");
+	return CLI_OK;
+}
+int cmd_port_mirror_from(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	if(CLI_HELP_REQUESTED)
+	{
+		switch(argc)
+		{
+			case 1:
+				return cli_arg_help(cli, 0,
+					"[i|e|a]", "i: ingress; e: egress; a:All direction", NULL);
+				break;
+			case 2:
+				return cli_arg_help(cli, 0,
+					"<port_list>", "Specify interface's port list(e.g.: 1; 1,2; 1-3)", NULL);
+				break;
+			case 3:
+				return cli_arg_help(cli, 0,
+					"[0|1]", "0: disable all mirror port, 1: enable", NULL);
+				break;
+			default:
+				return cli_arg_help(cli, argc > 1, NULL);
+				break;
+		}
+	}
+  if(argc == 3)
+	{
+	    unsigned int ulPort=0;
+	  	unsigned long maxportnumber = UNI_PORT_MAX;
+	  	unsigned int port_array = 0;
+	  	unsigned int mirr_en = 0;
+	  	cs_callback_context_t     context;
+
+	  	if(('1'<argv[2][0])||('0'>argv[2][0]))
+		{
+			cli_print(cli,"%% valid input error.");
+			return CLI_OK;
+		}
+	  	mirr_en = atoi(argv[2]);
+
+//	  	if((mirr_en!=1)&&(mirr_en!=0))
+//	  	{
+//			cli_print(cli,"%% valid input error.");
+//			return CLI_OK;
+//	  	}
+		if(1 == mirr_en)
+		{
+			BEGIN_PARSE_PORT_LIST_TO_PORT_NO_CHECK(argv[1], ulPort,maxportnumber)
+			{
+				if(ulPort < 0)
+				{
+					cli_print(cli,"%% valid input error.");
+					return CLI_OK;
+				}
+				if(ulPort > maxportnumber)
+				{
+					cli_print(cli,"  Input port number %d error!\r\n", ulPort);
+					return CLI_OK;
+				}
+
+				port_array |= 1<<(ulPort-1);
+			}
+			END_PARSE_PORT_LIST_TO_PORT_NO_CHECK();
+
+			if(strcmp(argv[0],"i") == 0)
+			{
+				if(epon_request_onu_mirror_source_set(context,0,0,port_array,0) != CS_E_OK)
+				{
+					cli_print(cli,"set ingress mirror port fail\n");
+				}
+				else
+				{
+					cli_print(cli,"Mirror ingress successfully\r\n",port_array);
+				}
+
+			}
+			else if(strcmp(argv[0],"e") == 0)
+			{
+				if(epon_request_onu_mirror_source_set(context,0,0,0,port_array) != CS_E_OK)
+				{
+					cli_print(cli,"set egress mirror port fail\n");
+				}
+				else
+				{
+					cli_print(cli,"Mirror ingress successfully\r\n",port_array);
+				}
+			}
+			else if(strcmp(argv[0],"a") == 0)
+			{
+				if(epon_request_onu_mirror_source_set(context,0,0,port_array,port_array) != CS_E_OK)
+				{
+					cli_print(cli,"set ingress&egress mirror port fail\n");
+				}
+				else
+				{
+					cli_print(cli,"Mirror all direct successfully\r\n",port_array);
+				}
+			}
+			else
+				cli_print(cli,"  Invalid input!\r\n");
+		}
+		else if(0 == mirr_en)
+		{
+			//clear source port configuration
+			if(epon_request_onu_mirror_source_set(context,0,0,0,0) != CS_E_OK)
+			{
+				cli_print(cli,"reset mirror source port fail\n");
+			}
+			cli_print(cli,"Clear Mirror Source Port Successfully\r\n");
+		}
+		else
+			cli_print(cli,"  Invalid input!\r\n");
+	}
+	else
+	{
+		cli_print(cli,"  Invalid input!\r\n");
+	}
+
+	return CLI_OK;
+}
+#endif
+
 #if 1
 extern int cmd_laser(struct cli_def *cli, char *command, char *argv[], int argc);
 #endif
@@ -5755,6 +5979,11 @@ void cli_reg_gwd_cmd(struct cli_command **cmd_root)
 
 		port = cli_register_command(cmd_root, NULL, "port", NULL,  PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "port command");
 		cli_register_command(cmd_root, port, "mode", cmd_port_mode, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "port mode");
+#if (PRODUCT_CLASS == PRODUCTS_GT812C)
+		cli_register_command(cmd_root, port, "mirror_from", cmd_port_mirror_from, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "mirror_from");
+		cli_register_command(cmd_root, port, "mirror_to", cmd_port_mirror_to, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "mirror_to");
+		cli_register_command(cmd_root, port, "mirror_show", cmd_port_mirror_show, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "mirror_show");
+#endif
 
 		vlan = cli_register_command(cmd_root, NULL, "vlan", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "vlan command");
 		cli_register_command(cmd_root, vlan, "port_isolate", cmd_oam_port_isolate, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "isolate command");

@@ -2637,7 +2637,168 @@ end:
 
 }
 #endif
+#define MIRROR_DISABLE 0xf
+static unsigned int mirr_rx_port[UNI_PORT_MAX]={0},mirr_tx_port[UNI_PORT_MAX]={0}, monitorPort=MIRROR_DISABLE;
 
+cs_status epon_request_onu_mirror_source_set(
+    CS_IN cs_callback_context_t     context,
+    CS_IN cs_int32                  device_id,
+    CS_IN cs_int32                  llidport,
+    CS_IN cs_uint32                 rx_port_msk,
+    CS_IN cs_uint32                 tx_port_msk
+)
+{
+	GT_LPORT     i;
+    cs_status      rt = CS_E_OK;
+	GT_32 unit, hwport;
+	GT_32 clear_flag = 0, enable = 0;
+
+    if (rx_port_msk > ((1<<8)-1)) {		//here we set uplink can not be source port
+        SDL_MIN_LOG("rx_port_msk: %d is not supported!\n", rx_port_msk);
+		cs_printf("rx_port_msk:0x%02x\n",rx_port_msk);
+        rt = CS_E_PARAM;
+        goto END;
+    }
+
+    if (tx_port_msk > ((1<<8)-1)) {		//here we set uplink can not be source port
+        SDL_MIN_LOG("tx_port_msk %d is not supported!\n", tx_port_msk);
+		cs_printf("tx_port_msk:0x%02x\n",tx_port_msk);
+        rt = CS_E_PARAM;
+        goto END;
+    }
+
+    /*rx_port_msk should equal to tx_port_msk if neither of them is 0*/
+    if ((rx_port_msk != tx_port_msk) && (tx_port_msk != 0) && (rx_port_msk != 0)) {
+        SDL_MIN_LOG("port_mask is set uncorrectly!\n");
+        rt = CS_E_PARAM;
+        goto END;
+    }
+
+    if((0 == rx_port_msk)&&(0 == tx_port_msk))
+    {
+    	clear_flag = 1;
+    }
+
+    i=0;
+    while(i < UNI_PORT_MAX)
+    {
+    	enable = rx_port_msk & 0x1;
+    	gt_getswitchunitbylport(i, &unit, &hwport);
+		if(clear_flag||enable)
+		{
+			if( GT_OK != gprtSetIngressMonitorSource(QD_DEV_PTR, hwport, enable))
+			{
+				rt = CS_E_ERROR;
+				goto END;
+			}
+			mirr_rx_port[i] = enable;
+		}
+    	rx_port_msk >>= 1;
+    	i++;
+    }
+
+    i=0;
+    while(i < UNI_PORT_MAX)
+    {
+    	enable = tx_port_msk & 0x1;
+		gt_getswitchunitbylport(i, &unit, &hwport);
+		if(clear_flag||enable)
+		{
+			if( GT_OK != gprtSetEgressMonitorSource(QD_DEV_PTR, hwport, (tx_port_msk & 0x1)))
+			{
+				rt = CS_E_ERROR;
+				goto END;
+			}
+			mirr_tx_port[i] = enable;
+		}
+
+    	tx_port_msk >>= 1;
+    	i++;
+    }
+
+END:
+        return rt;
+}
+
+cs_status epon_request_onu_mirror_get(
+	CS_IN cs_callback_context_t     context,
+	CS_IN cs_int32                  device_id,
+	CS_IN cs_int32                  llidport,
+	CS_IN cs_int32                  *stat,
+	CS_IN cs_int32                  *destPort
+)
+{
+    cs_status      rt = CS_E_OK;
+	if((MIRROR_DISABLE == monitorPort)||((0 ==mirr_rx_port[llidport-1])&&(0 ==mirr_tx_port[llidport-1])))
+	{
+		rt = CS_E_NOT_FOUND;
+        goto END;
+	}
+	else
+	{
+		if(0 ==mirr_rx_port[llidport-1])
+			*stat = 1;
+		else if(0 ==mirr_tx_port[llidport-1])
+			*stat = 0;
+		else
+			*stat = 2;
+		*destPort = monitorPort;
+	}
+END:
+    return rt;
+}
+
+cs_status epon_request_onu_mirror_dest_set(
+	CS_IN cs_callback_context_t     context,
+	CS_IN cs_int32                  device_id,
+	CS_IN cs_int32                  llidport,
+    CS_IN cs_port_id_t              mirror_port
+)
+{
+    cs_status      rt = CS_E_OK;
+    GT_LPORT     port;
+	GT_32 unit=0, hwport;
+
+    if ((mirror_port < 0) ||(mirror_port > UNI_PORT_MAX)) {		//here we set uplink port can not be dest port
+        SDL_MIN_LOG("port_id %d is not supported!\n", mirror_port);
+		cs_printf("mirror port error\n");
+        rt = CS_E_PARAM;
+        goto END;
+    }
+
+    if(mirror_port != 0)
+    {
+    	port = L2P_PORT(mirror_port);
+    	if((1 == mirr_rx_port[port])||(1 == mirr_tx_port[port]))
+    	{
+    		cs_printf("mirror_port %d should not be included into source port!\n", mirror_port);
+            rt = CS_E_PARAM;
+            goto END;
+    	}
+    }
+    if(mirror_port != 0)
+    	gt_getswitchunitbylport(port, &unit, &hwport);
+    else
+    	hwport = MIRROR_DISABLE;//clear
+	if(gsysSetIngressMonitorDest(QD_DEV_PTR, hwport) != GT_OK)
+	{
+		rt = CS_E_ERROR;
+		goto END;
+	}
+	if(gsysSetEgressMonitorDest(QD_DEV_PTR, hwport) != GT_OK)
+	{
+		rt = CS_E_ERROR;
+		goto END;
+	}
+	monitorPort = mirror_port;
+END:
+     return rt;
+}
+
+/*
+ * if mirror_port is 0,clear the dest port set
+ * if rx_port_msk or tx_port_msk is 0, clear the source port set
+ */
 cs_status epon_request_onu_port_mirror_set(
     CS_IN cs_callback_context_t     context,
     CS_IN cs_int32                  device_id,
@@ -2652,6 +2813,7 @@ cs_status epon_request_onu_port_mirror_set(
     
 	GT_32 unit, hwport;
 
+#if 0
     if ((mirror_port < CS_UNI_PORT_ID1) ||
             ((mirror_port > UNI_PORT_MAX) && (mirror_port != CS_UPLINK_PORT))) {
         SDL_MIN_LOG("port_id %d is not supported!\n", mirror_port);
@@ -2659,15 +2821,31 @@ cs_status epon_request_onu_port_mirror_set(
         rt = CS_E_PARAM;
         goto END;
     }
+#else
+    if ((mirror_port < 0) ||(mirror_port > UNI_PORT_MAX)) {		//here we set uplink port can not be dest port
+        SDL_MIN_LOG("port_id %d is not supported!\n", mirror_port);
+		cs_printf("mirror port error");
+        rt = CS_E_PARAM;
+        goto END;
+    }
+#endif
 
+#if 0
     if (rx_port_msk > MIRROR_MAX_PORT_MASK) {
+#else
+    if (rx_port_msk > ((1<<8)-1)) {		//here we set uplink can not be source port
+#endif
         SDL_MIN_LOG("rx_port_msk: %d is not supported!\n", rx_port_msk);
 		cs_printf("rx_port_msk:0x%02x\n",rx_port_msk);
         rt = CS_E_PARAM;
         goto END;
     }
 
+#if 0
     if (tx_port_msk > MIRROR_MAX_PORT_MASK) {
+#else
+    if (tx_port_msk > ((1<<8)-1)) {		//here we set uplink can not be source port
+#endif
         SDL_MIN_LOG("tx_port_msk %d is not supported!\n", tx_port_msk);
 		cs_printf("tx_port_msk:0x%02x\n",tx_port_msk);
         rt = CS_E_PARAM;
@@ -2682,6 +2860,7 @@ cs_status epon_request_onu_port_mirror_set(
     }
 
     /*mirror port != source port*/
+#if 0
     port = L2P_PORT(mirror_port);
     if (mirror_port == CS_UPLINK_PORT) {
         if (((tx_port_msk &(1 << UNI_PORT_MAX)) > 0) || ((rx_port_msk &(1 << UNI_PORT_MAX)) > 0)) {
@@ -2697,8 +2876,21 @@ cs_status epon_request_onu_port_mirror_set(
             goto END;
         }
     }
-
-	gt_getswitchunitbylport(port, &unit, &hwport);
+#else
+    if(mirror_port != 0)
+    {
+    	port = L2P_PORT(mirror_port);
+    	if (((tx_port_msk &(1 << port)) > 0) || ((rx_port_msk &(1 << port)) > 0)) {
+    	            SDL_MIN_LOG("mirror_port %d should not be included into source port!\n", mirror_port);
+    	            rt = CS_E_PARAM;
+    	            goto END;
+    	        }
+    }
+#endif
+    if(mirror_port != 0)
+    	gt_getswitchunitbylport(port, &unit, &hwport);
+    else
+    	hwport = 0xf;//clear
 	if(gsysSetIngressMonitorDest(QD_DEV_PTR, hwport) != GT_OK)
 	{
 		rt = CS_E_ERROR;
@@ -2712,33 +2904,29 @@ cs_status epon_request_onu_port_mirror_set(
 
 
     i=0;
-    while(rx_port_msk)
+    while(i < UNI_PORT_MAX)
     {
-    	if(rx_port_msk & 0x1)
-    	{
-    		gt_getswitchunitbylport(i, &unit, &hwport);
-    		if( GT_OK != gprtSetIngressMonitorSource(QD_DEV_PTR, hwport, GT_TRUE))
-    		{
-    			rt = CS_E_ERROR;
-    			goto END;
-    		}
-    	}
+		gt_getswitchunitbylport(i, &unit, &hwport);
+		if( GT_OK != gprtSetIngressMonitorSource(QD_DEV_PTR, hwport, (rx_port_msk & 0x1)))
+		{
+			rt = CS_E_ERROR;
+			goto END;
+		}
+
     	rx_port_msk >>= 1;
     	i++;
     }
 
     i=0;
-    while(tx_port_msk)
+    while(i < UNI_PORT_MAX)
     {
-    	if(tx_port_msk & 0x1)
-    	{
-    		gt_getswitchunitbylport(i, &unit, &hwport);
-    		if( GT_OK != gprtSetEgressMonitorSource(QD_DEV_PTR, hwport, GT_TRUE))
-    		{
-    			rt = CS_E_ERROR;
-    			goto END;
-    		}
-    	}
+		gt_getswitchunitbylport(i, &unit, &hwport);
+		if( GT_OK != gprtSetEgressMonitorSource(QD_DEV_PTR, hwport, (tx_port_msk & 0x1)))
+		{
+			rt = CS_E_ERROR;
+			goto END;
+		}
+
     	tx_port_msk >>= 1;
     	i++;
     }
