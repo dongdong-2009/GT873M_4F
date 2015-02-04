@@ -17,7 +17,7 @@
 #include "sdl_pktctrl.h"
 #include "sdl_vlan_util.h"
 #include "app_vlan.h"
-
+//#define RPU_MODULE_GW_DHCPR
 #ifdef RPU_MODULE_GW_DHCPR
 
 enum{
@@ -34,7 +34,7 @@ dhcp_option82_data_info_t option82info;
 
 #define DHCP_PROXY_MODE_CHACK(mode) if(mode > DHCP_RELAY_GWD_MODE)
 #define FUNC_RETURN_VALUE_CHECK(ret) if(ret != OK)
-static unsigned int DhcpRelayRcpFlag = 1;
+static unsigned int DhcpRelayRcpFlag = 0;
 
 static unsigned int log_level = GW_LOG_LEVEL_CRI;
 
@@ -225,7 +225,7 @@ unsigned int Gwd_Func_Dhcp_Proxy_Mode_get(unsigned int *mode)
 //	gw_semaphore_post(DhcpRelaySem);
 	return OK;
 }
-unsigned int Gwd_Func_Dhcp_Proxy_Mode_Process(unsigned char*option82_data,unsigned int proxy_mode,unsigned int *option82len,int ulport)
+unsigned int Gwd_Func_Dhcp_Proxy_Mode_Process(unsigned char*option82_data,unsigned int proxy_mode,unsigned int *option82len,int ulport,unsigned int vlan)
 {
 	unsigned int ret =ERROR;
 	unsigned int i =0;
@@ -307,7 +307,7 @@ unsigned int Gwd_Func_Dhcp_Proxy_Mode_Process(unsigned char*option82_data,unsign
 	memcpy(&option82_str->cir_id.str_info[0],&local_option82_data.dhcprelayidentifierinfo[0],local_option82_data.datalen);
 	gw_log(GW_LOG_LEVEL_DEBUG,"%s %d dhcp_discover_pkt_flag:0x%02x datalen:%d\r\n",__func__,__LINE__,dhcp_discover_pkt_flag,local_option82_data.datalen);
 
-	re_len += (local_option82_data.datalen-1);
+	re_len += (local_option82_data.datalen);
 	if(proxy_mode == DHCP_RELAY_GWD_MODE)
 	{
 
@@ -366,7 +366,11 @@ unsigned int Gwd_Func_Dhcp_Proxy_Mode_Process(unsigned char*option82_data,unsign
 		}
 //		len = sprintf(&option82_str->cir_id.str_info[re_len],"1:");
 //		re_len +=len;
+#if 0
 		len = sprintf(&option82_str->cir_id.str_info[re_len],":%d EP",DEFAULT_SWITCH_VLAN);
+#else
+		len = sprintf(&option82_str->cir_id.str_info[re_len],":%d EP",vlan);
+#endif
 		re_len +=len;
 #endif
 	}
@@ -380,8 +384,10 @@ unsigned int Gwd_Func_Dhcp_Proxy_Mode_Process(unsigned char*option82_data,unsign
     ptr_front++;
     *ptr_front =Padding;
     ptr_front++;
+    *ptr_front =Padding;
+    ptr_front++;
 	FUNC_END:
-	*option82len =cumulative_len;
+	*option82len =(cumulative_len+1);
 	if(GW_LOG_LEVEL_DEBUG >= getGwlogLevel())
 	{
 		cs_printf("local dhcp info:\r\n");
@@ -648,6 +654,7 @@ unsigned short Gwd_func_checksum_get(unsigned short *buf,unsigned int len)
 	unsigned int ret = ERROR;
 	unsigned long cksum = 0;
 	unsigned int nword = 0;
+	unsigned short result=0;
 	if((buf == NULL) || (len < 1))
 	{
 		gw_log(GW_LOG_LEVEL_DEBUG,"%s %d buflen:%d  is null error\r\n",__func__,__LINE__,nword);
@@ -662,12 +669,14 @@ unsigned short Gwd_func_checksum_get(unsigned short *buf,unsigned int len)
 
     cksum += (cksum >>16);
     gw_log(GW_LOG_LEVEL_DEBUG,"%s %d cksum:0x%04x\r\n",__func__,__LINE__,cksum);
-    return (~cksum);
+    result=(unsigned short)(~cksum);
+    return result;
 }
 unsigned int Gwd_func_ip_header_checksum_process(unsigned char *response_dhcp_pkt,unsigned int responselen)
 {
 	unsigned int ret = ERROR;
 	unsigned int nword = 0;
+	unsigned short result=0;
 	eth_iphead_info_t *ipheader=NULL;
 	gwd_dhcp_pkt_info_head_t *response_head = NULL;
 
@@ -683,12 +692,91 @@ unsigned int Gwd_func_ip_header_checksum_process(unsigned char *response_dhcp_pk
 	/*IP TOT_LENTH*/
 	/*responselen = ETHLEN+IPLEN+UDPLEN+PAYLOAD+FCS*/
 	gw_log(GW_LOG_LEVEL_DEBUG,"%s %d ipheader->Totlength:%d  \r\n",__func__,__LINE__,ipheader->Totlength);
+#if 0
 	ipheader->Totlength = (responselen-EtherHeadLen-ETHFCSLEN);
-	ipheader->Checksum = Gwd_func_checksum_get((unsigned short*)ipheader,IPHEADERLEN);
+//	ipheader->Checksum = Gwd_func_checksum_get((unsigned short*)ipheader,IPHEADERLEN);
+#else
+	ipheader->Totlength =htons(responselen-EtherHeadLen);
+#endif
+	result=Gwd_func_checksum_get((unsigned short*)ipheader,IPHEADERLEN);
+	ipheader->Checksum = htons(result);
 	gw_log(GW_LOG_LEVEL_DEBUG,"%s %d ipheader->Totlength:0x%04x ipheader->Checksum:0x%04x nword:%d\r\n",
 			__func__,__LINE__,ipheader->Totlength,ipheader->Checksum,nword);
 	return OK;
 }
+#if 1
+unsigned short gwd_udp_cksum(struct tsd_header_s* pudph, char*buf, int n)
+  {
+    unsigned long sum = 0;
+    unsigned short *tmp = NULL;
+    unsigned short result;
+    register int i = 0;
+    unsigned char pad[2];
+
+    tmp = (unsigned short *) pudph;
+    for (i = 0; i < 6; i++) {
+      sum += *tmp++;
+    }
+
+    tmp = (unsigned short *) buf;
+    while (n > 1) {
+      sum += *tmp++;
+      n -= 2;
+    }
+
+    if ( n == 1) {      /* n % 2 == 1, have to do padding */
+      pad[0] = (unsigned char)*tmp;
+      pad[1] = 0;
+      tmp = (unsigned short *) pad;
+      sum += *tmp;
+    }
+
+    sum = (sum >> 16) + (sum & 0xffff);
+    sum += (sum >> 16);
+    result = (unsigned short) ~sum;
+    if (result == 0)
+      result = 0xffff;
+
+    return(result);
+}
+unsigned int Gwd_func_udp_header_checksum_process(unsigned char *response_dhcp_pkt,unsigned int responselen)
+{
+	struct tsd_header_s tsdheader;
+	gwd_dhcp_pkt_info_head_t *response_head = NULL;
+	udp_head_info_t *udpheader=NULL;
+	eth_iphead_info_t *ipheader=NULL;
+	unsigned short len;
+	unsigned char* buff;
+	unsigned short result;
+	response_head = (gwd_dhcp_pkt_info_head_t*)response_dhcp_pkt;
+	ipheader = (eth_iphead_info_t*)&response_head->iphead;
+	udpheader=(udp_head_info_t*)&response_head->udphead;
+
+	udpheader->length = htons(responselen-EtherHeadLen-IPHEADERLEN);
+	buff = (unsigned char*)malloc(ntohs(udpheader->length)+1);
+	if (buff==NULL)
+	 {
+	   return 0;
+	 }
+	memset(buff, 0,(ntohs(udpheader->length)+1));
+
+	memset(&tsdheader,0,sizeof(tsd_header_t));
+	tsdheader.destip = ipheader->DestIP;
+	tsdheader.sourceip = ipheader->SourceIP;
+	tsdheader.mzero = 0;
+	tsdheader.ptcl = 17;
+	tsdheader.udplen = udpheader->length;
+	udpheader->checkSum=0;
+	memcpy((unsigned char*)buff,(response_dhcp_pkt+EtherHeadLen+IPHEADERLEN), ntohs(udpheader->length));
+	  len = ntohs(udpheader->length);
+	  if (len %2 ==1)
+	  	len++;
+    result = (gwd_udp_cksum(&tsdheader, (char *) buff, /*ntohs*/(len)));
+    udpheader->checkSum=htons(result);
+    free(buff);
+    return OK;
+}
+#else
 unsigned int Gwd_func_udp_header_checksum_process(unsigned char *response_dhcp_pkt,unsigned int responselen)
 {
 	unsigned int ret = ERROR;
@@ -751,11 +839,12 @@ unsigned int Gwd_func_udp_header_checksum_process(unsigned char *response_dhcp_p
 	gw_log(GW_LOG_LEVEL_DEBUG,"%s %d udpheader->checkSum:0x%04x nword:%d\r\n",__func__,__LINE__,udpheader->checkSum,nword);
 	return OK;
 }
+#endif
 unsigned int Gwd_func_eth_pkt_checksum_process(unsigned char *response_dhcp_pkt,unsigned int responselen)
 {
 	unsigned int ret = ERROR;
-	unsigned int ethfcs = 0;
-	gwd_dhcp_pkt_info_head_t *response_head = NULL;
+//	unsigned int ethfcs = 0;
+//	gwd_dhcp_pkt_info_head_t *response_head = NULL;
 	if((response_dhcp_pkt == NULL) || (responselen < DHCP_PKT_DEF_LEN))
 	{
 		gw_log(GW_LOG_LEVEL_DEBUG,"%s %d responselen:%d  is null error\r\n",__func__,__LINE__,responselen);
@@ -773,10 +862,12 @@ unsigned int Gwd_func_eth_pkt_checksum_process(unsigned char *response_dhcp_pkt,
 	  cs_printf("%s %d return error\r\n",__func__,__LINE__);
 	  return ret;
     }
+#if 0
 	response_head = (gwd_dhcp_pkt_info_head_t*)response_dhcp_pkt;
     ethfcs =gwd_crc32(ethfcs,response_dhcp_pkt,(responselen-ETHFCSLEN));
     gw_log(GW_LOG_LEVEL_DEBUG,"%s %d pktlen:0x%08x  len:%d\r\n",__func__,__LINE__,ethfcs,responselen);
 	memcpy(&response_dhcp_pkt[responselen-ETHFCSLEN],&ethfcs,ETHFCSLEN);
+#endif
 	return OK;
 }
 
@@ -790,6 +881,9 @@ unsigned char Gwd_func_dhcp_pkt_handler(cs_pkt_t *pPkt)
   unsigned int dhcp_proxy_mode = 0;
   unsigned int response_len=0;
   unsigned char *response_dhcp_pkt = NULL;
+  unsigned int vlan=0;
+  unsigned char *ptr=NULL;
+  gwd_dhcp_pkt_info_head_t *headstruct=NULL;
 
 #if 1
   unsigned char *dhcp_pkt = NULL;
@@ -815,9 +909,11 @@ unsigned char Gwd_func_dhcp_pkt_handler(cs_pkt_t *pPkt)
 	  cs_printf("%s %d  %d %d is NULL \r\n",__func__,__LINE__,dhcp_len,dhcpheadlen);
 	  return ret;
   }
+  memset(response_dhcp_pkt,0,DHCP_MALLOC_RESPONSE_LEN);
   memcpy(response_dhcp_pkt,dhcp_pkt,dhcp_len);
   dhcphead = response_dhcp_pkt;
-
+  headstruct=(gwd_dhcp_pkt_info_head_t*)response_dhcp_pkt;
+  vlan=(unsigned int)(ntohs(headstruct->ethhead.cvlan)&0xfff);
   option82 = (unsigned char*)(dhcphead+dhcpheadlen);
   ret = Gwd_Func_Dhcp_Proxy_Mode_get(&dhcp_proxy_mode);
   FUNC_RETURN_VALUE_CHECK(ret)
@@ -834,7 +930,7 @@ unsigned char Gwd_func_dhcp_pkt_handler(cs_pkt_t *pPkt)
 			break;
 		case DHCP_RELAY_GWD_MODE:
 		case DHCP_RELAY_CTC_MODE:
-			ret = Gwd_Func_Dhcp_Proxy_Mode_Process(option82,dhcp_proxy_mode,&option82_len,ulport);
+			ret = Gwd_Func_Dhcp_Proxy_Mode_Process(option82,dhcp_proxy_mode,&option82_len,ulport,vlan);
 			FUNC_RETURN_VALUE_CHECK(ret)
 			{
 				cs_printf("%s %d return error\r\n",__func__,__LINE__);
@@ -842,13 +938,23 @@ unsigned char Gwd_func_dhcp_pkt_handler(cs_pkt_t *pPkt)
 				return ret;
 			}
 			gw_log(GW_LOG_LEVEL_DEBUG,"%s %d sendlen:%d %d\r\n",__func__,__LINE__,option82_len,dhcp_len);
+#if 0
 			response_len = (dhcpheadlen+option82_len+ETHFCSLEN);
+#else
+			response_len = (dhcpheadlen+option82_len);
+#endif
 			ret = Gwd_func_eth_pkt_checksum_process(response_dhcp_pkt,response_len);
 			FUNC_RETURN_VALUE_CHECK(ret)
 			{
 				cs_printf("%s %d return error\r\n",__func__,__LINE__);
 				iros_free(response_dhcp_pkt);
 				return ret;
+			}
+			if((ntohs(headstruct->ethhead.flag==0x8100)) && ((ntohs(headstruct->ethhead.cvlan)&0xfff) == 1))
+			{
+				ptr=response_dhcp_pkt+16;
+			    memcpy((response_dhcp_pkt+12),ptr,(response_len-16));
+			    response_len-=4;
 			}
 #if 0
 			ret = call_gwdonu_if_api(LIB_IF_PORTSEND, 3,GW_PON_PORT_ID, response_dhcp_pkt,response_len);
@@ -947,12 +1053,6 @@ void cli_reg_gwd_dhcp_relay_cmd(struct cli_command **cmd_root)
     return;
 }
 #endif
-
-
-
-
-
-
 
 
 
