@@ -555,7 +555,7 @@ unsigned int Gwd_Func_Dhcp_relay_Oam_Admin_Process(unsigned char *pReq,unsigned 
 }
 cs_status Gwd_func_dhcp_pkt_parser(cs_pkt_t *pPkt)
 {
-  int ret = CS_E_ERROR;
+  int ret = CS_E_NOT_SUPPORT;
   unsigned int dhcpheadlen=0;
   unsigned short ethertype = 0;
   unsigned short dhcp_server_port = 0;
@@ -588,6 +588,8 @@ cs_status Gwd_func_dhcp_pkt_parser(cs_pkt_t *pPkt)
 
   if((dhcp_pkt == NULL)|| (dhcp_len < dhcpheadlen))
   {
+	  pop_vlan(dhcp_pkt, dhcp_pkt, &dhcp_len);
+		pPkt->len = dhcp_len;
 	  gw_log(GW_LOG_LEVEL_DEBUG,"%s %d  %d %d is NULL \r\n",__func__,__LINE__,dhcp_len,dhcpheadlen);
 	  return ret;
   }
@@ -599,6 +601,8 @@ cs_status Gwd_func_dhcp_pkt_parser(cs_pkt_t *pPkt)
   gw_log(GW_LOG_LEVEL_DEBUG,"%s %d ipverlen:(0x%02x 0x%x) \r\n",__func__,__LINE__,ipver,ipver);
   if(ipver == IpV6Version)
   {
+	  pop_vlan(dhcp_pkt, dhcp_pkt, &dhcp_len);
+		pPkt->len = dhcp_len;
 	  gw_log(GW_LOG_LEVEL_DEBUG,"%s %d ipverlen:(0x%02x 0x%x) is ipv6 no proc\r\n",__func__,__LINE__,ipver,ipver);
 	  return ret;
   }
