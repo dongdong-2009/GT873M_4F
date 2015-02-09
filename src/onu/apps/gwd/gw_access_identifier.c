@@ -420,7 +420,7 @@ int Gwd_dhcp_relay_enable(int mode)
 	unsigned int state = (mode==1)?DST_CPU:DST_FE;
 
 	ret = epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_UP_STREAM,CS_PKT_DHCP,state);
-	ret += epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_DOWN_STREAM, CS_PKT_DHCP, state);
+//	ret += epon_request_onu_spec_pkt_dst_set(context, 0, 0, CS_DOWN_STREAM, CS_PKT_DHCP, state);
 
 	return ret;
 }
