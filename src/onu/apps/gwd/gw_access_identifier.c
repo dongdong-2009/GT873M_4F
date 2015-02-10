@@ -562,6 +562,7 @@ cs_status Gwd_func_dhcp_pkt_parser(cs_pkt_t *pPkt)
   unsigned short dhcp_client_port = 0;
   unsigned char ipverlen = 0;
   unsigned char ipver = 0;
+  int tag_flag = 0;
 
 #if 1
   unsigned char *dhcp_pkt = NULL;
@@ -578,6 +579,7 @@ cs_status Gwd_func_dhcp_pkt_parser(cs_pkt_t *pPkt)
 	//报文是否有vlan tag
 	if(0 == pkt_vlan_tag_check(dhcp_pkt, dhcp_len))
 	{
+		tag_flag = 1;
 		push_vlan(1, dhcp_pkt, dhcp_pkt, &dhcp_len);
 		pPkt->len = dhcp_len;
 	}
@@ -588,10 +590,8 @@ cs_status Gwd_func_dhcp_pkt_parser(cs_pkt_t *pPkt)
 
   if((dhcp_pkt == NULL)|| (dhcp_len < dhcpheadlen))
   {
-	  pop_vlan(dhcp_pkt, dhcp_pkt, &dhcp_len);
-		pPkt->len = dhcp_len;
 	  gw_log(GW_LOG_LEVEL_DEBUG,"%s %d  %d %d is NULL \r\n",__func__,__LINE__,dhcp_len,dhcpheadlen);
-	  return ret;
+	  goto END;
   }
 
   dhcphead = (gwd_dhcp_pkt_info_head_t*)dhcp_pkt;
@@ -601,10 +601,8 @@ cs_status Gwd_func_dhcp_pkt_parser(cs_pkt_t *pPkt)
   gw_log(GW_LOG_LEVEL_DEBUG,"%s %d ipverlen:(0x%02x 0x%x) \r\n",__func__,__LINE__,ipver,ipver);
   if(ipver == IpV6Version)
   {
-	  pop_vlan(dhcp_pkt, dhcp_pkt, &dhcp_len);
-		pPkt->len = dhcp_len;
 	  gw_log(GW_LOG_LEVEL_DEBUG,"%s %d ipverlen:(0x%02x 0x%x) is ipv6 no proc\r\n",__func__,__LINE__,ipver,ipver);
-	  return ret;
+	  goto END;
   }
 
 
@@ -614,15 +612,19 @@ cs_status Gwd_func_dhcp_pkt_parser(cs_pkt_t *pPkt)
 
   if((ethertype != ETH_TYPE_IP) || (dhcp_server_port != DhcpSvrPortNum) || (dhcp_client_port != DhcpCliPortNum))
   {
-	  pop_vlan(dhcp_pkt, dhcp_pkt, &dhcp_len);
-		pPkt->len = dhcp_len;
-		gw_log(GW_LOG_LEVEL_DEBUG,"%s %d ethertype:%0x04x dhcp_server_port:%d dhcp_client_port:%d\r\n",__func__,__LINE__,ethertype,dhcp_server_port,dhcp_client_port);
-	  return ret;
+	  gw_log(GW_LOG_LEVEL_DEBUG,"%s %d ethertype:%0x04x dhcp_server_port:%d dhcp_client_port:%d\r\n",__func__,__LINE__,ethertype,dhcp_server_port,dhcp_client_port);
+	  goto END;
   }
 
   pPkt->pkt_type = CS_PKT_DHCP;
-
-  return CS_E_OK;
+  ret = CS_E_OK;
+END:
+	if(1 == tag_flag)
+	{
+		pop_vlan(dhcp_pkt, dhcp_pkt, &dhcp_len);
+		pPkt->len = dhcp_len;
+	}
+	return ret;
 }
 #if 0
 static unsigned int crc_table[256];
