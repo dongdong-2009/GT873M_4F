@@ -2845,6 +2845,7 @@ int cmd_onu_mgt_config_product_date(struct cli_def *cli, char *command, char *ar
 int cmd_onu_mgt_config_product_hw_version(struct cli_def *cli, char *command, char *argv[], int argc)
 {
 	int v_major, v_rel;
+	int v_b = 0;
         
     // deal with help
     if(CLI_HELP_REQUESTED)
@@ -2859,10 +2860,13 @@ int cmd_onu_mgt_config_product_hw_version(struct cli_def *cli, char *command, ch
             return cli_arg_help(cli, 0,
                 "<1-9>", "Release version",
                  NULL);
-	//	case 3:
-          //  return cli_arg_help(cli, 0,
-            //    "<1-9>", "B version",
-             //    NULL);
+		case 3:
+			cli_arg_help(cli, 0,
+            	"<cr>", "Enter to execuse",
+            	NULL);
+          	return cli_arg_help(cli, 0,
+            	"<1-9>", "B version",
+            	NULL);
         default:
             return cli_arg_help(cli, argc > 1, NULL);
         }
@@ -2872,7 +2876,6 @@ int cmd_onu_mgt_config_product_hw_version(struct cli_def *cli, char *command, ch
     {   
 		v_major = atoi(argv[0]);
 		v_rel = atoi(argv[1]);
-	//	V_B = atoi(argv[2]);
 
 		sprintf(onu_system_info_total.hw_version, "V%d.%d", 
 			v_major, v_rel);
@@ -2881,7 +2884,22 @@ int cmd_onu_mgt_config_product_hw_version(struct cli_def *cli, char *command, ch
 		{
 			cli_print(cli, "  System information save error!\r\n");
 		}
-    } else
+    }
+	else if(3 == argc)
+	{
+		v_major = atoi(argv[0]);
+		v_rel = atoi(argv[1]);
+		v_b = atoi(argv[2]);
+
+		sprintf(onu_system_info_total.hw_version, "V%d.%dB%d", 
+			v_major, v_rel, v_b);
+        
+		if (GWD_RETURN_OK != Onu_Sysinfo_Save())
+		{
+			cli_print(cli, "  System information save error!\r\n");
+		}
+	}
+	else
     {
         cli_print(cli, "%% Invalid input.");
     }
@@ -3088,6 +3106,7 @@ int cmd_show_system_information(struct cli_def *cli, char *command, char *argv[]
 	}
 #endif
 
+	char *hw_version = (char *)malloc(sizeof(onu_system_info_total.hw_version + 1));
 	long lRet = GWD_RETURN_OK;
     char strMac[32];
 	extern int cli_get_onu_mac_addr(char *mac);
@@ -3099,15 +3118,16 @@ int cmd_show_system_information(struct cli_def *cli, char *command, char *argv[]
 	if (lRet != GWD_RETURN_OK)
 	{
 		cli_print(cli, "  Get product information from flash with error.\r\n");
-		return CLI_OK;
 	}
 	else
 	{
 	#if 1
+		strcpy(hw_version, "");
+		memcpy(hw_version, onu_system_info_total.hw_version, sizeof(onu_system_info_total.hw_version));
 		cli_print(cli,  "\n  Product information as following--");
 		cli_print(cli,  "    ONU type         : %s", onu_type);
 		cli_print(cli,  "    DeiveName        : %s", onu_system_info_total.device_name);
-		cli_print(cli,  "    Hardware version : %s", onu_system_info_total.hw_version);
+		cli_print(cli,  "    Hardware version : %s", hw_version);
 		cli_print(cli,  "    Software version : %s", onu_system_info_total.sw_version);
 		cli_print(cli,  "    Firmware version : %s", iros_version);
 		cli_print(cli,  "    Bootload version : %s", irosbootver);
@@ -3126,9 +3146,10 @@ int cmd_show_system_information(struct cli_def *cli, char *command, char *argv[]
 		cs_printf("    Serial number    : %s\n", onu_system_info_total.serial_no);
     	cs_printf("    Onu mac address  : %s\n", strMac);
 	#endif
-
-		return CLI_OK;
 	}
+	free(hw_version);
+	
+	return CLI_OK;
 }
 
 int cmd_show_optical_diagnostics(struct cli_def *cli, char *command, char *argv[], int argc)
