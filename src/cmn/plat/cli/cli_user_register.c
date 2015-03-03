@@ -551,6 +551,166 @@ int app_stats_cpu_clr()
 }
 #endif
 
+
+void statistics_pon_show(void)
+{
+    cs_callback_context_t context;
+    cs_port_id_t  port = CS_PON_PORT_ID ;
+    cs_pon_stats_t stats;
+
+    if(CS_E_OK == epon_request_onu_pon_stats_get(context, 0, port, 0, &stats))
+	{
+		cs_printf("\nPON STATISTICS\n");
+		cs_printf("========================================\n");
+		cs_printf("%-30s: %llu\n", "pon_byte_cnt         ", stats.pon_byte_cnt           );
+		cs_printf("%-30s: %llu\n", "pon_tx_byte_cnt      ", stats.pon_tx_byte_cnt        );
+		cs_printf("%-30s: %u\n", "pon_frame_cnt          ", stats.pon_frame_cnt          );
+		cs_printf("%-30s: %u\n", "pon_txframe_cnt        ", stats.pon_txframe_cnt        );
+		cs_printf("%-30s: %u\n", "pon_crcerr_cnt         ", stats.pon_crcerr_cnt         );
+		cs_printf("%-30s: %u\n", "pon_mcframe_cnt        ", stats.pon_mcframe_cnt        );
+		cs_printf("%-30s: %u\n", "pon_bcframe_cnt        ", stats.pon_bcframe_cnt        );
+		cs_printf("%-30s: %u\n", "pon_txmcframe_cnt      ", stats.pon_txmcframe_cnt      );
+		cs_printf("%-30s: %u\n", "pon_txbcframe_cnt      ", stats.pon_txbcframe_cnt      );
+		cs_printf("%-30s: %u\n", "pon_ctrlframe_cnt      ", stats.pon_ctrlframe_cnt      );
+		cs_printf("%-30s: %u\n", "pon_txctrlframe_cnt    ", stats.pon_txctrlframe_cnt    );
+		cs_printf("%-30s: %u\n", "pon_pauseframe_cnt     ", stats.pon_pauseframe_cnt     );
+		cs_printf("%-30s: %u\n", "pon_unknownop_cnt      ", stats.pon_unknownop_cnt      );
+		cs_printf("%-30s: %u\n", "pon_runt_cnt           ", stats.pon_runt_cnt           );
+		cs_printf("%-30s: %u\n", "pon_oversize_cnt       ", stats.pon_oversize_cnt       );
+		cs_printf("%-30s: %u\n", "pon_rmon64_cnt         ", stats.pon_rmon64_cnt         );
+		cs_printf("%-30s: %u\n", "pon_rmon65_127_cnt     ", stats.pon_rmon65_127_cnt     );
+		cs_printf("%-30s: %u\n", "pon_rmon128_255_cnt    ", stats.pon_rmon128_255_cnt    );
+		cs_printf("%-30s: %u\n", "pon_rmon256_511_cnt    ", stats.pon_rmon256_511_cnt    );
+		cs_printf("%-30s: %u\n", "pon_rmon512_1023_cnt   ", stats.pon_rmon512_1023_cnt   );
+		cs_printf("%-30s: %u\n", "pon_rmon1024_1518_cnt  ", stats.pon_rmon1024_1518_cnt  );
+		cs_printf("%-30s: %u\n", "pon_txrmon64_cnt       ", stats.pon_txrmon64_cnt       );
+		cs_printf("%-30s: %u\n", "pon_txrmon65_127_cnt   ", stats.pon_txrmon65_127_cnt   );
+		cs_printf("%-30s: %u\n", "pon_txrmon128_255_cnt  ", stats.pon_txrmon128_255_cnt  );
+		cs_printf("%-30s: %u\n", "pon_txrmon256_511_cnt  ", stats.pon_txrmon256_511_cnt  );
+		cs_printf("%-30s: %u\n", "pon_txrmon512_1023_cnt ", stats.pon_txrmon512_1023_cnt );
+		cs_printf("%-30s: %u\n", "pon_txrmon1024_1518_cnt", stats.pon_txrmon1024_1518_cnt);
+		cs_printf("%-30s: %u\n", "pon_mpcp_uc_rev_cnt     ", stats.pon_mpcp_uc_rev_cnt     );
+		cs_printf("%-30s: %u\n", "pon_mpcp_uc_reg_ack     ", stats.pon_mpcp_uc_reg_ack     );
+		cs_printf("%-30s: %u\n", "pon_mpcp_uc_reg_nack    ", stats.pon_mpcp_uc_reg_nack    );
+		cs_printf("%-30s: %u\n", "pon_mpcp_uc_reg_dereg   ", stats.pon_mpcp_uc_reg_dereg   );
+		cs_printf("%-30s: %u\n", "pon_mpcp_uc_reg_rereg   ", stats.pon_mpcp_uc_reg_rereg   );
+		cs_printf("%-30s: %u\n", "pon_mpcp_uc_reg_reg_rev ", stats.pon_mpcp_uc_reg_reg_rev );
+		cs_printf("%-30s: %u\n", "pon_mpcp_uc_gat_rev     ", stats.pon_mpcp_uc_gat_rev     );
+		cs_printf("%-30s: %u\n", "pon_mpcp_uc_gat_norm    ", stats.pon_mpcp_uc_gat_norm    );
+		cs_printf("%-30s: %u\n", "pon_mpcp_uc_gat_frpt    ", stats.pon_mpcp_uc_gat_frpt    );
+		cs_printf("%-30s: %u\n", "pon_mpcp_uc_gat_udis    ", stats.pon_mpcp_uc_gat_udis    );
+		cs_printf("%-30s: %u\n", "pon_mpcp_uc_gat_bdis    ", stats.pon_mpcp_uc_gat_bdis    );
+		cs_printf("%-30s: %u\n", "pon_mpcp_mc_rev_cnt     ", stats.pon_mpcp_mc_rev_cnt     );
+		cs_printf("%-30s: %u\n", "pon_mpcp_mc_reg_ack     ", stats.pon_mpcp_mc_reg_ack     );
+		cs_printf("%-30s: %u\n", "pon_mpcp_mc_reg_nack    ", stats.pon_mpcp_mc_reg_nack    );
+		cs_printf("%-30s: %u\n", "pon_mpcp_mc_reg_dereg   ", stats.pon_mpcp_mc_reg_dereg   );
+		cs_printf("%-30s: %u\n", "pon_mpcp_mc_reg_rereg   ", stats.pon_mpcp_mc_reg_rereg   );
+		cs_printf("%-30s: %u\n", "pon_mpcp_mc_reg_reg_rev ", stats.pon_mpcp_mc_reg_reg_rev );
+		cs_printf("%-30s: %u\n", "pon_mpcp_mc_gat_rev     ", stats.pon_mpcp_mc_gat_rev     );
+		cs_printf("%-30s: %u\n", "pon_mpcp_mc_gat_norm    ", stats.pon_mpcp_mc_gat_norm    );
+		cs_printf("%-30s: %u\n", "pon_mpcp_mc_gat_frpt    ", stats.pon_mpcp_mc_gat_frpt    );
+		cs_printf("%-30s: %u\n", "pon_mpcp_mc_gat_udis    ", stats.pon_mpcp_mc_gat_udis    );
+		cs_printf("%-30s: %u\n", "pon_mpcp_mc_gat_bdis    ", stats.pon_mpcp_mc_gat_bdis    );
+		cs_printf("%-30s: %u\n", "pon_mpcp_bc_rev_cnt     ", stats.pon_mpcp_bc_rev_cnt     );
+		cs_printf("%-30s: %u\n", "pon_mpcp_bc_reg_ack     ", stats.pon_mpcp_bc_reg_ack     );
+		cs_printf("%-30s: %u\n", "pon_mpcp_bc_reg_nack    ", stats.pon_mpcp_bc_reg_nack    );
+		cs_printf("%-30s: %u\n", "pon_mpcp_bc_reg_dereg   ", stats.pon_mpcp_bc_reg_dereg   );
+		cs_printf("%-30s: %u\n", "pon_mpcp_bc_reg_rereg   ", stats.pon_mpcp_bc_reg_rereg   );
+		cs_printf("%-30s: %u\n", "pon_mpcp_bc_reg_reg_rev ", stats.pon_mpcp_bc_reg_reg_rev );
+		cs_printf("%-30s: %u\n", "pon_mpcp_bc_gat_rev     ", stats.pon_mpcp_bc_gat_rev     );
+		cs_printf("%-30s: %u\n", "pon_mpcp_bc_gat_norm    ", stats.pon_mpcp_bc_gat_norm    );
+		cs_printf("%-30s: %u\n", "pon_mpcp_bc_gat_frpt    ", stats.pon_mpcp_bc_gat_frpt    );
+		cs_printf("%-30s: %u\n", "pon_mpcp_bc_gat_udis    ", stats.pon_mpcp_bc_gat_udis    );
+		cs_printf("%-30s: %u\n", "pon_mpcp_bc_gat_bdis    ", stats.pon_mpcp_bc_gat_bdis    );
+		cs_printf("%-30s: %u\n", "pon_mpcp_tx_req_dereg   ", stats.pon_mpcp_tx_req_dereg   );
+		cs_printf("%-30s: %u\n", "pon_mpcp_tx_req_reg     ", stats.pon_mpcp_tx_req_reg     );
+		cs_printf("%-30s: %u\n", "pon_mpcp_tx_ack_ack     ", stats.pon_mpcp_tx_ack_ack     );
+		cs_printf("%-30s: %u\n", "pon_mpcp_tx_ack_nack    ", stats.pon_mpcp_tx_ack_nack    );
+		cs_printf("%-30s: %u\n", "pon_mpcp_tx_rpt    ", stats.pon_mpcp_tx_rpt    );
+		cs_printf("%-30s: %u\n", "pon_mpcp_tx_oam    ", stats.pon_mpcp_tx_oam    );
+		cs_printf("%-30s: %u\n", "pon_mpcp_da_mc_nslf", stats.pon_mpcp_da_mc_nslf);
+		cs_printf("%-30s: %u\n", "pon_mpcp_da_mc_slf ", stats.pon_mpcp_da_mc_slf );
+		cs_printf("%-30s: %u\n", "pon_mpcp_da_uc     ", stats.pon_mpcp_da_uc     );
+		cs_printf("%-30s: %u\n", "pon_framecnt       ", stats.pon_framecnt       );
+		cs_printf("%-30s: %u\n", "pon_txoversizecnt  ", stats.pon_txoversizecnt  );
+		cs_printf("%-30s: %u\n", "pon_rx1519_maxcnt  ", stats.pon_rx1519_maxcnt  );
+		cs_printf("%-30s: %u\n", "pon_tx1519_maxcnt  ", stats.pon_tx1519_maxcnt  );
+		cs_printf("%-30s: %u\n", "pon_txframecnt     ", stats.pon_txframecnt     );
+		cs_printf("%-30s: %u\n", "pon_txpausecnt     ", stats.pon_txpausecnt     );
+		cs_printf("%-30s: %u\n", "pon_undersizecnt   ", stats.pon_undersizecnt   );
+		cs_printf("%-30s: %u\n", "pon_jabbercnt      ", stats.pon_jabbercnt      );
+		cs_printf("%-30s: %u\n", "pon_extensioncnt   ", stats.pon_extensioncnt   );
+		cs_printf("%-30s: %u\n", "pon_txextensioncnt ", stats.pon_txextensioncnt );
+		cs_printf("%-30s: %u\n", "pon_err_symbol     ", stats.pon_err_symbol     );
+		cs_printf("%-30s: %u\n", "pon_outofsync      ", stats.pon_outofsync      );
+		cs_printf("%-30s: %u\n", "pon_sld_err        ", stats.pon_sld_err        );
+		cs_printf("%-30s: %u\n", "pon_crc8_err       ", stats.pon_crc8_err       );
+		cs_printf("%-30s: %u\n", "pon_mac_drop       ", stats.pon_mac_drop       );
+		cs_printf("%-30s: %u\n", "pon_ipg_drop       ", stats.pon_ipg_drop       );
+		cs_printf("%-30s: %u\n", "pon_drain          ", stats.pon_drain          );
+		cs_printf("%-30s: %u\n", "pon_tx_crc_err     ", stats.pon_tx_crc_err     );
+		cs_printf("========================================\n");		
+	}
+	else
+	{
+		cs_printf("show pon statistics failed!\n");
+	}
+}
+
+
+void statistics_pon_clear(void)
+{
+	cs_callback_context_t context;
+
+	if(CS_E_OK == epon_request_onu_pon_stats_clr(context, 0, CS_PON_PORT_ID))
+	{
+		cs_printf("clear pon statistics sucess");	
+	}
+	else
+	{
+		cs_printf("clear pon statistics failed");
+	}
+}
+
+int cmd_statistics_pon(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	if (CLI_HELP_REQUESTED)
+	{
+		return CLI_HELP_NO_ARGS;
+	}
+        
+	if(0 == argc)
+	{
+		statistics_pon_show();
+	}
+	else
+	{
+		cli_print(cli, "%% Invalid input.");
+	}
+	
+	return CLI_OK;
+}
+
+int cmd_statistics_pon_clear(struct cli_def *cli, char *command, char *argv[], int argc)
+{
+	if (CLI_HELP_REQUESTED)
+	{
+		return CLI_HELP_NO_ARGS;
+	}
+        
+	if(0 == argc)
+	{
+		statistics_pon_clear();
+	}
+	else
+	{
+		cli_print(cli, "%% Invalid input.");
+	}
+	
+	return CLI_OK;
+}
+
+
 #if 1
 cs_status uni_port_check(cs_port_id_t port);
 cs_status uni_port_num_get(int *num);
@@ -1583,6 +1743,17 @@ void user_register_command_entry(struct cli_command **cmd_root)
 	#endif
 	
 #endif
+
+{
+	struct cli_command *statistics = NULL;
+	struct cli_command *statistics_pon = NULL;
+	
+	statistics = cli_register_command(cmd_root, NULL, "statistics",  NULL,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "Show system statistics information");
+	statistics_pon = cli_register_command(cmd_root, statistics, "pon",  NULL,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "Show pon statistics");
+	cli_register_command(cmd_root, statistics_pon, "show", cmd_statistics_pon, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "show pon statistics");
+	cli_register_command(cmd_root, statistics_pon, "clear", cmd_statistics_pon_clear, PRIVILEGE_PRIVILEGED, MODE_CONFIG, "clear pon statistics");
+}
+
 #if 0
     /*statistics*/
     statistics = cli_register_command(cmd_root, NULL, "statistics",  NULL,     PRIVILEGE_PRIVILEGED, MODE_CONFIG, "Show system statistics information");
