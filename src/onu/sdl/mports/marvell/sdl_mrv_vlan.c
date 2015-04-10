@@ -885,6 +885,41 @@ static void __update_hw_mc(cs_port_id_t port_id)
         SDL_MIN_LOG("\nNot supported MC VLAN ACTION: %d\n", port_vlan->mc_act);
     }
 }
+
+
+/* Transparent port should add all others port's vlan */
+static cs_uint16 __get_transparent_mbp(void)
+{
+    int i;
+    cs_uint16 mbp = 0;
+
+    for(i = CS_UNI_PORT_ID1; i <= UNI_PORT_MAX; ++i)
+    {
+        if(SDL_VLAN_MODE_TRANSPARENT == __port_vlan_table[i].vlan_mode)
+        {
+            mbp |= (1<<(i-1));
+        }
+    }
+
+    return mbp;
+}
+
+void switch_add_transparent_mbp_to_vlan(cs_uint16 transparent_mbp, cs_uint16 vid)
+{
+	GT_U32 unit, port;
+	int k = 0;
+	
+	for(k=0; k<sizeof(transparent_mbp)*8; k++)	//遍历透传端口列表
+	{
+		if(transparent_mbp&(1<<k))		//找到透传端口
+		{
+			gt_getswitchunitbylport(k, &unit, &port);	//将端口转化为交换机端口
+			InternalVlanJoin(QD_DEV_PTR, vid, port, GT_TRUE);	//将透传端口加入vlan列表
+		}
+	}
+}
+
+
 /***************************************************************************************
  * Function Name:
  *      __update_hw_uc
@@ -944,6 +979,18 @@ static void __update_hw_uc(cs_port_id_t port_id)
         }
     }
 
+	//add by zhuxh
+	/*synchronize transparent port to vlan,so that transparent port can receive frame whitch send to vlan port */
+	for(i = 0; i < __VLAN_MAX; ++i)
+	{
+		if( __c_vlan_table[i].valid )
+		{
+			cs_uint16 transparent_mbp = __get_transparent_mbp(); //获取透传端口列表
+			cs_uint16 vid = __s_vlan_table[i].vlan.vid;
+			switch_add_transparent_mbp_to_vlan(transparent_mbp, vid);
+		}
+	}
+	
     if(SDL_VLAN_MODE_TRANSPARENT != port_vlan->vlan_mode)
     {
         /* sync sw C-vlan table to HW (including default vlan) */
